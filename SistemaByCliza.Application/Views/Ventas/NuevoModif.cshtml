@@ -1,0 +1,397 @@
+﻿@{
+    ViewData["Title"] = "Venta";
+    var id = Context.Request.Query["id"].ToString();
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="~/css/VentasNuevoModif.css" />
+}
+
+<input type="hidden" id="txtId" value="@id" />
+
+<div class="container-fluid mt-4 venta-container-lg">
+
+
+    <div class="page-header rounded-3 p-4 mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0">Venta</h2>
+            <small class="text-muted">@(string.IsNullOrEmpty(id) ? "Nueva" : "Edición")</small>
+        </div>
+        <button class="btn btn-ghost" onclick="volverIndex()">
+            <i class="fa fa-arrow-left me-2"></i> Volver
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <!-- Izquierda -->
+        <div class="col-xxl-5 col-xl-6">
+            <div class="card-glass p-4 h-100">
+                <form id="formVenta" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="dtpFecha" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Cliente</label>
+
+                        <div class="d-flex align-items-stretch gap-2">
+                            <select id="cmbCliente" class="form-select flex-grow-1" required>
+                                <option value="">Seleccione</option>
+                            </select>
+
+                            <button type="button"
+                                    class="btn btn-success btn-plus"
+                                    title="Nuevo cliente"
+                                    onclick="abrirModalNuevoClienteVenta()">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Vendedor</label>
+                        <select id="cmbVendedor" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Lista de Precios</label>
+                        <select id="cmbListaPrecio" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Sucursal</label>
+                        <select id="cmbSucursal" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Nota interna</label>
+                        <textarea id="txtNota" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Nota cliente</label>
+                        <textarea id="txtNotaCliente" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div id="errorCamposVenta" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+
+                <div class="row mt-2 g-3">
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Subtotal</div>
+                            <div class="value" id="statSub">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Descuentos</div>
+                            <div class="value text-warning" id="statDesc">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">IVA</div>
+                            <div class="value" id="statIva">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Total</div>
+                            <div class="value text-success" id="statTotal">$ 0,00</div>
+                        </div>
+                    </div>
+
+                    <!-- NUEVOS -->
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Abonado</div>
+                            <div class="value" id="statAbonado">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Restante</div>
+                            <div class="value" id="statRestante">$ 0,00</div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="d-grid mt-3">
+                    <button id="btnGuardarVenta" class="btn btn-primary btn-lg" type="button" onclick="guardarVenta()">
+                        <i class="fa fa-check me-1"></i> Registrar
+                    </button>
+                    <button type="button" class="btn btn-outline-light mt-2" onclick="exportarVentaPdf()">
+                        <i class="fa fa-file-pdf-o me-1"></i> Exportar PDF
+                    </button>
+
+                    <button type="button" id="btnEliminarVenta" class="btn btn-danger mt-2 d-none" onclick="eliminarVenta()">
+                        <i class="fa fa-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Derecha -->
+        <div class="col-xxl-7 col-xl-6">
+            <div class="card-glass p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-box me-2 text-info"></i>Productos</h5>
+                    <button class="btn btn-success btn-sm" type="button" onclick="abrirModalItem()">
+                        <i class="fa fa-plus"></i> Agregar Ítem
+                    </button>
+                </div>
+                <div class="tabla-wrap alto-productos">
+                    <table class="display nowrap compact" id="grd_Items" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Producto</th>
+                                <th>Variantes</th>
+                                <th class="text-end">Cant</th>
+                                <th class="text-end">P.Unit</th>
+                                <th class="text-end">Desc%</th>
+                                <th class="text-end">IVA%</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-glass p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-wallet me-2 text-success"></i>Pagos</h5>
+                    <button class="btn btn-dark btn-sm" type="button" onclick="abrirModalPago()">
+                        <i class="fa fa-plus"></i> Registrar Pago
+                    </button>
+                </div>
+                <div class="tabla-wrap alto-pagos">
+                    <table class="display nowrap compact" id="grd_Pagos" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Fecha</th>
+                                <th>Cuenta</th>
+                                <th class="text-end">Importe</th>
+                                <th>Nota</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Producto -->
+<div class="modal fade" id="modalItem" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-cubes me-2 text-info"></i>Producto</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formItem" class="row g-3">
+                    <div class="col-xl-6">
+                        <label class="form-label">Producto</label>
+                        <select id="cmbItemProducto" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-6 col-xl-2">
+                        <label class="form-label">Cantidad</label>
+                        <input type="text" id="txtItemCant" class="form-control Inputmiles" value="1" />
+                        <small id="qtyLockHint" class="text-info d-block mt-1" hidden></small>
+                    </div>
+                    <div class="col-6 col-xl-4">
+                        <label class="form-label">Precio</label>
+                        <input type="text" id="txtItemPrecio" class="form-control Inputmiles" />
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <label class="form-label">% Desc</label>
+                        <input type="text" id="txtItemDesc" class="form-control Inputmiles" value="0" />
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <label class="form-label">% IVA</label>
+                        <input type="text" id="txtItemIva" class="form-control Inputmiles" value="21" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Subtotal calculado</label>
+                        <input type="text" id="txtItemSubtotal" class="form-control subtotal-preview" readonly />
+                    </div>
+                    <div class="col-12" id="variantesContainer" style="display:none;">
+                        <div class="d-flex align-items-center mb-2">
+                            <h6 class="mb-0"><i class="fa fa-tags me-2 text-info"></i>Variantes disponibles</h6>
+                            <small class="text-muted ms-2">(Si cargás cantidades por variante, se usará la <strong>suma</strong> como cantidad del ítem)</small>
+                        </div>
+                        <div id="variantesWrap" class="variantes-wrap"></div>
+                        <div id="variantesEmpty" class="alert alert-secondary py-2 mt-2" hidden>Este producto no tiene variantes definidas.</div>
+                    </div>
+                    <div id="errorCamposItem" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button class="btn btn-success" onclick="guardarItem()"><i class="fa fa-check me-1"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal: Cliente Rápido -->
+<div class="modal fade" id="modalClienteRapido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content card-glass">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">
+          <i class="fa fa-user-plus me-2 text-info"></i>Nuevo cliente
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="formClienteRapido" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nombre</label>
+            <input type="text" id="cr_Nombre" class="form-control" required>
+            <div class="invalid-feedback">Campo obligatorio</div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Teléfono</label>
+            <input type="text" id="cr_Telefono" class="form-control">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Email</label>
+            <input type="email" id="cr_Email" class="form-control">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">DNI</label>
+            <input type="text" id="cr_Dni" class="form-control">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">CUIT</label>
+            <input type="text" id="cr_Cuit" class="form-control">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Condición IVA</label>
+            <select id="cr_CondIva" class="form-select" required>
+              <option value="">Seleccione</option>
+            </select>
+            <div class="invalid-feedback">Campo obligatorio</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Lista de Precios</label>
+            <select id="cr_ListaPrecio" class="form-select" required>
+              <option value="">Seleccione</option>
+            </select>
+            <div class="invalid-feedback">Campo obligatorio</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Domicilio</label>
+            <input type="text" id="cr_Domicilio" class="form-control">
+          </div>
+
+          <div id="cr_Error" class="alert alert-danger d-none col-12">
+            Completá los campos obligatorios.
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fa fa-times me-1"></i> Cancelar
+        </button>
+        <button class="btn btn-success" onclick="guardarClienteRapido()">
+          <i class="fa fa-check me-1"></i> Registrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Pago -->
+<div class="modal fade" id="modalPago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-plus-circle me-2 text-success"></i>Registrar Pago</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPago" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="dtpPagoFecha" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cuenta</label>
+                        <select id="cmbCuenta" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Importe</label>
+                        <input type="text" id="txtPagoImporte" class="form-control Inputmiles" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Nota</label>
+                        <input type="text" id="txtPagoNota" class="form-control" />
+                    </div>
+                </form>
+
+                <!-- 🚨 Aviso de validación -->
+                <div id="errorCamposPago" class="alert alert-danger py-2 px-3 mt-2 d-none" role="alert">
+                    <i class="fa fa-exclamation-triangle me-1"></i>
+                    Debes completar los campos obligatorios.
+                </div>
+            </div>
+
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button class="btn btn-success" id="btnGuardarPago" onclick="guardarPago()"><i class="fa fa-check me-1"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+    <script src="~/js/VentasNuevoModif.js?v=1.2"></script>
+}

@@ -1,0 +1,231 @@
+﻿@{
+    ViewData["Title"] = "Clientes";
+}
+
+@section Estilos {
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
+
+    <!-- Icons / Select2 (si usás en el modal) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link href="~/css/clientes.css" rel="stylesheet" />
+}
+
+<div class="container page-99" style="margin-top: 100px">
+
+    <!-- Header estilo Inventario -->
+    <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <span class="cc-badge"><i class="fa fa-users"></i></span>
+                <div>
+                    <h2 class="m-0 fw-800">Clientes</h2>
+                    <small class="text-muted-cc">Gestión de clientes</small>
+                </div>
+            </div>
+
+            <div class="ms-auto d-flex gap-3 flex-wrap">
+                <div class="cc-stat">
+                    <div class="label">Total clientes</div>
+                    <div class="value kpi-azul" id="kpiTotalClientes">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grilla -->
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card-glass p-3">
+                <div class="tabla-wrap position-relative">
+                    <div class="tabla-controls-top d-flex gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" type="button" id="btnConfigCols"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa fa-cog me-2"></i> Config. Columnas
+                            </button>
+                            <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
+                        </div>
+                        <button class="btn btn-primary" onclick="nuevoCliente()">
+                            <i class="fa fa-plus me-1"></i> Nuevo
+                        </button>
+                    </div>
+
+                    <div class="dt-dark-wrap">
+                    <table class="dt-dark display nowrap compact" id="grd_Clientes" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Teléfono Alternativo</th>
+                                <th>DNI</th>
+                                <th>CUIT</th>
+                                <th>Condición IVA</th>
+                                <th>Domicilio</th>
+                                <th>Provincia</th>
+                                <th>Localidad</th>
+                                <th>Email</th>
+                                <th>Código Postal</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    </div>
+
+                    <div class="tabla-footer d-flex align-items-center justify-content-between">
+                        <div></div>
+                        <div class="acciones-externas d-flex justify-content-end mt-2 gap-2">
+                            <button class="btn btn-outline-info d-flex align-items-center" onclick="exportarClientesPdf()">
+                                <i class="fa fa-file-pdf-o me-2"></i> Exportar PDF
+                            </button>
+                        </div>
+
+                     
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Alta/Edición (igual al tuyo, sin cambios de campos) -->
+<div class="modal fade" id="modalEdicion" tabindex="-1" role="dialog" aria-labelledby="modalEdicionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion" role="document">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">Nuevo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCliente" class="row g-3">
+                    <input type="text" id="txtId" hidden>
+
+                    <div class="col-md-3">
+                        <label for="txtNombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="txtNombre" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtTelefono" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="txtTelefono">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtTelefonoAlternativo" class="form-label">Teléfono Alternativo</label>
+                        <input type="text" class="form-control" id="txtTelefonoAlternativo">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtDni" class="form-label">DNI</label>
+                        <input type="text" class="form-control" id="txtDni">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtCuit" class="form-label">CUIT</label>
+                        <input type="text" class="form-control" id="txtCuit">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="cmbCondicionIva" class="form-label">Condición IVA</label>
+                        <select id="cmbCondicionIva" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="cmbListaPrecios" class="form-label">Lista de Precios</label>
+                        <select id="cmbListaPrecios" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtDomicilio" class="form-label">Domicilio</label>
+                        <input type="text" class="form-control" id="txtDomicilio">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="cmbProvincia" class="form-label">Provincia</label>
+                        <select id="cmbProvincia" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtLocalidad" class="form-label">Localidad</label>
+                        <input type="text" class="form-control" id="txtLocalidad">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="txtEmail">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtCodigoPostal" class="form-label">Código Postal</label>
+                        <input type="text" class="form-control" id="txtCodigoPostal">
+                    </div>
+
+                    <div id="errorCampos" class="alert alert-danger d-none col-12">
+                        Debes completar los campos obligatorios.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCambios()">
+                    <i class="fa fa-check"></i> Registrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <!-- jQuery (si ya lo carga el layout, no lo dupliques) -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <!-- DataTables núcleo -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <!-- Extensión Buttons (núcleo) -->
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+
+    <!-- Dependencias para BOTONES HTML5 -->
+    <!-- Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+
+    <!-- PDF (solo si usás pdfHtml5) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+
+    <!-- Implementaciones de botones HTML5 (excelHtml5 / pdfHtml5) -->
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+
+    <!-- Botón de impresión -->
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+
+    <!-- FixedHeader (como usás en Inventario/Clientes) -->
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+
+    <!-- (Opcional) jsPDF + AutoTable si además usás el botón externo de PDF tipo Inventario -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- utilidades del proyecto -->
+    <script src="~/js/site.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+
+    <!-- lógica Clientes -->
+    <script src="~/js/Clientes.js?v=2.1"></script>
+}

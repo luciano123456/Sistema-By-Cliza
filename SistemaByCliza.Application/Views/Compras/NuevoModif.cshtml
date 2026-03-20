@@ -1,0 +1,276 @@
+﻿@* =================== Views/Compras/NuevoModif.cshtml =================== *@
+@{
+    ViewData["Title"] = "Compra";
+    var id = Context.Request.Query["id"].ToString();
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <!-- Reutilizo el mismo CSS que Ventas para el look & feel -->
+    <link rel="stylesheet" href="~/css/VentasNuevoModif.css" />
+}
+
+<input type="hidden" id="txtId" value="@id" />
+
+<div class="container-fluid mt-4 venta-container-lg">
+
+    <div class="page-header rounded-3 p-4 mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0">Compra</h2>
+            <small class="text-muted">@(string.IsNullOrEmpty(id) ? "Nueva" : "Edición")</small>
+        </div>
+        <button class="btn btn-ghost" onclick="volverIndex()">
+            <i class="fa fa-arrow-left me-2"></i> Volver
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <!-- Izquierda -->
+        <div class="col-xxl-5 col-xl-6">
+            <div class="card-glass p-4 h-100">
+                <form id="formCompra" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="dtpFecha" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Proveedor</label>
+                        <select id="cmbProveedor" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Nota interna</label>
+                        <textarea id="txtNota" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div id="errorCamposCompra" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+
+                <div class="row mt-2 g-3">
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Subtotal</div>
+                            <div class="value" id="statSub">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Descuentos</div>
+                            <div class="value text-warning" id="statDesc">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">IVA</div>
+                            <div class="value" id="statIva">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Total</div>
+                            <div class="value text-success" id="statTotal">$ 0,00</div>
+                        </div>
+                    </div>
+
+                    <!-- Pagos -->
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Abonado</div>
+                            <div class="value" id="statAbonado">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Restante</div>
+                            <div class="value" id="statRestante">$ 0,00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-3">
+                    <button id="btnGuardarCompra" class="btn btn-primary btn-lg" type="button" onclick="guardarCompra()">
+                        <i class="fa fa-check me-1"></i> Registrar
+                    </button>
+                    <button type="button" class="btn btn-outline-light mt-2" id="btnExportarCompraPdf">
+                        <i class="fa fa-file-pdf-o me-1"></i> Exportar PDF
+                    </button>
+
+                    <button type="button" id="btnEliminarCompra" class="btn btn-danger mt-2 d-none" onclick="eliminarCompra()">
+                        <i class="fa fa-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Derecha -->
+        <div class="col-xxl-7 col-xl-6">
+            <div class="card-glass p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-puzzle-piece me-2 text-info"></i>Insumos</h5>
+                    <button class="btn btn-success btn-sm" type="button" onclick="abrirModalItem()">
+                        <i class="fa fa-plus"></i> Agregar Ítem
+                    </button>
+                </div>
+                <div class="tabla-wrap alto-productos">
+                    <table class="display nowrap compact" id="grd_Insumos" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Insumo</th>
+                                <th class="text-end">Cant</th>
+                                <th class="text-end">C.Unit</th>
+                                <th class="text-end">Desc%</th>
+                                <th class="text-end">IVA%</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-glass p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-wallet me-2 text-success"></i>Pagos</h5>
+                    <button class="btn btn-dark btn-sm" type="button" onclick="abrirModalPago()">
+                        <i class="fa fa-plus"></i> Registrar Pago
+                    </button>
+                </div>
+                <div class="tabla-wrap alto-pagos">
+                    <table class="display nowrap compact" id="grd_Pagos" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Fecha</th>
+                                <th>Cuenta</th>
+                                <th>Concepto</th>
+                                <th class="text-end">Importe</th>
+                                <th>Nota</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ítem -->
+<div class="modal fade" id="modalItem" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-cubes me-2 text-info"></i>Insumo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formItem" class="row g-3">
+                    <div class="col-xl-6">
+                        <label class="form-label">Insumo</label>
+                        <select id="cmbItemInsumo" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-6 col-xl-2">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" id="txtItemCant" class="form-control" value="1" min="0" step="1" />
+                    </div>
+                    <div class="col-6 col-xl-4">
+                        <label class="form-label">Costo Unitario</label>
+                        <input type="text" id="txtItemCosto" class="form-control" />
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <label class="form-label">% Desc</label>
+                        <input type="text" id="txtItemDesc" class="form-control" value="0" />
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <label class="form-label">% IVA</label>
+                        <input type="text" id="txtItemIva" class="form-control" value="21" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Subtotal calculado</label>
+                        <input type="text" id="txtItemSubtotal" class="form-control subtotal-preview" readonly />
+                    </div>
+                    <div id="errorCamposItem" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button class="btn btn-success" onclick="guardarItem()"><i class="fa fa-check me-1"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pago -->
+<div class="modal fade" id="modalPago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-plus-circle me-2 text-success"></i>Registrar Pago</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPago" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="dtpPagoFecha" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cuenta</label>
+                        <select id="cmbCuenta" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Importe</label>
+                        <input type="text" id="txtPagoImporte" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="txtPagoConcepto" class="form-control" value="PAGO COMPRA" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Nota</label>
+                        <input type="text" id="txtPagoNota" class="form-control" />
+                    </div>
+                </form>
+
+                <div id="errorCamposPago" class="alert alert-danger py-2 px-3 mt-2 d-none" role="alert">
+                    <i class="fa fa-exclamation-triangle me-1"></i>
+                    Debes completar los campos obligatorios.
+                </div>
+            </div>
+
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button class="btn btn-success" id="btnGuardarPago" onclick="guardarPago()"><i class="fa fa-check me-1"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+    <script src="~/js/ComprasNuevoModif.js?v=1.2"></script>
+}

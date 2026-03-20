@@ -1,0 +1,16 @@
+.select-checklist {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: .5rem;
+    max-height: 240px;
+    overflow: auto;
+    z-index: 1055;
+}
+
+    .select-checklist .form-check {
+        margin-bottom: .25rem;
+    }

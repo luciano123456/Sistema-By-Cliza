@@ -1,0 +1,523 @@
+﻿/* =========================================================
+   Cuentas Corrientes – Tema oscuro responsive (depurado)
+   ========================================================= */
+
+/* ---------- Tokens de color ---------- */
+:root {
+    --card: #121a2a;
+    --card2: #101726;
+    --muted: #9aa8c5;
+    --text: #e7ecff;
+    --primary: #7c5cff;
+    --primary2: #4fb4ff;
+    --green: #2ecc71;
+    --red: #ff5b6e;
+    --border: rgba(255,255,255,.08);
+    /* Campos de formulario (texto negro) */
+    --field-bg: #ffffff;
+    --field-text: #000000;
+    --field-border: #ced4da;
+    --field-focus-border: #4fb4ff;
+    --field-focus-ring: rgba(79,180,255,.25);
+}
+
+/* ---------- Utilidades ---------- */
+* {
+    letter-spacing: .2px
+}
+
+.fw-700 {
+    font-weight: 700
+}
+
+.fw-800 {
+    font-weight: 800
+}
+
+.text-muted-cc {
+    color: var(--muted) !important
+}
+
+/* ---------- Layout contenedor ---------- */
+.cc-container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    margin-top: 1.25rem;
+}
+
+@media (min-width: 576px) {
+    .cc-container {
+        padding: 0 1.25rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .cc-container {
+        padding: 0 2rem;
+    }
+}
+
+/* ---------- Header con totales ---------- */
+.cc-header {
+    width: 100%;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(90deg, rgba(124,92,255,.25), rgba(79,180,255,.2));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: .75rem;
+}
+
+    .cc-title h2, .cc-header h2 {
+        color: var(--text);
+        text-shadow: 0 2px 0 rgba(0,0,0,.25);
+    }
+
+.cc-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-grid;
+    place-items: center;
+    background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.06));
+    color: #fff;
+    font-size: 20px;
+    border: 1px solid var(--border);
+}
+
+.cc-stat {
+    min-width: 160px;
+    padding: .65rem .9rem;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    border: 1px solid var(--border);
+}
+
+    .cc-stat .label {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: .8rem;
+        text-transform: uppercase;
+    }
+
+    .cc-stat .value {
+        color: #fff;
+        font-size: 1.15rem;
+        font-weight: 800;
+    }
+
+@media (max-width: 576px) {
+    .cc-stat {
+        min-width: 100%;
+    }
+}
+
+/* ---------- Cards ---------- */
+.cc-card {
+    width: 100%;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 18px 45px rgba(0,0,0,.35);
+    min-height: 50vh;
+    overflow: hidden;
+}
+
+.cc-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    padding: .9rem 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: .75rem;
+}
+
+/* ---------- Buscador ---------- */
+.cc-search {
+    position: relative;
+    color: var(--muted);
+}
+
+    .cc-search i {
+        position: absolute;
+        left: .9rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .cc-search input {
+        background: var(--field-bg);
+        border: 1px solid var(--field-border);
+        color: var(--field-text);
+        padding: .5rem 1rem .5rem 2.5rem;
+        border-radius: 10px;
+        font-size: .95rem;
+    }
+
+        .cc-search input:focus {
+            outline: none;
+            border-color: var(--field-focus-border);
+            box-shadow: 0 0 0 3px var(--field-focus-ring);
+        }
+
+/* ---------- Panel de filtros ---------- */
+.filter-bar {
+    background: linear-gradient(180deg, rgba(79,180,255,.10), rgba(124,92,255,.08));
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 14px !important;
+    box-shadow: 0 12px 28px rgba(0,0,0,.25);
+    padding: .75rem;
+}
+
+    .filter-bar .form-label {
+        color: #c9d3f5;
+    }
+
+    /* Campos con texto negro (global) */
+    .form-control,
+    .form-select,
+    .filter-bar .form-control,
+    .filter-bar .form-select,
+    .cc-modal .form-control,
+    .cc-modal .form-select {
+     
+        color: var(--field-text);
+        border: 1px solid var(--field-border);
+    }
+
+        .form-control:focus,
+        .form-select:focus,
+        .filter-bar .form-control:focus,
+        .filter-bar .form-select:focus,
+        .cc-modal .form-control:focus,
+        .cc-modal .form-select:focus {
+            border-color: var(--field-focus-border);
+            box-shadow: 0 0 0 .2rem var(--field-focus-ring);
+        }
+
+/* Placeholder legible con fondo claro */
+::placeholder {
+    color: #6b7280;
+    opacity: 1;
+}
+
+/* ---------- DataTables ---------- */
+.dataTables_wrapper {
+    color: var(--text);
+}
+
+    .dataTables_wrapper .dataTables_scrollHead {
+        border-bottom: 1px solid var(--border);
+        margin-bottom: .75rem;
+    }
+
+/* Encabezado Clientes */
+#grd_Proveedores thead th {
+    background: linear-gradient(180deg, rgba(124,92,255,.18), rgba(79,180,255,.12)) !important;
+    color: #e7ecff;
+    font-weight: 800;
+    letter-spacing: .4px;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+/* Head común */
+table.dataTable thead th {
+    background: transparent !important;
+    border-bottom: none !important;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+table.dataTable {
+    border-bottom: none !important;
+}
+
+    /* Celdas cómodas */
+    table.dataTable.compact tbody td,
+    table.dataTable.compact tbody th {
+        padding: 12px 12px;
+    }
+
+    /* Ocultar caret de sort por defecto */
+    table.dataTable thead .sorting,
+    table.dataTable thead .sorting_asc,
+    table.dataTable thead .sorting_desc {
+        background-image: none !important;
+    }
+
+/* Scrolls adaptables */
+#grd_Proveedores_wrapper .dataTables_scrollBody {
+    max-height: 60vh !important;
+}
+
+#grd_Movimientos_wrapper .dataTables_scrollBody {
+    max-height: 64vh !important;
+}
+
+/* Contenedores de tablas responsivas: permiten deslizar en X */
+.table-responsive-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+    .table-responsive-wrap table {
+        min-width: 720px;
+    }
+/* evita colapsos de columnas en móvil */
+
+/* ---------- Clientes: selección ---------- */
+#grd_Proveedores tbody tr {
+    cursor: pointer;
+    transition: background-color .2s;
+}
+
+    #grd_Proveedores tbody tr:hover {
+        background-color: rgba(255,255,255,.05);
+    }
+
+    #grd_Proveedores tbody tr.selected,
+    #grd_Proveedores tbody tr.selected td {
+        background: linear-gradient(90deg, #1e3a8a, #1d4ed8) !important;
+        color: #fff !important;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+/* ---------- Botones ---------- */
+.btn-ghost {
+    background-color: rgba(255,255,255,.08);
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: all .2s;
+}
+
+    .btn-ghost:hover {
+        background-color: rgba(255,255,255,.15);
+        color: var(--text);
+        border-color: var(--primary2);
+    }
+
+.btn-success {
+    background-color: var(--green);
+    border-color: var(--green);
+    color: #fff;
+}
+
+.btn-dark {
+    background-color: #0b1223;
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.btn-outline-secondary {
+    color: var(--muted);
+    border-color: var(--muted);
+}
+
+.btn-primary {
+    background-color: var(--primary2);
+    border-color: var(--primary2);
+    color: #0b1223;
+}
+
+.btn-export {
+    border: 1px solid rgba(255,255,255,.15);
+}
+
+/* ---------- Acciones inferiores ---------- */
+.cc-footer-actions {
+    display: flex;
+    gap: .75rem;
+    justify-content: flex-end;
+    align-items: center;
+    position: static;
+    margin-top: 10px;
+}
+
+/* ---------- Icono por fila ---------- */
+.btn-row-icon {
+    background: transparent;
+    border: none;
+    color: #9aa8c5;
+    padding: 0 .35rem;
+    cursor: pointer;
+}
+
+    .btn-row-icon:hover {
+        color: #4fb4ff;
+    }
+
+/* ---------- Modal ---------- */
+.cc-modal .modal-content {
+    background: var(--card);
+    color: #e5e7eb;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+/* Modal responsive */
+.modal-dialog {
+    max-width: 95vw;
+    margin: 1rem auto;
+}
+
+@media (min-width: 576px) {
+    .modal-dialog {
+        max-width: 540px;
+    }
+}
+
+@media (min-width: 768px) {
+    .modal-dialog {
+        max-width: 680px;
+    }
+}
+
+@media (min-width: 992px) {
+    .modal-dialog {
+        max-width: 760px;
+    }
+}
+
+/* Fila “Impacta caja” que puede ocultarse */
+#rowCuentaCaja {
+    display: none;
+}
+
+/* Resumen debajo del select (opcional) */
+#impactaCajaResumen {
+    font-size: .9rem;
+    color: var(--muted);
+    margin-top: .25rem;
+}
+
+/* ---------- Validación ---------- */
+.is-invalid {
+    border-color: var(--red) !important;
+    box-shadow: 0 0 0 .2rem rgba(255,91,110,.15) !important;
+}
+
+.invalid-hint {
+    color: #ff6b7a;
+    font-size: .85rem;
+}
+
+/* ---------- Helpers de ancho ---------- */
+.min-col-fecha {
+    min-width: 120px;
+}
+
+.min-col-wide {
+    min-width: 160px;
+}
+
+.min-col-xwide {
+    min-width: 240px;
+}
+
+.min-col-sucursal {
+    min-width: 140px;
+}
+
+/* ---------- Scrollbars ---------- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--card2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.15);
+    border-radius: 10px;
+}
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,.25);
+    }
+
+/* ---------- Ajustes extra para pantallas chicas ---------- */
+@media (max-width: 576px) {
+    .cc-card-head {
+        gap: .5rem;
+        padding: .75rem;
+    }
+
+    .cc-header {
+        border-radius: 16px;
+    }
+
+    .cc-badge {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .cc-stat {
+        padding: .6rem .8rem;
+    }
+
+    .cc-search input {
+        font-size: .9rem;
+    }
+    /* Hacer los inputs/select full width por defecto dentro de filtros y modales */
+    .filter-bar .form-control,
+    .filter-bar .form-select,
+    .cc-modal .form-control,
+    .cc-modal .form-select {
+        width: 100%;
+    }
+    /* tablas: contenedor scrollable */
+    .table-responsive-wrap {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ---------- Contenedor de tablas por si no usás un div envolvente ---------- */
+#grd_Proveedores_wrapper,
+#grd_Movimientos_wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.container {
+    min-width: 99% !important;
+}
+
+/* Detalle (cajas) */
+.cc-detail {
+    background: #0b1223;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    padding: 1rem 1.25rem
+}
+
+    .cc-detail .label {
+        color: #9aa8c5;
+        font-weight: 600;
+        font-size: .85rem
+    }
+
+    .cc-detail .val {
+        color: #e7ecff;
+        font-weight: 700
+    }
+
+
+
+
+
+
+
+
+
+
+
+

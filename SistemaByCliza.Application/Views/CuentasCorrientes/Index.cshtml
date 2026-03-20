@@ -1,0 +1,242 @@
+﻿@{
+    ViewData["Title"] = "Cuentas Corrientes";
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/CuentasCorrientes.css" rel="stylesheet" />
+}
+
+<div class="container cc-container px-4" style="margin-top: 100px">
+    <!-- Header totales -->
+    <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <span class="cc-badge"><i class="fa fa-bolt"></i></span>
+                <div>
+                    <h2 class="m-0 fw-800">Cuentas Corrientes</h2>
+                    <small class="text-muted-cc">Clientes &amp; Movimientos</small>
+                </div>
+            </div>
+
+            <div class="ms-auto d-flex gap-3 flex-wrap">
+                <div class="cc-stat"><div class="label">Debe</div><div class="value" id="totDebe">–</div></div>
+                <div class="cc-stat"><div class="label">Haber</div><div class="value" id="totHaber">–</div></div>
+                <div class="cc-stat"><div class="label">Saldo</div><div class="value" id="totSaldo">–</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout 3/9 -->
+    <div class="row g-4">
+        <!-- CLIENTES -->
+        <div class="col-12 col-lg-3">
+            <div class="cc-card h-100">
+                <div class="cc-card-head">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa fa-users text-primary"></i><span class="fw-700">Clientes</span>
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center gap-3 flex-wrap">
+                        <label class="form-check d-flex align-items-center gap-2 m-0">
+                            <input type="checkbox" id="chkSaldoActivo" class="form-check-input">
+                            <span>Saldo Activo</span>
+                        </label>
+                        <div class="cc-search">
+                            <i class="fa fa-search"></i>
+                            <input type="text" id="buscarClientes" placeholder="Buscar por nombre…">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 pt-0">
+                    <table id="grd_Clientes" class="display compact nowrap w-100">
+                        <thead>
+                            <tr><th>Nombre</th><th>Saldo</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOVIMIENTOS -->
+        <div class="col-12 col-lg-9">
+            <div class="cc-card h-100 d-flex flex-column">
+                <div class="cc-card-head flex-wrap w-100">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa fa-exchange text-success"></i><span class="fw-700">Movimientos</span>
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+                        <button class="btn btn-ghost btn-sm d-flex align-items-center" type="button" id="btnToggleFiltros">
+                            <i id="iconFiltros" class="fa fa-arrow-up me-2"></i> Filtros
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-ghost btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fa fa-cog"></i> Config. columnas
+                            </button>
+                            <ul id="configColumnasMenu" class="dropdown-menu dropdown-menu-end p-2"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <form id="formFiltros" class="filter-bar shadow-sm rounded-3 mb-3 mx-3 p-3 d-none">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6 col-md-2">
+                            <label class="form-label">Desde</label>
+                            <input type="date" id="fltDesde" class="form-control">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label">Hasta</label>
+                            <input type="date" id="fltHasta" class="form-control">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label">Sucursal</label>
+                            <select id="fltSucursal" class="form-select"><option value="">Todas</option></select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Texto</label>
+                            <input type="text" id="fltTexto" class="form-control" placeholder="Concepto…">
+                        </div>
+                        <div class="col-12 col-md-3 d-flex gap-2 mt-2">
+                            <button type="button" id="btnBuscar" class="btn btn-primary flex-fill"><i class="fa fa-search me-1"></i> Buscar</button>
+                            <button type="button" id="btnLimpiar" class="btn btn-outline-secondary"><i class="fa fa-eraser me-1"></i> Limpiar</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Tabla -->
+                <div class="p-3 pt-0 flex-grow-1 d-flex flex-column dt-dark-wrap">
+                    <table class="dt-dark display nowrap" id="grd_Movimientos" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Concepto</th>
+                                <th>Debe</th>
+                                <th>Haber</th>
+                                <th>Saldo</th>
+                                <th>Sucursal</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="cc-footer-actions">
+        <button id="btnExportarPdf" class="btn btn-dark btn-export"><i class="fa fa-file-pdf-o"></i> Exportar PDF</button>
+        <button id="btnNuevo" class="btn btn-success"><i class="fa fa-plus"></i> Nuevo cobro</button>
+    </div>
+</div>
+
+<!-- Modal COBRO (manual) -->
+<div class="modal fade cc-modal" id="modalMovimiento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-plus-circle text-success"></i> Nuevo cobro</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formMovimiento" class="row g-3 needs-validation" novalidate>
+                    <input id="movId" type="hidden">
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha *</label>
+                        <input type="date" id="movFecha" class="form-control" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sucursal *</label>
+                        <select id="movSucursal" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cuenta de caja *</label>
+                        <select id="movCuentaCaja" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Importe *</label>
+                        <input type="text" id="movImporte" class="form-control Inputmiles" placeholder="0,00" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Concepto *</label>
+                        <input type="text" id="movConcepto" class="form-control" placeholder="Ej.: Cobro en efectivo" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div id="errorMov" class="alert alert-danger d-none col-12">
+                        Completá los campos obligatorios.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cancelar</button>
+                <button id="btnEliminarMov" class="btn btn-danger d-none"><i class="fa fa-trash"></i> Eliminar</button>
+                <button id="btnGuardarMov" class="btn btn-success"><i class="fa fa-check"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal DETALLE -->
+<div class="modal fade cc-modal" id="modalDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-eye"></i> Detalle del movimiento</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 cc-detail">
+                    <div class="col-6"><div class="label">Fecha</div><div id="detFecha" class="val"></div></div>
+                    <div class="col-6"><div class="label">Tipo</div><div id="detTipo" class="val"></div></div>
+                    <div class="col-12"><div class="label">Concepto</div><div id="detConcepto" class="val"></div></div>
+                    <div class="col-6"><div class="label">Sucursal</div><div id="detSucursal" class="val"></div></div>
+                    <div class="col-3"><div class="label">Debe</div><div id="detDebe" class="val"></div></div>
+                    <div class="col-3"><div class="label">Haber</div><div id="detHaber" class="val"></div></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <a id="btnIrVenta" class="btn btn-primary d-none"><i class="fa fa-external-link"></i> Ver detalle</a>
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-check"></i> Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+
+    <script src="~/js/site.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="~/js/CuentasCorrientes.js?v=1.2"></script>
+}

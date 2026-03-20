@@ -1,0 +1,148 @@
+﻿.modal-transferencia {
+    max-width: 550px; /* o lo que necesites */
+}
+
+.is-invalid {
+    border-color: red !important;
+    box-shadow: 0 0 5px red;
+}
+
+
+.invalid-feedback {
+    display: none;
+    color: #dc3545;
+    font-size: 0.875em;
+}
+
+.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+
+
+.alert-validacion {
+    background-color: rgba(240, 240, 240, 0.9); /* gris claro con transparencia */
+    border: 1px solid rgba(180, 180, 180, 0.7);
+    padding: 10px 15px;
+    border-radius: 8px;
+    color: #b30000;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 10px;
+    transition: all 0.3s ease-in-out;
+}
+
+input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+    box-shadow: 0 0 0px 1000px white inset !important;
+    caret-color: #000;
+    color: #000 !important;
+}
+
+
+
+
+.form-control-sm {
+    height: 30px;
+    padding: 2px 8px;
+    font-size: 0.875rem;
+}
+
+
+
+.modal-edicion {
+    max-width: 60%; /* o lo que necesites */
+}
+
+
+@media (max-width: 1300px) {
+    .modal-edicion {
+        max-width: 80%; /* o lo que necesites */
+    }
+}
+
+@media (max-width: 900px) {
+    .modal-edicion {
+        max-width: 98%; /* o lo que necesites */
+    }
+}
+
+
+.transfer-header {
+    background: linear-gradient(135deg, #3b82f6, #1f2937);
+    color: #fff;
+    border-top-left-radius: 1rem !important;
+    border-top-right-radius: 1rem !important;
+}
+
+#modalTransfer .form-label {
+    font-weight: 600;
+}
+
+#modalTransfer .valid-indicator {
+    background: #16a34a;
+    color: #fff;
+}
+
+#modalTransfer .select2-container--default .select2-selection--single {
+    height: 38px;
+    padding: 4px 8px;
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+}
+
+    #modalTransfer .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 28px;
+    }
+
+    #modalTransfer .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+
+/* Header degradé del modal */
+.transfer-header {
+    background: linear-gradient(135deg, #1f68d1, #6a88ff);
+    color: #fff;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+}
+
+/* Panel suave para “Historial entre estas cuentas” */
+.panel-soft {
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    background: rgba(255,255,255,.02);
+    box-shadow: 0 8px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.05);
+    overflow: hidden;
+}
+
+.panel-soft__header {
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    padding: .65rem .9rem;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    display: flex;
+    align-items: center;
+}
+
+.panel-soft__body {
+    padding: .75rem;
+}
+
+
+
+/* Fila especial de saldo anterior */
+.saldo-anterior-row td {
+    background: #f2fbf5 !important; /* verdoso muy suave */
+    border-top: 2px solid #d3f0da;
+    border-bottom: 2px solid #d3f0da;
+}
+
+.saldo-anterior-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-size: 0.95rem;
+}
+
+.saldo-anterior-row .badge.bg-success {
+    font-weight: 600;
+}

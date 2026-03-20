@@ -1,0 +1,442 @@
+﻿@{
+    ViewData["Title"] = "Inventario";
+}
+
+@section Estilos {
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
+
+    <!-- Select2 / Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+
+    <!-- Estilos del módulo -->
+    <link rel="stylesheet" href="~/css/Inventario.css?v=1.7" />
+}
+
+<div class="container page-99" style="margin-top: 100px">
+
+    <!-- Header -->
+    <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <span class="cc-badge"><i class="fa fa-cubes"></i></span>
+                <div>
+                    <h2 class="m-0 fw-800">Inventario</h2>
+                    <small class="text-muted-cc">Stocks, Movimientos y Transferencias</small>
+                </div>
+            </div>
+
+            <div class="ms-auto d-flex gap-3 flex-wrap">
+                <div class="cc-stat">
+                    <div class="label">Stock actual</div>
+                    <div class="value" id="kpiStockTotal">0</div>
+                </div>
+                <div class="cc-stat">
+                    <div class="label">Entradas (período)</div>
+                    <div class="value" id="kpiEntradas">0</div>
+                </div>
+                <div class="cc-stat">
+                    <div class="label">Salidas (período)</div>
+                    <div class="value" id="kpiSalidas">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- IZQUIERDA: Variantes -->
+        <div class="col-xxl-4 col-lg-4">
+            <div class="card-glass p-0">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center"><i class="fa fa-tags text-info me-2"></i> <span>Variantes</span></div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="chkSoloStock">
+                        <label class="form-check-label small" for="chkSoloStock">Solo con stock</label>
+                    </div>
+                </div>
+                <div class="p-3 pb-2">
+                    <input type="text" id="txtBuscarProd" class="form-control" placeholder="Buscar variante (producto/color/talle)..." />
+                </div>
+                <div class="p-2">
+                    <label class="form-label">Sucursal</label>
+                    <select id="fltSucursal" class="form-select">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="product-list" id="lstProductos"></div>
+            </div>
+        </div>
+
+        <!-- DERECHA: Grilla de movimientos -->
+        <div class="col-xxl-8 col-lg-8">
+            <div class="card-glass p-3">
+                <div class="tabla-wrap position-relative">
+                    <div class="tabla-controls-top d-flex gap-2">
+                        <button class="btn btn-outline-primary d-flex align-items-center" id="btnToggleFiltros" type="button">
+                            <i class="fa fa-arrow-up me-2" id="iconFiltros"></i> Filtros
+                        </button>
+
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" type="button" id="btnConfigCols"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa fa-cog me-2"></i> Config. Columnas
+                            </button>
+                            <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Panel de filtros -->
+                    <form id="formFiltros" class="filter-bar shadow-sm rounded-3 mb-3 p-3 d-none">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Desde</label>
+                                <input type="date" id="fltDesde" class="form-control">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Hasta</label>
+                                <input type="date" id="fltHasta" class="form-control">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Sucursal</label>
+                                <select id="fltSucursalTop" class="form-select">
+                                    <option value="">Todas</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3 d-flex gap-2">
+                                <button type="button" id="btnBuscar" class="btn btn-primary flex-fill">
+                                    <i class="fa fa-search me-1"></i> Buscar
+                                </button>
+                                <button type="button" id="btnLimpiar" class="btn btn-outline-secondary">
+                                    <i class="fa fa-eraser me-1"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="dt-dark-wrap">
+                        <table class="dt-dark  display nowrap compact " id="grd_Movs">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Producto</th>
+                                    <th>Talle</th>
+                                    <th>Color</th>
+                                    <th>Concepto</th>
+                                    <th class="text-end">Entrada</th>
+                                    <th class="text-end">Salida</th>
+                                    <th class="text-end">Stock</th>
+                                    <th>Sucursal</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="tabla-footer d-flex align-items-center justify-content-between">
+                        <div class="left">
+                            <button class="btn btn-outline-info d-flex align-items-center" id="btnExportPdf" type="button">
+                                <i class="fa fa-file-pdf-o me-2"></i> Exportar PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="acciones-externas d-flex justify-content-end mt-3 gap-2 flex-wrap">
+                <button class="btn btn-success" id="btnAjuste" type="button">
+                    <i class="fa fa-balance-scale"></i> Ajuste de inventario
+                </button>
+                <button class="btn btn-purple" id="btnTransfer" type="button">
+                    <i class="fa fa-exchange"></i> Nueva transferencia
+                </button>
+                <button class="btn btn-primary" id="btnIngresoOC" type="button">
+                    <i class="fa fa-plus-square"></i> Nuevo ingreso OC
+                </button>
+                <button class="btn btn-outline-danger" id="btnRevertOC" type="button">
+                    <i class="fa fa-undo"></i> Revertir ingreso OC
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Ajuste de inventario -->
+<div class="modal fade" id="modalAjuste" tabindex="-1" role="dialog" aria-labelledby="modalAjusteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion" role="document">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalAjusteLabel">
+                    <i class="fa fa-balance-scale me-2"></i> Ajuste de inventario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAjuste" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="ajFecha" class="form-control" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal</label>
+                        <select id="ajSucursal" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tipo</label>
+                        <select id="ajTipo" class="form-control" required>
+                            <option value="ENTRADA">ENTRADA</option>
+                            <option value="SALIDA">SALIDA</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label">Producto</label>
+                        <select id="ajProducto" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cantidad</label>
+                        <input type="text" id="ajCantidad" class="form-control Inputmiles p-1" readonly value="0">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-2">
+                            <h6 class="mb-0"><i class="fa fa-tags text-info me-2"></i> Variantes del producto</h6>
+                            <small class="text-muted ms-2">(Si cargás cantidades por variante, se usa la suma y se bloquea la cantidad general)</small>
+                        </div>
+                        <div id="ajVariantesWrap" class="variantes-wrap"></div>
+                        <div id="ajVariantesEmpty" class="alert alert-secondary py-2 mt-2 d-none">
+                            Este producto no tiene variantes definidas.
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Nota</label>
+                        <input type="text" id="ajNota" class="form-control" placeholder="AJUSTE MANUAL (...)">
+                    </div>
+
+                    <div id="errorAjuste" class="alert alert-danger d-none col-12">
+                        Debes completar los campos requeridos
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" class="btn btn-success" id="btnGuardarAjuste">
+                    <i class="fa fa-check"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Transferencia -->
+<div class="modal fade" id="modalTransfer" tabindex="-1" role="dialog" aria-labelledby="modalTransferLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion" role="document">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalTransferLabel">
+                    <i class="fa fa-exchange me-2"></i> Nueva transferencia
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formTransfer" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="trFecha" class="form-control" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal Origen</label>
+                        <select id="trOrigen" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal Destino</label>
+                        <select id="trDestino" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label">Producto</label>
+                        <select id="trProducto" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nota</label>
+                        <input type="text" id="trNota" class="form-control" placeholder="Transferencia entre Sucursales">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-2">
+                            <h6 class="mb-0"><i class="fa fa-tags text-info me-2"></i> Variantes a transferir</h6>
+                            <small class="text-muted ms-2">(Ingresá cantidades por variante)</small>
+                        </div>
+                        <div id="trVariantesWrap" class="variantes-wrap"></div>
+                        <div id="trVariantesEmpty" class="alert alert-secondary py-2 mt-2 d-none">
+                            Este producto no tiene variantes definidas.
+                        </div>
+                    </div>
+
+                    <div id="errorTransfer" class="alert alert-danger d-none col-12">
+                        Debes completar los campos requeridos
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" class="btn btn-primary" id="btnGuardarTransfer">
+                    <i class="fa fa-check"></i> Transferir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Nuevo ingreso OC -->
+<div class="modal fade" id="modalIngresoOC" tabindex="-1" role="dialog" aria-labelledby="modalIngresoOCLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion" role="document">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalIngresoOCLabel">
+                    <i class="fa fa-plus-square me-2"></i> Nuevo ingreso por Orden de Corte
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formIngresoOC" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="ocFecha" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal</label>
+                        <select id="ocSucursal" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Orden de Corte</label>
+                        <select id="ocNumero" class="form-control" required></select>
+                        <small class="text-muted">Solo se listan OC <strong>Finalizado</strong> y sin ingreso.</small>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Nota</label>
+                        <input type="text" id="ocNota" class="form-control" placeholder="Ingreso por OC">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-2">
+                            <h6 class="mb-0"><i class="fa fa-tags text-info me-2"></i> Variantes de la OC</h6>
+                            <small class="text-muted ms-2">(Cargá las cantidades a ingresar)</small>
+                        </div>
+                        <div id="ocVariantesWrap" class="variantes-wrap"></div>
+                        <div id="ocVariantesEmpty" class="alert alert-secondary py-2 mt-2 d-none">
+                            Sin variantes para la OC indicada.
+                        </div>
+                    </div>
+
+                    <div id="errorIngresoOC" class="alert alert-danger d-none col-12">
+                        Debes completar los campos requeridos
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" class="btn btn-primary" id="btnGuardarIngresoOC">
+                    <i class="fa fa-check"></i> Ingresar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Revertir ingreso OC -->
+<div class="modal fade" id="modalRevertOC" tabindex="-1" role="dialog" aria-labelledby="modalRevertOCLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion" role="document">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalRevertOCLabel">
+                    <i class="fa fa-undo me-2"></i> Revertir ingreso por Orden de Corte
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formRevertOC" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Sucursal</label>
+                        <select id="rvSucursal" class="form-control" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Orden de Corte</label>
+                        <select id="rvNumero" class="form-control" required></select>
+                        <small class="text-muted">Se listan las OC con ingreso en la sucursal seleccionada.</small>
+                    </div>
+                    <div id="errorRevertOC" class="alert alert-danger d-none col-12">
+                        Debes completar los campos requeridos
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="btnConfirmRevertOC">
+                    <i class="fa fa-undo"></i> Revertir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <!-- libs -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+
+    <!-- Select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- jsPDF -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- utilidades del proyecto -->
+    <script src="~/js/site.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+
+    <!-- lógica -->
+    <script src="~/js/Inventario.js?v=2.1"></script>
+}

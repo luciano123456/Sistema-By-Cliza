@@ -1,0 +1,168 @@
+﻿@{
+    ViewData["Title"] = "Insumos";
+}
+
+@section Estilos {
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <!-- Estilos base del proyecto -->
+    <link href="~/css/usuarios.css" rel="stylesheet" />
+}
+
+<div class="container page-99" style="margin-top: 100px">
+    <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <span class="cc-badge"><i class="fa fa-cubes"></i></span>
+                <div>
+                    <h2 class="m-0 fw-800">Insumos</h2>
+                    <small class="text-muted-cc">Catálogo de insumos</small>
+                </div>
+            </div>
+
+            <div class="ms-auto d-flex gap-3 flex-wrap">
+                <div class="cc-stat">
+                    <div class="label">Total insumos</div>
+                    <div class="value kpi-azul" id="kpiCantInsumos">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card-glass p-3">
+                <div class="tabla-wrap position-relative">
+                    <div class="tabla-controls-top d-flex gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" type="button" id="btnConfigCols"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa fa-cog me-2"></i> Config. Columnas
+                            </button>
+                            <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="nuevoInsumo()">
+                            <i class="fa fa-plus me-1"></i> Nuevo
+                        </button>
+                    </div>
+
+                    <div class="dt-dark-wrap">
+                        <table class="dt-dark display nowrap compact" id="grd_Insumos" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>                <!-- Acciones -->
+                                    <th>Código</th>          <!-- 1 -->
+                                    <th>Descripción</th>     <!-- 2 -->
+                                    <th>Categoría</th>       <!-- 3 -->
+                                    <th>Proveedor</th>       <!-- 4 -->
+                                    <th>Costo</th>           <!-- 5 -->
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="tabla-footer d-flex align-items-center justify-content-between">
+                        <div></div>
+                        <div class="acciones-externas d-flex justify-content-end mt-2 gap-2"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Crear/Editar Insumo -->
+<div class="modal fade" id="modalEdicion" tabindex="-1" aria-labelledby="modalEdicionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion modal-lg">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">Nuevo Insumo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formInsumo" class="row g-3">
+                    <input type="text" id="txtId" hidden>
+
+                    <div class="col-md-3">
+                        <label for="txtCodigo" class="form-label">Código</label>
+                        <input type="text" class="form-control" id="txtCodigo" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label for="txtDescripcion" class="form-label">Descripción</label>
+                        <input type="text" class="form-control" id="txtDescripcion" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="cmbCategoria" class="form-label">Categoría</label>
+                        <select id="cmbCategoria" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="cmbProveedor" class="form-label">Proveedor</label>
+                        <select id="cmbProveedor" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtCosto" class="form-label">Costo Unitario</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="txtCosto" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div id="errorCampos" class="alert alert-danger d-none col-12">
+                        Debes completar los campos obligatorios.
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCambios()">
+                    <i class="fa fa-check"></i> Registrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+
+    <!-- Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+
+    <!-- Utils del proyecto -->
+    <script src="~/js/site.js"></script>
+
+    <!-- Lógica Insumos -->
+    <script src="~/js/Insumos.js?v=1.0"></script>
+}

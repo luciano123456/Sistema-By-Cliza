@@ -1,0 +1,445 @@
+﻿@{
+    ViewData["Title"] = "Orden de Corte";
+    var id = Context.Request.Query["id"].ToString();
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="~/css/VentasNuevoModif.css" />
+    <style>
+        /* --- Anchos de modales (como ventas) --- */
+        #modalProducto .modal-dialog {
+            max-width: 1000px;
+        }
+
+        #modalInsumo .modal-dialog {
+            max-width: 800px;
+        }
+
+        #modalEtapa .modal-dialog {
+            max-width: 960px;
+        }
+
+        /* Editables vs Auto-calculados */
+        .auto-field {
+            background: rgba(255,255,255,.06) !important;
+            color: #b7c0cd !important;
+            pointer-events: none;
+        }
+
+        .editable-field {
+            background: rgba(0,123,255,.08) !important;
+        }
+
+        .bg-disabled {
+            background: rgba(255,255,255, .03) !important;
+        }
+
+        .var-row {
+            display: grid;
+            grid-template-columns: 1fr 120px;
+            gap: .75rem;
+            align-items: center;
+            padding: .35rem 0;
+            border-bottom: 1px solid rgba(255,255,255,.05)
+        }
+
+            .var-row:last-child {
+                border-bottom: none
+            }
+
+        .stat-card .label {
+            font-size: .85rem;
+            opacity: .7
+        }
+
+        .stat-card .value {
+            font-weight: 700;
+            font-size: 1.15rem
+        }
+    </style>
+}
+
+<input type="hidden" id="txtId" value="@id" />
+
+<div class="container-fluid mt-4 venta-container-lg">
+    <div class="page-header rounded-3 p-4 mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0">Orden de Corte</h2>
+            <small class="text-muted">@(string.IsNullOrEmpty(id) ? "Nueva" : "Edición")</small>
+        </div>
+        <button class="btn btn-ghost" onclick="volverIndexOC()">
+            <i class="fa fa-arrow-left me-2"></i> Volver
+        </button>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Cabecera -->
+        <div class="col-xxl-5 col-xl-6">
+            <div class="card-glass p-4 h-100">
+                <form id="formOC" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha inicio</label>
+                        <input type="date" id="dtpFechaInicio" class="form-control editable-field" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <select id="cmbEstado" class="form-select editable-field" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label">Personal responsable</label>
+                        <select id="cmbPersonal" class="form-select editable-field" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">A producir</label>
+                        <!-- AUTO: suma de productos/variantes -->
+                        <input type="text" id="txtCantAProducir" class="form-control auto-field" value="0" readonly />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Producidas</label>
+                        <!-- EDITABLE: el usuario puede cargar lo producido del corte -->
+                        <input type="text" id="txtCantProducidas" class="form-control Inputmiles editable-field" value="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Corte Δ</label>
+                        <!-- AUTO: A producir - Producidas -->
+                        <input type="text" id="txtDifCorte" class="form-control auto-field" value="0" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Final real</label>
+                        <!-- AUTO: Cant. producida de la última etapa -->
+                        <input type="text" id="txtCantFinalReal" class="form-control auto-field" value="0" readonly />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Final Δ</label>
+                        <!-- AUTO: A producir - Final real -->
+                        <input type="text" id="txtDifFinalReal" class="form-control auto-field" value="0" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Largo tizada</label>
+                        <input type="text" id="txtLargo" class="form-control Inputmiles editable-field" value="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Ancho tizada</label>
+                        <input type="text" id="txtAncho" class="form-control Inputmiles editable-field" value="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Capas</label>
+                        <input type="text" id="txtCapas" class="form-control Inputmiles editable-field" value="0" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Hora inicio corte</label>
+                        <input type="time" id="txtHoraIni" class="form-control editable-field" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Hora fin corte</label>
+                        <input type="time" id="txtHoraFin" class="form-control editable-field" />
+                    </div>
+
+                    <div id="errorCamposOC" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+
+                <div class="row mt-2 g-3">
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">A producir</div>
+                            <div class="value" id="statAProd">0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Producidas</div>
+                            <div class="value" id="statProd">0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Δ Corte</div>
+                            <div class="value" id="statDifCorte">0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Δ Final</div>
+                            <div class="value" id="statDifFinal">0,00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-3">
+                    <button id="btnGuardarOC" class="btn btn-primary btn-lg" type="button" onclick="guardarOC()">
+                        <i class="fa fa-check me-1"></i> Registrar
+                    </button>
+                    <button type="button" class="btn btn-outline-light mt-2" onclick="exportarOCPdf()">
+                        <i class="fa fa-file-pdf-o me-1"></i> Exportar PDF
+                    </button>
+                    <button type="button" id="btnEliminarOC" class="btn btn-danger mt-2 d-none" onclick="eliminarOC()">
+                        <i class="fa fa-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Derecha: Productos / Insumos / Etapas -->
+        <div class="col-xxl-7 col-xl-6">
+
+            <!-- Productos -->
+            <div class="card-glass p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-cubes me-2 text-info"></i>Productos</h5>
+                    <button class="btn btn-dark btn-sm" type="button" onclick="abrirModalProducto()">
+                        <i class="fa fa-plus"></i> Agregar producto
+                    </button>
+                </div>
+                <div class="tabla-wrap">
+                    <table class="display nowrap compact" id="grd_Productos" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Producto</th>
+                                <th>Variantes</th>
+                                <th class="text-center">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Insumos -->
+            <div class="card-glass p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-wrench me-2 text-success"></i>Insumos</h5>
+                    <button class="btn btn-dark btn-sm" type="button" onclick="abrirModalInsumo()">
+                        <i class="fa fa-plus"></i> Agregar Insumo
+                    </button>
+                </div>
+                <div class="tabla-wrap alto-insumos">
+                    <table class="display nowrap compact" id="grd_Insumos" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Insumo</th>
+                                <th class="text-center">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Etapas -->
+            <div class="card-glass p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-tasks me-2 text-warning"></i>Etapas</h5>
+                    <button class="btn btn-dark btn-sm" type="button" onclick="abrirModalEtapa()">
+                        <i class="fa fa-plus"></i> Agregar Etapa
+                    </button>
+                </div>
+                <div class="tabla-wrap alto-etapas">
+                    <table class="display nowrap compact" id="grd_Etapas" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Taller</th>
+                                <th>Entrada</th>
+                                <th>Salida aprox.</th>
+                                <th>Salida real</th>
+                                <th class="text-center">Días reales</th>
+                                <th class="text-center">A prod.</th>
+                                <th class="text-center">Prod.</th>
+                                <th class="text-center">Δ</th>
+                                <th>Estado</th>
+                            
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal Producto -->
+<div class="modal fade modal-dark" id="modalProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-cubes me-2 text-info"></i>Producto</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3">
+                    <div class="col-8">
+                        <label class="form-label">Producto</label>
+                        <select id="cmbProdModal" class="form-select editable-field">
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Cantidad</label>
+                        <input type="text" id="txtProdCantModal" class="form-control Inputmiles editable-field" value="1" />
+                        <small id="qtyLockHint" class="text-info d-block mt-1" hidden></small>
+                    </div>
+
+                    <div id="variantesContainer" class="col-12" style="display:none;">
+                        <label class="form-label d-flex align-items-center gap-2"><i class="fa fa-tags text-info"></i> Variantes</label>
+                        <div id="variantesWrap" class="variantes-wrap"></div>
+                        <div id="variantesEmpty" class="alert alert-secondary py-2 mt-2" hidden>Este producto no tiene variantes definidas.</div>
+                    </div>
+
+                    <div id="errorCamposItem" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button id="btnGuardarProducto" class="btn btn-success" onclick="guardarProducto()"><i class="fa fa-check me-1"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Insumo -->
+<div class="modal fade modal-dark" id="modalInsumo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-wrench me-2 text-success"></i>Insumo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Insumo</label>
+                        <select id="cmbInsumo" class="form-select editable-field" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cantidad</label>
+                        <input type="text" id="txtInsumoCant" class="form-control Inputmiles editable-field" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div id="errorCamposInsumo" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button id="btnGuardarInsumo" class="btn btn-success" onclick="guardarInsumo()"><i class="fa fa-check me-1"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Etapa -->
+<div class="modal fade modal-dark" id="modalEtapa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-tasks me-2 text-warning"></i>Etapa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Taller</label>
+                        <select id="cmbTaller" class="form-select editable-field">
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Entrada</label>
+                        <input type="date" id="dtpEtEntrada" class="form-control editable-field" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Salida aprox.</label>
+                        <input type="date" id="dtpEtSalidaAprox" class="form-control editable-field" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Salida real</label>
+                        <input type="date" id="dtpEtSalidaReal" class="form-control editable-field" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Días reales</label>
+                        <!-- AUTO: Salida real - Entrada -->
+                        <input type="text" id="txtEtDiasReales" class="form-control auto-field" value="0" readonly />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">A prod.</label>
+                        <input type="text" id="txtEtAP" class="form-control Inputmiles editable-field" value="0" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Prod.</label>
+                        <input type="text" id="txtEtP" class="form-control Inputmiles editable-field" value="0" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Δ</label>
+                        <!-- AUTO: A prod. - Prod. -->
+                        <input type="text" id="txtEtDif" class="form-control auto-field" value="0" readonly />
+                    </div>
+                   
+                     <div class="col-md-2">
+                        <label class="form-label">Importe Total</label>
+                        <input type="text" id="txtImporteTotal" class="form-control Inputmiles editable-field" value="0" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Estado</label>
+                        <select id="cmbEtEstado" class="form-select editable-field">
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-8">
+                        <label class="form-label">Nota interna</label>
+                        <input type="text" id="txtEtNota" class="form-control editable-field" />
+                    </div>
+                    <div id="errorCamposEtapa" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button id="btnGuardarEtapa" class="btn btn-success" onclick="guardarEtapa()"><i class="fa fa-check me-1"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+    <script src="~/js/OrdenesCorteNuevoModif.js?v=3.1"></script>
+}

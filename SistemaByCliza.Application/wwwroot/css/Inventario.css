@@ -1,0 +1,673 @@
+﻿/* ===== Layout generales ===== */
+.container {
+    min-width: 99% !important;
+}
+
+.page-99 {
+    max-width: 99% !important;
+}
+
+/* ===== HTML base ===== */
+html {
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+/* ===== Body (fondo oscuro global) ===== */
+body {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background-attachment: fixed;
+    background-position: center center;
+    background-repeat: no-repeat no-repeat;
+    background-size: cover;
+    width: 99%;
+    height: 98%;
+    margin-left: 5px;
+    background: linear-gradient(135deg,#0b1220 0%,#0f172a 100%);
+    color: var(--text);
+}
+
+/* ===== Header oscuro ===== */
+.page-header {
+    background: linear-gradient(180deg,#1c2636,#151c28);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #e8eef7;
+}
+
+/* ===== Tarjetas / contenedores ===== */
+.card-glass {
+    background: #151c28;
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 16px;
+    box-shadow: 0 6px 22px rgba(0,0,0,.35);
+    color: #e8eef7;
+}
+
+.card-body, .card-header {
+    background: #323844 !important;
+    color: #fff;
+}
+
+.card {
+    background: linear-gradient(135deg,#0b1220 0%,#0f172a 100%);
+    color: var(--text);
+    border-radius: 50px;
+}
+
+/* ===== KPIs ===== */
+.kpi-card {
+    background: #101725;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,.06);
+}
+
+.kpi-label {
+    font-size: .85rem;
+    color: #a8b4c5;
+}
+
+.kpi-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: .3px;
+}
+
+#kpiStockTotal {
+    color: #60a5fa;
+}
+
+/* ===== Listado productos (panel izq) ===== */
+.product-list {
+    max-height: 560px;
+    overflow: auto;
+    padding: 8px 12px 12px;
+}
+
+.product-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: .15s;
+}
+
+    .product-item:hover {
+        background: #192338;
+    }
+
+    .product-item.active {
+        background: #23314f;
+        border-color: #3f5ba7;
+    }
+
+.product-name {
+    font-weight: 600;
+}
+
+.product-stock {
+    font-weight: 700;
+    color: #a0d2ff;
+}
+
+/* ===== Botones ===== */
+.btn-purple {
+    background: #7e44ff;
+    color: #fff;
+}
+
+    .btn-purple:hover {
+        background: #6d36f1;
+        color: #fff;
+    }
+
+.btn-outline-primary {
+    color: #60a5fa;
+    border-color: #60a5fa;
+}
+
+    .btn-outline-primary:hover {
+        background: #60a5fa;
+        color: #0b1322;
+    }
+
+/* ===== Controles de tabla (como Gastos) ===== */
+.tabla-wrap {
+    position: relative;
+    padding-top: 56px;
+}
+
+.tabla-controls-top {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+}
+
+.tabla-footer {
+    margin-top: 8px;
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding-top: 10px;
+}
+
+.dataTables_wrapper .dataTables_info {
+    float: right;
+    margin-left: 12px;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+    float: right;
+}
+
+/* ===== Filtros en thead ===== */
+.table .filters th,
+#grd_Movs thead tr.filters th {
+    padding: 6px !important;
+    background: #111827 !important;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+#grd_Movs thead input, #grd_Movs thead select {
+    width: 100%;
+    font-size: .82rem;
+    background: #0f1625;
+    color: #e8eef7;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 8px;
+    padding: 4px 6px;
+}
+
+/* ===== Etiqueta fila “Stock anterior” ===== */
+.stock-label {
+    display: block;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+
+
+
+/* ===== Variantes (versión final) ===== */
+.variantes-wrap {
+    max-height: 220px;
+    overflow: auto;
+    border: 1px dashed rgba(255,255,255,.12);
+    border-radius: 12px;
+    padding: 8px;
+    background: #1a2233;
+}
+
+.var-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+}
+
+    .var-row:hover {
+        background: #111a2b;
+        border-radius: 10px;
+    }
+
+.var-name {
+    flex: 1;
+    color: #dbe3f3;
+}
+
+.var-cant {
+    width: 110px;
+}
+
+    .var-cant .form-control {
+        text-align: right;
+    }
+
+/* ===== Navbar ===== */
+.navbar-nav .nav-link, .navbar-brand {
+    color: #fff !important;
+}
+
+.navbar-nav .dropdown-menu .dropdown-item {
+    color: #000 !important;
+}
+
+.navbar-nav .nav-link:hover {
+    text-shadow: 0 0 8px rgba(255,255,255,.9);
+    color: #fff !important;
+    transition: .3s;
+}
+
+.navbar-brand:hover {
+    text-shadow: 0 0 8px rgba(255,255,255,.9);
+    transition: .3s;
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath stroke='white' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important;
+}
+
+/* ===== Info / helpers varios ===== */
+table.dataTable.row-border tbody th,
+table.dataTable.row-border tbody td,
+table.dataTable.display tbody th,
+table.dataTable.display tbody td {
+    border-top: none !important;
+}
+
+@keyframes blinkTextShadow {
+    0% {
+        box-shadow: inset 0 0 10px #d4edda;
+        color: #fff;
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow: inset 0 0 10px #28a745;
+        color: #28a745;
+        transform: scale(1.1);
+    }
+
+    100% {
+        box-shadow: inset 0 0 10px #d4edda;
+        color: #fff;
+        transform: scale(1);
+    }
+}
+
+.blinking {
+    animation: blinkTextShadow 3s ease-out;
+}
+
+.acciones-menu {
+    position: relative;
+    z-index: 9999999 !important;
+}
+
+.acciones-dropdown {
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,.1);
+    z-index: 10000;
+    margin-top: -30px;
+    padding: 5px;
+    border-radius: 4px;
+    min-width: 150px;
+}
+
+    .acciones-dropdown button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 5px;
+        border: none;
+        background: none;
+    }
+
+        .acciones-dropdown button:hover {
+            background: #f0f0f0;
+        }
+
+select option:disabled {
+    color: red;
+}
+
+input:disabled {
+    cursor: not-allowed;
+}
+
+.paginate_button.current {
+    background-color: #007bff !important;
+    color: #fff !important;
+    border: 1px solid #007bff !important;
+    border-radius: 4px !important;
+}
+
+/* ===== Encabezado modal consistente ===== */
+.colorEncabezado {
+    background: linear-gradient(180deg,#22314a,#1a2436);
+    color: #eaf2ff;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+    .colorEncabezado .modal-title i {
+        color: #9bd5ff;
+    }
+
+    .colorEncabezado .btn-close {
+        filter: invert(1) grayscale(100%);
+        opacity: .8;
+    }
+
+/* ===== Modal: cuerpo / footer ===== */
+.modal-content {
+    background-color: #323844 !important;
+    border-radius: 0 0 .5rem .5rem;
+    box-shadow: none;
+}
+
+.modal-edicion {
+    max-width: 900px;
+}
+
+    .modal-edicion .modal-content {
+        border: none;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #1d2636;
+        color: #e8eef7;
+    }
+
+    .modal-edicion .modal-body {
+        background: #1d2636;
+    }
+
+    .modal-edicion .modal-footer {
+        background: #1b2434;
+        border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+/* ===== Panel filtros (última versión) ===== */
+.filter-bar {
+    background: #0f1625;
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: 0 3px 15px rgba(0,0,0,1) !important;
+}
+
+    .filter-bar .form-label {
+        margin-bottom: .25rem;
+        font-weight: 600;
+    }
+
+@media (max-width:575.98px) {
+    #formFiltros .btn {
+        width: 100%;
+    }
+}
+
+/* ===== DataTable: Inventario (#grd_Movs) ===== */
+#grd_Movs_wrapper .dataTables_scrollHead,
+#grd_Movs_wrapper .dataTables_scrollHeadInner,
+#grd_Movs thead th,
+table.dataTable.fixedHeader-floating,
+#grd_Movs thead tr.filters th {
+    background: #1d2633;
+    color: #e5e7eb;
+    border-color: #2b3647;
+}
+
+    #grd_Movs thead tr.filters th input,
+    #grd_Movs thead tr.filters th select {
+        background: #111827;
+        color: #e5e7eb;
+        border: 1px solid #2b3647;
+    }
+
+#grd_Movs_wrapper .dataTables_scrollBody {
+    background: #0b1320;
+}
+
+#grd_Movs tbody tr {
+    background: #0f1722 !important;
+}
+
+    #grd_Movs tbody tr.odd {
+        background: #0e1620 !important;
+    }
+
+    #grd_Movs tbody tr.even {
+        background: #101824 !important;
+    }
+
+#grd_Movs tbody td, #grd_Movs thead th {
+    border-bottom: 1px solid #243244;
+}
+
+#grd_Movs_wrapper .dataTables_scrollHead,
+#grd_Movs_wrapper .dataTables_scrollHeadInner {
+    border-bottom: 1px solid #2b3647;
+}
+
+#grd_Movs tbody tr:hover {
+    background: #152037 !important;
+}
+
+/* ===== Ajustes UX DataTables globales ===== */
+/* Letras blancas en paginación */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: #fff !important;
+}
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        color: #fff !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+        color: rgba(255,255,255,.4) !important;
+    }
+
+/* Espacio entre buscador y tabla */
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 10 !important;
+    padding-bottom: 0 !important;
+}
+
+.dataTables_wrapper .dataTables_scroll {
+    margin-top: 0 !important;
+}
+
+/* Separación paginación e info */
+.dataTables_wrapper .dataTables_paginate {
+    margin-top: 10px !important;
+}
+
+.dataTables_wrapper .dataTables_info {
+    margin-top: 10px !important;
+}
+
+/* ===== Responsivo ===== */
+@media (max-width:1000px) {
+    .lblfiltro {
+        font-size: 4vw !important;
+        display: block;
+        margin-left: -16px !important;
+    }
+
+    .input-nuevo {
+        width: 100% !important;
+        font-size: 4vw !important;
+    }
+}
+
+@media (max-width:900px) {
+    .lblNombreInput {
+        font-size: 3vw !important;
+    }
+
+    .input-nuevomodif {
+        font-size: 2.8vw !important;
+    }
+}
+
+@media (max-width:600px) {
+    .lblNombreInput {
+        font-size: 3.5vw !important;
+    }
+
+    .input-nuevomodif {
+        font-size: 3.3vw !important;
+    }
+}
+
+@media (max-width:450px) {
+    .lblNombreInput {
+        font-size: 3.8vw !important;
+    }
+
+    .input-nuevomodif {
+        font-size: 3.6vw !important;
+    }
+}
+
+@media (max-width:400px) {
+    .imageMenu {
+        height: 60px;
+        width: 60px;
+    }
+}
+
+/* ===== Otros estilos que no colisionan (mantengo última versión) ===== */
+.input-nuevo {
+    border: none;
+    border-bottom: solid blue;
+    width: 70%;
+    margin-bottom: 20px;
+    text-align: center !important;
+    font-size: .8vw;
+    max-width: 200px !important;
+    background: #1B2631 !important;
+    color: #fff !important;
+}
+
+.divFiltros {
+    padding: 5px;
+    border: solid blue;
+    display: block;
+    position: relative;
+    left: 8%;
+    margin-top: 20px;
+    width: 85%;
+    color: #000;
+    text-align: center;
+}
+
+.lblfiltro {
+    margin-left: 30px;
+    font-size: .7vw;
+}
+
+td, tr, table, span, label {
+    color: #fff;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    color: #fff;
+}
+
+thead, tr, tbody, th, td {
+    text-align: center !important;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    margin-top: 10px;
+    background: #fff !important;
+}
+
+.dataTables_filter {
+    margin-top: 10px;
+}
+
+/* ====== Header tipo Cuentas Corrientes (mínimo necesario) ====== */
+
+/* Tokens (si ya tenés variables similares, podés omitir o ajustar) */
+:root {
+    --muted: #9aa8c5;
+    --text: #e7ecff;
+    --border: rgba(255,255,255,.08);
+}
+
+/* Utilidades usadas por el header */
+.fw-800 {
+    font-weight: 800;
+}
+
+.text-muted-cc {
+    color: var(--muted) !important;
+}
+
+/* Contenedor del header con gradiente y borde */
+.cc-header {
+    width: 100%;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(90deg, rgba(124,92,255,.25), rgba(79,180,255,.2));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: .75rem;
+}
+
+    .cc-header h2 {
+        color: var(--text);
+        text-shadow: 0 2px 0 rgba(0,0,0,.25);
+    }
+
+/* Badge del título (icono a la izquierda) */
+.cc-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-grid;
+    place-items: center;
+    background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.06));
+    color: #fff;
+    font-size: 20px;
+    border: 1px solid var(--border);
+}
+
+/* Tarjetitas de KPI a la derecha */
+.cc-stat {
+    min-width: 160px;
+    padding: .65rem .9rem;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    border: 1px solid var(--border);
+}
+
+    .cc-stat .label {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: .8rem;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    .cc-stat .value {
+        color: #fff;
+        font-size: 1.15rem;
+        font-weight: 800;
+    }
+
+/* Responsivo: que las stats se apilen bien en móvil */
+@media (max-width: 576px) {
+    .cc-stat {
+        min-width: 100%;
+    }
+
+    .cc-badge {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .cc-header {
+        border-radius: 16px;
+    }
+}
+
+

@@ -1,0 +1,229 @@
+﻿@{
+    ViewData["Title"] = "Cuentas Corrientes Proveedores";
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/CuentasCorrientesProveedores.css" rel="stylesheet" />
+}
+
+<div class="container cc-container px-4" style="margin-top: 100px">
+    <!-- Header totales -->
+    <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <span class="cc-badge"><i class="fa fa-bolt"></i></span>
+                <div>
+                    <h2 class="m-0 fw-800">Cuentas Corrientes</h2>
+                    <small class="text-muted-cc">Proveedores &amp; Movimientos</small>
+                </div>
+            </div>
+
+            <div class="ms-auto d-flex gap-3 flex-wrap">
+                <div class="cc-stat"><div class="label">Debe</div><div class="value" id="totDebeProv">–</div></div>
+                <div class="cc-stat"><div class="label">Haber</div><div class="value" id="totHaberProv">–</div></div>
+                <div class="cc-stat"><div class="label">Saldo</div><div class="value" id="totSaldoProv">–</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout 3/9 -->
+    <div class="row g-4">
+        <!-- PROVEEDORES -->
+        <div class="col-12 col-lg-3">
+            <div class="cc-card h-100">
+                <div class="cc-card-head">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa fa-truck text-primary"></i><span class="fw-700">Proveedores</span>
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center gap-3 flex-wrap">
+                        <label class="form-check d-flex align-items-center gap-2 m-0">
+                            <input type="checkbox" id="chkSaldoActivoProv" class="form-check-input">
+                            <span>Saldo Activo</span>
+                        </label>
+                        <div class="cc-search">
+                            <i class="fa fa-search"></i>
+                            <input type="text" id="buscarProveedores" placeholder="Buscar por nombre…">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 pt-0">
+                    <table id="grd_Proveedores" class="display compact nowrap w-100">
+                        <thead>
+                            <tr><th>Nombre</th><th>Saldo</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOVIMIENTOS -->
+        <div class="col-12 col-lg-9">
+            <div class="cc-card h-100 d-flex flex-column">
+                <div class="cc-card-head flex-wrap w-100">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa fa-exchange text-success"></i><span class="fw-700">Movimientos</span>
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+                        <button class="btn btn-ghost btn-sm d-flex align-items-center" type="button" id="btnToggleFiltrosProv">
+                            <i id="iconFiltrosProv" class="fa fa-arrow-up me-2"></i> Filtros
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-ghost btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fa fa-cog"></i> Config. columnas
+                            </button>
+                            <ul id="configColumnasMenuProv" class="dropdown-menu dropdown-menu-end p-2"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros (sin sucursal) -->
+                <form id="formFiltrosProv" class="filter-bar shadow-sm rounded-3 mb-3 mx-3 p-3 d-none">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6 col-md-2">
+                            <label class="form-label">Desde</label>
+                            <input type="date" id="fltDesdeProv" class="form-control">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label">Hasta</label>
+                            <input type="date" id="fltHastaProv" class="form-control">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label">Texto</label>
+                            <input type="text" id="fltTextoProv" class="form-control" placeholder="Concepto…">
+                        </div>
+                        <div class="col-12 col-md-3 d-flex gap-2 mt-2">
+                            <button type="button" id="btnBuscarProv" class="btn btn-primary flex-fill"><i class="fa fa-search me-1"></i> Buscar</button>
+                            <button type="button" id="btnLimpiarProv" class="btn btn-outline-secondary"><i class="fa fa-eraser me-1"></i> Limpiar</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Tabla -->
+                <div class="p-3 pt-0 flex-grow-1 d-flex flex-column dt-dark-wrap">
+                    <table class="dt-dark display nowrap" id="grd_MovimientosProv" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Concepto</th>
+                                <th>Debe</th>
+                                <th>Haber</th>
+                                <th>Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="cc-footer-actions">
+        <button id="btnExportarPdfProv" class="btn btn-dark btn-export"><i class="fa fa-file-pdf-o"></i> Exportar PDF</button>
+        <button id="btnNuevoPago" class="btn btn-success"><i class="fa fa-plus"></i> Nuevo pago</button>
+    </div>
+</div>
+
+<!-- Modal PAGO (manual) -->
+<div class="modal fade cc-modal" id="modalPagoProv" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-plus-circle text-success"></i> Nuevo pago</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPagoProv" class="row g-3 needs-validation" novalidate>
+                    <input id="pagoIdProv" type="hidden">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha *</label>
+                        <input type="date" id="pagoFechaProv" class="form-control" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cuenta de caja *</label>
+                        <select id="pagoCuentaCajaProv" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Importe *</label>
+                        <input type="text" id="pagoImporteProv" class="form-control Inputmiles" placeholder="0,00" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Concepto *</label>
+                        <input type="text" id="pagoConceptoProv" class="form-control" placeholder="Ej.: Transferencia" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div id="errorPagoProv" class="alert alert-danger d-none col-12">
+                        Completá los campos obligatorios.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cancelar</button>
+                <button id="btnEliminarPagoProv" class="btn btn-danger d-none"><i class="fa fa-trash"></i> Eliminar</button>
+                <button id="btnGuardarPagoProv" class="btn btn-success"><i class="fa fa-check"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal DETALLE -->
+<div class="modal fade cc-modal" id="modalDetalleProv" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-eye"></i> Detalle del movimiento</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 cc-detail">
+                    <div class="col-6"><div class="label">Fecha</div><div id="detProvFecha" class="val"></div></div>
+                    <div class="col-6"><div class="label">Tipo</div><div id="detProvTipo" class="val"></div></div>
+                    <div class="col-12"><div class="label">Concepto</div><div id="detProvConcepto" class="val"></div></div>
+                    <div class="col-3"><div class="label">Debe</div><div id="detProvDebe" class="val"></div></div>
+                    <div class="col-3"><div class="label">Haber</div><div id="detProvHaber" class="val"></div></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <a id="btnIrCompra" class="btn btn-primary d-none"><i class="fa fa-external-link"></i> Ver compra</a>
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-check"></i> Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+
+    <script src="~/js/site.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="~/js/CuentasCorrientesProveedores.js?v=1.0"></script>
+}

@@ -1,0 +1,143 @@
+﻿@{
+    ViewData["Title"] = "Talleres";
+}
+
+@section Estilos {
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <!-- Estilos base -->
+    <link href="~/css/usuarios.css" rel="stylesheet" />
+}
+
+<div class="container page-99" style="margin-top: 100px">
+    <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <span class="cc-badge"><i class="fa fa-truck"></i></span>
+                <div>
+                    <h2 class="m-0 fw-800">Talleres</h2>
+                    <small class="text-muted-cc">ABM de Talleres</small>
+                </div>
+            </div>
+
+            <div class="ms-auto d-flex gap-3 flex-wrap">
+                <div class="cc-stat">
+                    <div class="label">Total Talleres</div>
+                    <div class="value kpi-azul" id="kpiCantTalleres">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card-glass p-3">
+                <div class="tabla-wrap position-relative">
+                    <div class="tabla-controls-top d-flex gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" type="button" id="btnConfigCols"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa fa-cog me-2"></i> Config. Columnas
+                            </button>
+                            <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="nuevoTaller()">
+                            <i class="fa fa-plus me-1"></i> Nuevo
+                        </button>
+                    </div>
+
+                    <div class="dt-dark-wrap">
+                        <table class="dt-dark display nowrap compact" id="grd_Talleres" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>        <!-- Acciones -->
+                                    <th>Nombre</th>  <!-- 1 -->
+                                    <th>Dias Entrega</th>  <!-- 1 -->
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="tabla-footer d-flex align-items-center justify-content-between">
+                        <div></div>
+                        <div class="acciones-externas d-flex justify-content-end mt-2 gap-2"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Crear/Editar Taller -->
+<div class="modal fade" id="modalEdicion" tabindex="-1" aria-labelledby="modalEdicionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">Nuevo Taller</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formTaller" class="row g-3">
+                    <input type="text" id="txtId" hidden>
+
+                    <div class="col-6">
+                        <label for="txtNombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="txtNombre" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-6">
+                        <label for="txtDiasEntrega" class="form-label">Dias Entrega</label>
+                        <input type="number" class="form-control" id="txtDiasEntrega" required>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div id="errorCampos" class="alert alert-danger d-none col-12">
+                        Debes completar los campos obligatorios.
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCambios()">
+                    <i class="fa fa-check"></i> Registrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+
+    <!-- Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+
+    <!-- Utils del proyecto -->
+    <script src="~/js/site.js"></script>
+
+    <!-- Lógica Talleres -->
+    <script src="~/js/Talleres.js?v=1.0"></script>
+}

@@ -1,0 +1,131 @@
+﻿@{
+    ViewData["Title"] = "Compras";
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="~/css/usuarios.css" />
+}
+
+<div class="container page-99" style="margin-top: 100px">
+    <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <span class="cc-badge"><i class="fa fa-truck"></i></span>
+                <div>
+                    <h2 class="m-0 fw-800">Compras</h2>
+                    <small class="text-muted-cc">Listado y sumatorias del período</small>
+                </div>
+            </div>
+
+            <div class="ms-auto d-flex gap-3 flex-wrap">
+                <div class="cc-stat"><div class="label">Cantidad</div><div class="value" id="kpiCantCompras">0</div></div>
+                <div class="cc-stat"><div class="label">Subtotal</div><div class="value" id="kpiSubtotal">0,00</div></div>
+                <div class="cc-stat"><div class="label">Descuentos</div><div class="value" id="kpiDescuentos">0,00</div></div>
+                <div class="cc-stat"><div class="label">IVA</div><div class="value" id="kpiIva">0,00</div></div>
+                <div class="cc-stat"><div class="label">Total</div><div class="value kpi-azul" id="kpiTotalCompras">0,00</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card-glass p-3">
+                <div class="tabla-wrap position-relative">
+                    <div class="tabla-controls-top d-flex gap-2">
+                        <button class="btn btn-outline-primary d-flex align-items-center" type="button" id="btnToggleFiltros">
+                            <i class="fa fa-arrow-up me-2" id="iconFiltros"></i> Filtros
+                        </button>
+
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" type="button" id="btnConfigCols"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa fa-cog me-2"></i> Config. Columnas
+                            </button>
+                            <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
+                        </div>
+                    </div>
+
+                    <form id="formFiltros" class="filter-bar shadow-sm rounded-3 mb-3 p-3 d-none">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-6 col-md-2">
+                                <label class="form-label">Desde</label>
+                                <input type="date" id="fltDesde" class="form-control">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label">Hasta</label>
+                                <input type="date" id="fltHasta" class="form-control">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label">Proveedor</label>
+                                <select id="fltProveedor" class="form-select">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Buscar texto</label>
+                                <input type="text" id="fltTexto" class="form-control" placeholder="Proveedor, notas...">
+                            </div>
+                            <div class="col-12 col-md-3 d-flex gap-2 mt-2 mt-md-0">
+                                <button type="button" id="btnBuscar" class="btn btn-primary flex-fill">
+                                    <i class="fa fa-search me-1"></i> Buscar
+                                </button>
+                                <button type="button" id="btnLimpiar" class="btn btn-outline-secondary">
+                                    <i class="fa fa-eraser me-1"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="dt-dark-wrap">
+                        <table class="dt-dark display nowrap compact" id="grd_Compras" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Fecha</th>
+                                    <th>Proveedor</th>
+                                    <th>Subtotal</th>
+                                    <th>Descuentos</th>
+                                    <th>IVA</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="tabla-footer d-flex align-items-center justify-content-between">
+                        <div></div>
+                        <div class="acciones-externas d-flex justify-content-end mt-2 gap-2">
+                            <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="nuevaCompra()">
+                                <i class="fa fa-plus-square me-2"></i> Nueva Compra
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+
+    <script src="~/js/site.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+
+    <script src="~/js/Compras.js?v=1.0"></script>
+}

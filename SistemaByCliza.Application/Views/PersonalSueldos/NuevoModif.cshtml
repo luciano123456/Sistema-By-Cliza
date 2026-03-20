@@ -1,0 +1,197 @@
+﻿@{
+    ViewData["Title"] = "Pago de Sueldo";
+    var id = Context.Request.Query["id"].ToString();
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="~/css/PagosSueldosNuevoModif.css" />
+}
+
+<div class="container-fluid " style="margin-top: 100px">
+
+    <div class="page-header rounded-3 p-4 mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0">Pago de Sueldo</h2>
+            <small class="text-muted">@(string.IsNullOrEmpty(id) ? "Nuevo" : "Edición")</small>
+        </div>
+        <button class="btn btn-ghost" onclick="volverIndex()">
+            <i class="fa fa-arrow-left me-2"></i> Volver
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <!-- Datos del sueldo -->
+        <div class="col-lg-7">
+            <div class="card-glass p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="fa fa-file-invoice-dollar me-2 text-primary"></i>Datos del Sueldo</h5>
+                <form id="formSueldo" class="row g-3">
+                    <input type="hidden" id="txtId" value="@id" />
+
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="dtpFecha" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label">Personal</label>
+                        <select id="cmbPersonal" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="txtConcepto" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Importe</label>
+                        <input type="text" id="txtImporte" class="form-control Inputmiles" required />
+                             <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label">Nota Interna</label>
+                        <textarea id="txtNota" class="form-control" rows="2"></textarea>
+
+                    </div>
+
+                    <div id="errorCampos" class="alert alert-danger d-none mt-2">
+                        Debes completar los campos obligatorios.
+                    </div>
+                </form>
+
+                <div class="row mt-3 g-3">
+                    <div class="col-md-4">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Importe</div>
+                            <div class="value" id="statImporte">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Abonado</div>
+                            <div class="value text-success" id="statAbonado">$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card p-3 text-center">
+                            <div class="label">Saldo</div>
+                            <div class="value text-warning" id="statSaldo">$ 0,00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-3">
+                    <button id="btnGuardarGlobal" class="btn btn-primary btn-lg" type="button" onclick="guardarTodo()">
+                        <i class="fa fa-check me-1"></i> <span class="txt">Registrar</span>
+                    </button>
+                    <button type="button" id="btnEliminar" class="btn btn-danger mt-2 d-none" onclick="eliminarActual()">
+                        <i class="fa fa-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagos -->
+        <div class="col-lg-5">
+            <div class="card-glass p-4 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fa fa-wallet me-2 text-success"></i>Pagos</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-dark btn-sm" type="button" onclick="exportarReciboPdf()">
+                            <i class="fa fa-file-pdf me-1"></i> Exportar PDF
+                        </button>
+                        <button class="btn btn-success btn-sm" type="button" onclick="abrirModalPago()">
+                            <i class="fa fa-plus"></i> Registrar Pago
+                        </button>
+                    </div>
+                </div>
+
+                <table class="display nowrap compact" id="grd_Pagos" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Fecha</th>
+                            <th>Cuenta</th>
+                            <th class="text-end">Importe</th>
+                            <th>Nota</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pago -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-glass">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fa fa-plus-circle me-2 text-success"></i>Registrar Pago</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPago" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="dtpPagoFecha" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>  <!-- <- FALTABA -->
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Cuenta</label>
+                        <select id="cmbCuenta" class="form-select" required>
+                            <option value="">Seleccione</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Importe</label>
+                        <input type="text" id="txtPagoImporte" class="form-control Inputmiles" required />
+                      
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label">Nota</label>
+                        <input type="text" id="txtPagoNota" class="form-control" />
+                    </div>
+                    <div id="errorCamposPago" class="alert alert-danger d-none">
+                        Debes completar los campos obligatorios.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-times me-1"></i> Cancelar
+                </button>
+                <button class="btn btn-success" onclick="guardarPago()">
+                    <i class="fa fa-check me-1"></i> Registrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="~/js/site.js"></script>
+    <script src="~/js/utils/moment.js"></script>
+
+    <!-- jsPDF + AutoTable (para exportar PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="~/js/PagosSueldosNuevoModif.js?v=1.0"></script>
+}

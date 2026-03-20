@@ -1,0 +1,564 @@
+﻿:root {
+    --bg: #0b1320;
+    --panel: #131d2b;
+    --tile-from: #232c3b;
+    --tile-to: #1f2937;
+    --tile-text: #e6eefc;
+    --tile-icon: #e6eefc;
+    --tile-border: #344055;
+    --header-text: #fff;
+    --header-icon: #fff;
+}
+
+* {
+    box-sizing: border-box
+}
+
+a {
+    text-decoration: none
+}
+
+.app-body {
+    background: #0b1320;
+    color: #e8efff;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* HERO (solo logo centrado) */
+.hero {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 18px 0 6px;
+}
+
+.brand-logo {
+    height: 150px;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,.35));
+    margin-bottom: 20px;
+}
+
+/* GRID */
+#cols {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 28px; /* más respiro entre tarjetas */
+    margin-top: 14px;
+}
+
+/* Tarjetas que ocupan todo el ancho dentro del grid */
+.dash-card.fullwidth {
+    grid-column: 1 / -1;
+}
+
+/* CARD */
+.dash-card {
+    --hdr-from: #39475f;
+    --hdr-to: #53627a;
+    --hdr-text: var(--header-text);
+    --hdr-icon: var(--header-icon);
+    --tl-from: var(--tile-from);
+    --tl-to: var(--tile-to);
+    --tl-text: var(--tile-text);
+    --tl-icon: var(--tile-icon);
+    --tl-b: var(--tile-border);
+    background: #0f1724; /* si no hay fondo configurado */
+    border-radius: 18px;
+    padding-bottom: 12px;
+    box-shadow: 0 12px 28px rgba(0,0,0,.35);
+    overflow: visible;
+}
+
+.dash-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 18px 18px 0 0;
+    background: linear-gradient(90deg,var(--hdr-from),var(--hdr-to));
+}
+
+    .dash-card__header .header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--hdr-text);
+    }
+
+        .dash-card__header .header-left i {
+            color: var(--hdr-icon);
+        }
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-header {
+    background: rgba(255,255,255,.12);
+    border: 0;
+    border-radius: 12px;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+}
+
+    .btn-header:active {
+        transform: scale(.98)
+    }
+
+.card-handle {
+    cursor: grab;
+}
+
+/* Tiles */
+.tiles {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+}
+
+.tiles-inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+    .tiles-inline .tile {
+        width: min(420px,100%);
+    }
+
+.tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(180deg,var(--tl-from),var(--tl-to));
+    border: 1px solid var(--tl-b);
+    border-radius: 14px;
+    padding: 16px 18px;
+    color: var(--tl-text);
+    position: relative;
+}
+
+    .tile i {
+        color: var(--tl-icon);
+    }
+
+    .tile:hover {
+        filter: brightness(1.06);
+    }
+
+.tile-empty {
+    justify-content: center;
+    opacity: .7;
+    pointer-events: none;
+}
+
+.tile .tile-handle {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: var(--tl-text);
+    opacity: .75;
+    cursor: grab;
+}
+
+    .tile .tile-handle:active {
+        transform: scale(.96)
+    }
+
+/* FAVORITOS */
+.tiles-favs .tile {
+    position: relative;
+    filter: saturate(.96);
+}
+
+    .tiles-favs .tile .fa-star {
+        position: absolute;
+        left: 10px;
+        top: 8px
+    }
+
+.rank-1 .fa-star {
+    color: #ffd54d
+}
+
+.rank-2 .fa-star {
+    color: #c0c0c0
+}
+
+.rank-3 .fa-star {
+    color: #cd7f32
+}
+
+.tiles-favs .tile:not(.rank-1):not(.rank-2):not(.rank-3) {
+    opacity: .92
+}
+
+/* CONFIG: si la movés al grid, forzamos 1 por fila */
+.dash-card[data-card-id="config"].narrow .config-grid {
+    grid-template-columns: 1fr !important;
+}
+
+/* Config grid */
+.config-grid {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 12px;
+    max-height: 460px;
+    overflow: auto;
+}
+
+.conf-tile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(180deg,var(--tl-from),var(--tl-to));
+    border: 1px solid var(--tl-b);
+    border-radius: 12px;
+    color: var(--tl-text);
+    padding: 14px 16px;
+    text-align: left;
+}
+
+    .conf-tile i {
+        color: var(--tl-icon)
+    }
+
+/* Drag & Drop décor */
+.drag-ghost {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: .95;
+    transform: scale(.98);
+    filter: drop-shadow(0 30px 30px rgba(0,0,0,.35));
+}
+
+.placeholder-card {
+    height: 170px;
+    border: 2px dashed #6a7a90;
+    border-radius: 18px;
+    margin: 4px 0;
+    background: rgba(106,122,144,.12);
+}
+
+.placeholder-tile {
+    height: 56px;
+    border: 2px dashed #6a7a90;
+    border-radius: 12px;
+    margin: 6px 0;
+}
+
+/* Guía de zonas */
+.dz-candidate {
+    outline: 2px dashed rgba(60,156,255,.35);
+    outline-offset: -4px;
+}
+
+/* SCROLL */
+.scroll-clip::-webkit-scrollbar {
+    height: 8px;
+    width: 8px
+}
+
+.scroll-clip::-webkit-scrollbar-thumb {
+    background: #2e3a4e;
+    border-radius: 10px
+}
+
+/* RESPONSIVE */
+@media (max-width:992px) {
+    #cols {
+        grid-template-columns: 1fr
+    }
+
+    .dash-card.fullwidth {
+        grid-column: 1/1
+    }
+}
+
+/* ======= MODAL COLORES ======= */
+.color-modal .modal-body {
+    background: #0f1724
+}
+
+.sim-card {
+    background: #161f31;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.sim-header {
+    padding: 12px 14px;
+    background: linear-gradient(90deg,#2546bd,#2f5ae7);
+    color: #fff;
+    display: flex;
+    gap: 8px;
+    align-items: center
+}
+
+.sim-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px
+}
+
+.sim-tile {
+    background: linear-gradient(180deg,#2d3542,#2a3240);
+    border: 1px solid #3a4457;
+    color: #e8f0ff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center
+}
+
+    .sim-tile.active, .sim-header.active {
+        outline: 2px solid #3c9cff
+    }
+
+/* Inputs del modal */
+.form-group-bgto.disabled {
+    opacity: .5
+}
+
+.form-group-bgto input[disabled] {
+    pointer-events: none
+}
+
+/* Botón fijo de reset abajo derecha */
+.global-actions {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1000;
+}
+
+
+/* ==== Lista de selección en el modal de Colores ==== */
+.color-modal .modal-body {
+    background: #0f1724;
+}
+/* ya lo tenías, dejo por si acaso */
+
+.color-modal #applyList {
+    background: transparent; /* quita el fondo blanco de bootstrap */
+    border: 0;
+    padding: 0;
+}
+
+    .color-modal #applyList .list-group-item {
+        background: transparent; /* SIN fondo blanco */
+        color: #e8efff; /* texto claro */
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+        .color-modal #applyList .list-group-item:hover {
+            background: rgba(255,255,255,.06); /* hover suave en dark */
+        }
+
+    .color-modal #applyList .form-check-input {
+        /* hace visible el check en dark */
+        background-color: transparent;
+        border-color: rgba(255,255,255,.35);
+        width: 18px;
+        height: 18px;
+        margin-top: 0;
+        accent-color: #3c9cff; /* color del tilde */
+    }
+
+    .color-modal #applyList span {
+        color: #e8efff; /* asegura contraste del texto */
+    }
+
+/* “Seleccionar todos” debajo de la lista */
+.color-modal .select-all-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    color: #e8efff;
+}
+
+    .color-modal .select-all-row .form-check-input {
+        accent-color: #3c9cff;
+    }
+
+
+.btnConfiguraciones {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    outline: none;
+    border: none;
+    background: linear-gradient(135deg, #b0bec5, #546e7a); /* gris claro → gris oscuro */
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+
+    .btnConfiguraciones:hover {
+        background: linear-gradient(135deg, #90a4ae, #37474f); /* oscurecer en hover */
+        transform: translateY(-2px); /* pequeño efecto de elevación */
+        box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+
+    .btnConfiguraciones:active {
+        transform: translateY(0); /* vuelve a su lugar al hacer click */
+        box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    }
+
+.list-item {
+    background: linear-gradient(135deg, #b0bec5, #546e7a); /* gris claro → gris oscuro */
+    background-color: gray;
+    margin-bottom: 5px;
+    text-align: center;
+    width: 95%;
+    height: 30px;
+    position: relative;
+    left: 2%;
+    border-radius: 3px;
+}
+
+    .list-item:hover {
+        background-color: dimgray;
+    }
+
+.btnModificarConfiguracion {
+    border: none;
+    background-color: blue;
+    color: white;
+    width: 35%;
+    margin-left: 2px;
+    height: 50px;
+    font-size: 30px;
+    text-align: center;
+    border-radius: 12px;
+    padding: 0px 5px 5px 5px;
+}
+
+
+
+    .btnModificarConfiguracion:hover {
+        background-color: darkblue;
+    }
+
+
+.btnCancelarConfiguracion {
+    border: none;
+    background-color: brown;
+    color: white;
+    width: 35%;
+    margin-left: 2px;
+    height: 50px;
+    font-size: 30px;
+    text-align: center;
+    border-radius: 12px;
+    padding: 0px 5px 5px 5px;
+}
+
+
+    .btnCancelarConfiguracion:hover {
+        background-color: darkred;
+    }
+
+.btnModificarConfiguracion-container {
+    display: flex;
+    justify-content: center; /* Centra el botón horizontalmente */
+    align-items: center; /* Centra el botón verticalmente (si es necesario) */
+    width: 100%; /* Asegúrate de que el contenedor tome el ancho completo del modal */
+    margin-bottom: 10px;
+}
+
+.btnAgregarConfiguracion-container {
+    display: flex;
+    justify-content: right; /* Centra el botón horizontalmente */
+    align-items: center; /* Centra el botón verticalmente (si es necesario) */
+    width: 100%; /* Asegúrate de que el contenedor tome el ancho completo del modal */
+    margin-bottom: 10px;
+    margin-top: 30px;
+}
+
+.btnAgregarConfiguracion {
+    border: none;
+    background-color: green;
+    color: white;
+    width: 30%;
+    margin-left: 2px;
+    height: 50px;
+    font-size: 30px;
+    text-align: center;
+    border-radius: 12px;
+    margin-right: 30px;
+}
+
+
+.edit-icon {
+    font-size: 20px;
+    color: white;
+    position: absolute;
+    bottom: 5px;
+    left: 10px;
+    cursor: pointer;
+}
+
+
+.eliminar-icon {
+    font-size: 20px;
+    color: white;
+    position: absolute;
+    bottom: 5px;
+    right: 20px;
+    cursor: pointer;
+}
+
+
+
+.dash-card.fullwidth {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+
+/* Grilla de configuraciones: por defecto (fullwidth) varias columnas */
+.dash-card[data-card-id="config"] .config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 14px;
+}
+
+/* Cuando la card está chica => 1 por fila */
+.dash-card[data-card-id="config"].narrow .config-grid {
+    grid-template-columns: 1fr;
+}
+
+
+/* MISMO placeholder para TODOS los tiles (incluye conf-tile) */
+.placeholder-tile{
+  height: 48px;                /* ajustá al alto de tu tile */
+  border: 2px dashed var(--tile-border, #344055);
+  border-radius: 12px;
+  margin: 8px 0;
+}
+
