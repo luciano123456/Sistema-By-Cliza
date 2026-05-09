@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Talleres";
 }
 
@@ -13,7 +13,7 @@
     <link href="~/css/usuarios.css" rel="stylesheet" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
             <div class="d-flex align-items-center gap-3">
@@ -24,7 +24,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Total Talleres</div>
                     <div class="value kpi-azul" id="kpiCantTalleres">0</div>
@@ -46,13 +46,13 @@
                             <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
                         </div>
 
-                        <button class="btn btn-primary" onclick="nuevoTaller()">
+                        <button type="button" class="btn btn-primary" data-modulo="Talleres" data-permiso="crear" onclick="nuevoTaller()">
                             <i class="fa fa-plus me-1"></i> Nuevo
                         </button>
                     </div>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Talleres" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Talleres">
                             <thead>
                                 <tr>
                                     <th></th>        <!-- Acciones -->
@@ -139,5 +139,5 @@
     <script src="~/js/site.js"></script>
 
     <!-- Lógica Talleres -->
-    <script src="~/js/Talleres.js?v=1.0"></script>
+    <script src="~/js/Talleres.js?v=1.4"></script>
 }

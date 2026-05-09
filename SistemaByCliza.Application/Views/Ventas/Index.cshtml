@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Ventas";
 }
 
@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="~/css/usuarios.css" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <!-- Header tipo KPI -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -27,7 +27,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Cantidad</div>
                     <div class="value" id="kpiCantVentas">0</div>
@@ -91,7 +91,14 @@
                                 </select>
                             </div>
 
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-3" id="wrapFiltroSucursal">
+                                <label class="form-label">Sucursal</label>
+                                <select id="fltSucursal" class="form-select">
+                                    <option value="">Todas</option>
+                                </select>
+                            </div>
+
+                            <div class="col-6 col-md-3" id="wrapFiltroVendedor">
                                 <label class="form-label">Vendedor</label>
                                 <select id="fltVendedor" class="form-select">
                                     <option value="">Todos</option>
@@ -124,13 +131,13 @@
                     </form>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Ventas" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Ventas">
                             <thead>
                                 <tr>
                                     <th></th>
                                     <th>Fecha</th>
+                                    <th>Sucursal</th>
                                     <th>Cliente</th>
-                                    <th>Vendedor</th>
                                     <th>Subtotal</th>
                                     <th>Descuentos</th>
                                     <th>IVA</th>
@@ -144,7 +151,7 @@
                     <div class="tabla-footer d-flex align-items-center justify-content-between">
                         <div></div>
                         <div class="acciones-externas d-flex justify-content-end mt-2 gap-2">
-                            <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="nuevaVenta()">
+                            <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2 text-center" data-modulo="Ventas" data-permiso="crear" onclick="nuevaVenta()">
                                 <i class="fa fa-plus-square me-2"></i> Nueva Venta
                             </button>
                         </div>
@@ -166,6 +173,7 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
 
     <!-- Dependencias export -->
@@ -176,5 +184,5 @@
     <script src="~/js/utils/moment.js"></script>
 
     <!-- Lógica de la vista -->
-    <script src="~/js/Ventas.js?v=2.1"></script>
+    <script src="~/js/Ventas.js?v=2.6"></script>
 }

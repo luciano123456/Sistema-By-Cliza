@@ -21,9 +21,9 @@ public partial class Sucursal
 
     public virtual ICollection<InventarioMovimiento> InventarioMovimientos { get; set; } = new List<InventarioMovimiento>();
 
-    public virtual ICollection<InventarioTransfSucursal> InventarioTransfSucursalIdSucursalDestinoNavigations { get; set; } = new List<InventarioTransfSucursal>();
+    public virtual ICollection<InventarioTransfSucursal> InventarioTransfSucursaleIdSucursalDestinoNavigations { get; set; } = new List<InventarioTransfSucursal>();
 
-    public virtual ICollection<InventarioTransfSucursal> InventarioTransfSucursalIdSucursalOrigenNavigations { get; set; } = new List<InventarioTransfSucursal>();
+    public virtual ICollection<InventarioTransfSucursal> InventarioTransfSucursaleIdSucursalOrigenNavigations { get; set; } = new List<InventarioTransfSucursal>();
 
     public virtual ICollection<Inventario> Inventarios { get; set; } = new List<Inventario>();
 

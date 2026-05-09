@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Gastos";
 }
 
@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <!-- Header estilo Personal -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -23,7 +23,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Suma de gastos (período)</div>
                     <div class="value kpi-azul" id="kpiTotalGastos">$0,00</div>
@@ -102,7 +102,7 @@
 
                     <!-- Tabla -->
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Gastos" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Gastos">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -120,7 +120,7 @@
 
                     <!-- Botonera inferior -->
                     <div class="d-flex align-items-center justify-content-end mt-3">
-                        <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="nuevoGasto()">
+                        <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2 text-center" data-modulo="Gastos" data-permiso="crear" onclick="nuevoGasto()">
                             <i class="fa fa-plus-square me-2"></i> Nuevo Gasto
                         </button>
                     </div>
@@ -226,5 +226,5 @@
     <script src="~/js/utils/moment.js"></script>
 
     <!-- lógica Gastos -->
-    <script src="~/js/Gastos.js?v=2.2"></script>
+    <script src="~/js/Gastos.js?v=2.5"></script>
 }

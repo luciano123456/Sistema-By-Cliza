@@ -1,4 +1,9 @@
-﻿
+/** JWT: mismo origen que site.js (`token` en localStorage `JwtToken`). No usar `window.token` (no existe). */
+function _ocJwt() {
+    if (typeof token !== "undefined" && token) return token;
+    return localStorage.getItem("JwtToken") || "";
+}
+
 let gridProductos = null, gridInsumos = null, gridEtapas = null;
 let wasSubmitOC = false, wasSubmitItem = false, wasSubmitInsumo = false, wasSubmitEtapa = false;
 let isSaving = false;
@@ -15,6 +20,35 @@ const State = {
     productos: [], personal: [], estadosOC: [], insumosCat: [], talleres: [], etapasEstados: [],
     editItemIndex: -1, editInsumoIndex: -1, editEtapaIndex: -1
 };
+
+/** Modo solo lectura: permiso Ver sin Editar (ver `Permisos.aplicarUINuevoModif` + `permitirConsultaSinEditar`). */
+function ocEsSoloConsulta() {
+    return document.documentElement.dataset.nmSoloConsulta === "1";
+}
+
+function aplicarModoSoloConsultaOC() {
+    if (!ocEsSoloConsulta()) return;
+    document.body.classList.add("oc-solo-consulta");
+    const sub = document.querySelector(".page-header small.text-muted");
+    if (sub && (State.idOC || 0) > 0) sub.textContent = "Solo lectura";
+    ["btnGuardarOC", "btnEliminarOC", "btnCrearEstadoOC", "btnPlusPersonalOC", "btnPlusProductoOC", "btnNuevoInsumoABM", "btnPlusEtapaEstadoOC"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add("d-none");
+    });
+    document.querySelectorAll('button[onclick="abrirModalProducto()"], button[onclick="abrirModalInsumo()"], button[onclick="abrirModalEtapa()"]').forEach(b => b.classList.add("d-none"));
+    const form = document.getElementById("formOC");
+    if (form) {
+        form.querySelectorAll("input, select, textarea").forEach(el => {
+            el.disabled = true;
+        });
+    }
+    if (window.jQuery && $.fn.select2) {
+        $("#formOC select").prop("disabled", true).trigger("change.select2");
+    }
+    if (gridProductos) refreshProductos();
+    if (gridInsumos) refreshInsumos();
+    if (gridEtapas) refreshEtapas();
+}
 
 /* ---------------- helpers numéricos/fechas ---------------- */
 function _fmtNumber(n) { const v = parseFloat(n || 0); return new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v); }
@@ -60,11 +94,26 @@ function syncSaveButton() {
 function initSelect2Base(sel, opts = {}) {
     if (!window.jQuery || !$.fn.select2) return;
     const $el = $(sel); if (!$el.length) return;
-    const $parentModal = $el.closest('.modal');
+    const dpAttr = ($el.attr("data-s2-parent") || "").trim();
+    let $dropdownParent = null;
+    if (dpAttr === "body") {
+        $dropdownParent = $(document.body);
+    } else if (dpAttr) {
+        $dropdownParent = $(dpAttr);
+        if (!$dropdownParent.length) {
+            $dropdownParent = null;
+        } else if ($dropdownParent.hasClass("modal")) {
+            // Anclar al .modal recorta el desplegable (overflow / stacking). Body + z-index en CSS.
+            $dropdownParent = $(document.body);
+        }
+    }
+    if (!$dropdownParent || !$dropdownParent.length) {
+        $dropdownParent = $(document.body);
+    }
     const def = {
         theme: "bootstrap-5", width: "100%", placeholder: "Seleccione",
         language: { noResults: () => "No hay resultados", searching: () => "Buscando..." },
-        dropdownParent: $parentModal.length ? $parentModal : $(document.body)
+        dropdownParent: $dropdownParent
     };
     if ($el.hasClass("select2-hidden-accessible")) $el.select2('destroy');
     $el.select2({ ...def, ...opts });
@@ -80,42 +129,7 @@ function removeEmptyOptionOnSelect(sel) {
     };
     el.addEventListener("change", onChange);
 }
-function isSelect2(el) { return !!(window.jQuery && $(el).hasClass("select2-hidden-accessible") && $(el).next(".select2").length); }
-function getSelect2Selection(el) { return $(el).next(".select2").find(".select2-selection").get(0) || null; }
-function getFeedbackAnchor(el) { return isSelect2(el) ? $(el).next(".select2").get(0) : el; }
-function ensureInvalidFeedback(el) {
-    if (!el) return null;
-    const anchor = getFeedbackAnchor(el);
-    let fb = anchor?.nextElementSibling;
-    if (!(fb && fb.classList?.contains("invalid-feedback"))) {
-        fb = document.createElement("div"); fb.className = "invalid-feedback"; fb.style.display = "none";
-        anchor?.parentNode?.insertBefore(fb, anchor.nextSibling);
-    }
-    return fb;
-}
-function setInvalid(selector, msg = "Campo obligatorio") {
-    const el = typeof selector === "string" ? document.querySelector(selector) : selector;
-    if (!el) return false;
-    let target = el; if (isSelect2(el)) { const s2 = getSelect2Selection(el); if (s2) target = s2; }
-    target.classList.remove("is-valid"); target.classList.add("is-invalid");
-    const fb = ensureInvalidFeedback(el); if (fb) { fb.textContent = msg; fb.style.display = "block"; }
-    return false;
-}
-function setValid(selector) {
-    const el = typeof selector === "string" ? document.querySelector(selector) : selector;
-    if (!el) return true;
-    let target = el; if (isSelect2(el)) { const s2 = getSelect2Selection(el); if (s2) target = s2; }
-    target.classList.remove("is-invalid"); target.classList.add("is-valid");
-    const fb = getFeedbackAnchor(el)?.nextElementSibling; if (fb && fb.classList?.contains("invalid-feedback")) fb.style.display = "none";
-    return true;
-}
-function clearValidation(selector) {
-    const el = typeof selector === "string" ? document.querySelector(selector) : selector;
-    if (!el) return;
-    let target = el; if (isSelect2(el)) { const s2 = getSelect2Selection(el); if (s2) target = s2; }
-    target.classList.remove("is-invalid", "is-valid");
-    const fb = getFeedbackAnchor(el)?.nextElementSibling; if (fb && fb.classList?.contains("invalid-feedback")) fb.style.display = "none";
-}
+/* Validación Select2 + mensajes: usar siempre los helpers globales de site.js (no redefinir setInvalid/setValid/clearValidation: pisan al resto del inyectable Personal / ABM). */
 
 /* ---------------- Marcado visual editable vs auto ---------------- */
 function markAutoEditable() {
@@ -150,7 +164,26 @@ function debounce(fn, wait = 120) { let t = null; return (...a) => { clearTimeou
 
 /* ---------------- Init ---------------- */
 document.addEventListener("DOMContentLoaded", async () => {
+    Permisos.init();
+    Permisos.aplicarUINuevoModif("OrdenesCorte", { permitirConsultaSinEditar: true });
     State.idOC = parseInt((document.getElementById("txtId")?.value || "0"), 10) || 0;
+
+    window.__MInsumosByClizaRefill = async function (detail) {
+        try {
+            await _loadCatsAndProvsForABM();
+            if (!detail || !window.jQuery) return;
+            const nid = Number(detail.nuevoId ?? detail.NuevoId ?? 0);
+            if (!Number.isFinite(nid) || nid <= 0) return;
+            const t = (detail.tipo || "").trim();
+            if (t === "InsumosCategoria") {
+                window.jQuery("#insABM_Categoria").val(String(nid)).trigger("change.select2");
+            } else if (t === "Proveedores") {
+                window.jQuery("#insABM_Proveedor").val(String(nid)).trigger("change.select2");
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
     const dtp = document.getElementById("dtpFechaInicio"); if (dtp && !dtp.value) dtp.value = hoyISO();
 
     // Select2
@@ -183,6 +216,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     syncSaveButton();
     await hideInitial();
     recomputeAll(); // coherencia inicial
+
+    aplicarModoSoloConsultaOC();
+
+    registrarEventosEstadoOC();
+    registrarListenerConfiguracionesGlobales();
+    wirePlusPersonalOrdenesCorte();
+    wirePlusProductoOrdenesCorte();
+    wirePlusEtapaEstadoOrdenesCorte();
+
+    const modalAbmIns = document.getElementById("modalInsumoABM");
+    if (modalAbmIns) {
+        modalAbmIns.addEventListener("shown.bs.modal", () => {
+            _initSelect2PreferProject("#insABM_Categoria");
+            _initSelect2PreferProject("#insABM_Proveedor");
+        });
+    }
+
+    document.getElementById("btnNuevoInsumoABM")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        abrirModalInsumoABM();
+    });
+
 });
 
 /* ---- Binding robusto para #txtCantProducidas ---- */
@@ -208,7 +264,7 @@ async function fetchFirstOk(urls, opts) {
     }
     return null;
 }
-const authHeaders = () => ({ headers: { Authorization: "Bearer " + (token || "") } });
+const authHeaders = () => ({ headers: { Authorization: "Bearer " + _ocJwt() } });
 
 /* ---------------- Catálogos ---------------- */
 async function loadEstados() {
@@ -297,6 +353,7 @@ function setModalFooterAction(modalSel, editing) {
     btn.innerHTML = editing ? `<i class="fa fa-check me-1"></i> Guardar` : `<i class="fa fa-check me-1"></i> Registrar`;
 }
 function abrirModalProducto() {
+    if (ocEsSoloConsulta()) return;
     State.editItemIndex = -1; wasSubmitItem = false;
     setModalFooterAction("#modalProducto", false);
 
@@ -313,19 +370,20 @@ function abrirModalProducto() {
     const wrap = document.getElementById("variantesWrap");
     const cont = document.getElementById("variantesContainer");
     const empty = document.getElementById("variantesEmpty");
-    wrap.innerHTML = ""; cont.style.display = "none"; empty.hidden = true;
+    wrap.innerHTML = ""; cont.classList.add("d-none"); empty.hidden = true;
 
     clearValidation("#cmbProdModal"); clearValidation("#txtProdCantModal");
     document.getElementById("errorCamposItem")?.classList.add("d-none");
 
     cmb.onchange = async () => {
         const idProd = parseInt(cmb.value || 0, 10);
-        wrap.innerHTML = ""; cont.style.display = "none"; empty.hidden = true;
+        wrap.innerHTML = ""; cont.classList.add("d-none"); empty.hidden = true;
         if (btnSave) btnSave.disabled = true;
         if (!idProd) return;
 
         const vars = await obtenerVariantesProducto(idProd);
-        cont.style.display = "block";
+        /* Quitar d-none: el inline display:block no gana a .d-none { display:none !important } */
+        cont.classList.remove("d-none");
         if (vars.length === 0) {
             // NO se permite producto sin variantes
             empty.hidden = false;
@@ -370,6 +428,7 @@ function validarItem() {
     return ok;
 }
 function guardarProducto() {
+    if (ocEsSoloConsulta()) return;
     wasSubmitItem = true; if (!validarItem()) return;
 
     const id = parseInt(document.getElementById("cmbProdModal").value, 10);
@@ -394,6 +453,7 @@ function guardarProducto() {
     bootstrap.Modal.getInstance(document.getElementById("modalProducto"))?.hide();
 }
 function editarProducto(idx) {
+    if (ocEsSoloConsulta()) return;
     const it = State.items[idx]; if (!it) return;
     State.editItemIndex = idx; wasSubmitItem = false;
     setModalFooterAction("#modalProducto", true);
@@ -412,7 +472,7 @@ function editarProducto(idx) {
         const vars = await obtenerVariantesProducto(it.idProducto);
         const cont = document.getElementById("variantesContainer"); const empty = document.getElementById("variantesEmpty");
         const wrap = document.getElementById("variantesWrap");
-        wrap.innerHTML = ""; cont.style.display = "block"; empty.hidden = true;
+        wrap.innerHTML = ""; cont.classList.remove("d-none"); empty.hidden = true;
 
         if (vars.length === 0) {
             empty.hidden = false;
@@ -441,6 +501,7 @@ function editarProducto(idx) {
     new bootstrap.Modal(document.getElementById("modalProducto")).show();
 }
 async function eliminarProducto(idx) {
+    if (ocEsSoloConsulta()) return;
     const ok = await confirmarModal("¿Eliminar el producto de la orden?"); if (!ok) return;
     State.items.splice(idx, 1);
     refreshProductos();
@@ -448,13 +509,15 @@ async function eliminarProducto(idx) {
 }
 function renderChipsVariantes(variantes, rowIndex) {
     if (!Array.isArray(variantes) || variantes.length === 0) return '<span class="text-muted">—</span>';
+    const solo = ocEsSoloConsulta();
     return variantes.map((v, i) => `
     <span class="var-chip" title="${v.nombre}">
       <span class="chip-label">${v.nombre} <span class="qty">×${_fmtNumber(v.cantidad)}</span></span>
-      <button class="chip-x" onclick="quitarVar(${rowIndex},${i});return false;">×</button>
+      ${solo ? "" : `<button class="chip-x" onclick="quitarVar(${rowIndex},${i});return false;">×</button>`}
     </span>`).join("");
 }
 window.quitarVar = function (rowIndex, varIndex) {
+    if (ocEsSoloConsulta()) return;
     const it = State.items[rowIndex]; if (!it) return;
     it.variantes.splice(varIndex, 1);
     const sum = it.variantes.reduce((a, v) => a + (parseFloat(v.cantidad) || 0), 0);
@@ -470,7 +533,7 @@ function configTablaProductos() {
         columns: [
             {
                 data: null, orderable: false, width: "60px", className: "text-center",
-                render: (_, _2, _3, meta) => `
+                render: (_, _2, _3, meta) => ocEsSoloConsulta() ? "" : `
                 <button class="btn btn-link p-0 me-2 text-success" title="Editar" onclick="editarProducto(${meta.row})"><i class="fa fa-pencil"></i></button>
                 <button class="btn btn-link p-0 text-danger" title="Eliminar" onclick="eliminarProducto(${meta.row})"><i class="fa fa-trash"></i></button>`
             },
@@ -481,6 +544,9 @@ function configTablaProductos() {
         order: [[1, "asc"]], dom: "t", pageLength: 1000,
         createdRow: (row) => { $("td", row).eq(2).css({ "white-space": "normal" }); }
     });
+    if (typeof bindDataTableSeleccionFila === "function") {
+        bindDataTableSeleccionFila("#grd_Productos", "ocProd");
+    }
 }
 function refreshProductos() { if (!gridProductos) return; gridProductos.clear().rows.add(State.items).draw(); }
 
@@ -503,7 +569,7 @@ function configTablaInsumos() {
         columns: [
             {
                 data: null, orderable: false, width: "60px", className: "text-center",
-                render: (_, _2, _3, meta) => `
+                render: (_, _2, _3, meta) => ocEsSoloConsulta() ? "" : `
                 <button class="btn btn-link p-0 me-2 text-success" title="Editar" onclick="editarInsumo(${meta.row})"><i class="fa fa-pencil"></i></button>
                 <button class="btn btn-link p-0 text-danger" title="Eliminar" onclick="eliminarInsumo(${meta.row})"><i class="fa fa-trash"></i></button>`
             },
@@ -512,6 +578,9 @@ function configTablaInsumos() {
         ],
         order: [[1, "asc"]], dom: "t", pageLength: 1000
     });
+    if (typeof bindDataTableSeleccionFila === "function") {
+        bindDataTableSeleccionFila("#grd_Insumos", "ocIns");
+    }
 }
 function refreshInsumos() { if (!gridInsumos) return; gridInsumos.clear().rows.add(State.insumos).draw(); }
 
@@ -522,6 +591,7 @@ function setModalFooterActionById(modalId, editing) {
 }
 
 function abrirModalInsumo() {
+    if (ocEsSoloConsulta()) return;
     State.editInsumoIndex = -1; wasSubmitInsumo = false;
     setModalFooterActionById("#modalInsumo", false);
 
@@ -534,12 +604,18 @@ function abrirModalInsumo() {
     new bootstrap.Modal(document.getElementById("modalInsumo")).show();
 }
 function attachInsumoLiveValidation() {
-    const apply = () => { if (!wasSubmitInsumo) return; validarInsumo(); };
-    ["cmbInsumo", "txtInsumoCant"].forEach(id => {
-        const el = document.getElementById(id); if (!el) return;
-        ["input", "change"].forEach(evt => el.addEventListener(evt, apply));
-    });
-    if ($.fn.select2) $("#cmbInsumo").on("select2:select select2:clear", apply);
+    const $ = window.jQuery;
+    if (!$) return;
+    const apply = () => {
+        if (!wasSubmitInsumo) return;
+        validarInsumo();
+    };
+    $("#cmbInsumo").off(".ocInsLive").on("change.ocInsLive", apply);
+    if ($.fn.select2) {
+        $("#cmbInsumo").off("select2:select.ocInsLive select2:clear.ocInsLive")
+            .on("select2:select.ocInsLive select2:clear.ocInsLive", apply);
+    }
+    $("#txtInsumoCant").off(".ocInsLive").on("input.ocInsLive change.ocInsLive", apply);
 }
 function validarInsumo() {
     const id = parseInt(document.getElementById("cmbInsumo").value || 0, 10);
@@ -551,6 +627,7 @@ function validarInsumo() {
     return ok;
 }
 function guardarInsumo() {
+    if (ocEsSoloConsulta()) return;
     wasSubmitInsumo = true; if (!validarInsumo()) return;
     const id = parseInt(document.getElementById("cmbInsumo").value, 10);
     const nombre = document.getElementById("cmbInsumo").selectedOptions[0]?.textContent || "";
@@ -561,6 +638,7 @@ function guardarInsumo() {
     refreshInsumos(); bootstrap.Modal.getInstance(document.getElementById("modalInsumo"))?.hide();
 }
 function editarInsumo(i) {
+    if (ocEsSoloConsulta()) return;
     const it = State.insumos[i]; if (!it) return;
     State.editInsumoIndex = i; wasSubmitInsumo = false;
     setModalFooterActionById("#modalInsumo", true);
@@ -572,7 +650,7 @@ function editarInsumo(i) {
     attachInsumoLiveValidation();
     new bootstrap.Modal(document.getElementById("modalInsumo")).show();
 }
-async function eliminarInsumo(i) { const ok = await confirmarModal("¿Eliminar insumo?"); if (!ok) return; State.insumos.splice(i, 1); refreshInsumos(); }
+async function eliminarInsumo(i) { if (ocEsSoloConsulta()) return; const ok = await confirmarModal("¿Eliminar insumo?"); if (!ok) return; State.insumos.splice(i, 1); refreshInsumos(); }
 
 /* ---------------- Etapas ---------------- */
 function getTallerInfo(idTaller) {
@@ -616,7 +694,7 @@ function configTablaEtapas() {
         columns: [
             {
                 data: null, orderable: false, width: "60px", className: "text-center",
-                render: (_, _2, _3, meta) => `
+                render: (_, _2, _3, meta) => ocEsSoloConsulta() ? "" : `
                 <button class="btn btn-link p-0 me-2 text-success" title="Editar" onclick="editarEtapa(${meta.row})"><i class="fa fa-pencil"></i></button>
                 <button class="btn btn-link p-0 text-danger" title="Eliminar" onclick="eliminarEtapa(${meta.row})"><i class="fa fa-trash"></i></button>`
             },
@@ -642,6 +720,9 @@ function configTablaEtapas() {
         order: [[2, "desc"]], dom: "t", pageLength: 1000,
         createdRow: (row) => { $("td", row).eq(9).css({ "white-space": "normal" }); }
     });
+    if (typeof bindDataTableSeleccionFila === "function") {
+        bindDataTableSeleccionFila("#grd_Etapas", "ocEtapas");
+    }
 }
 function refreshEtapas() { if (!gridEtapas) return; gridEtapas.clear().rows.add(State.etapas).draw(); }
 
@@ -706,6 +787,7 @@ function recalcEtapaAutos() {
 }
 
 function abrirModalEtapa() {
+    if (ocEsSoloConsulta()) return;
     // 🔒 No permitir agregar etapa sin productos
     if ((State.items || []).length === 0) {
         errorModal?.("Agregá al menos un producto antes de crear etapas.");
@@ -758,6 +840,7 @@ function validarEtapa() {
     return ok;
 }
 function guardarEtapa() {
+    if (ocEsSoloConsulta()) return;
     wasSubmitEtapa = true; if (!validarEtapa()) return;
 
     const entrada = document.getElementById("dtpEtEntrada").value || null;
@@ -791,6 +874,7 @@ function guardarEtapa() {
     bootstrap.Modal.getInstance(document.getElementById("modalEtapa"))?.hide();
 }
 function editarEtapa(i) {
+    if (ocEsSoloConsulta()) return;
     const it = State.etapas[i]; if (!it) return; State.editEtapaIndex = i; wasSubmitEtapa = false;
     setModalFooterActionById("#modalEtapa", true);
 
@@ -832,7 +916,7 @@ function editarEtapa(i) {
     recalcEtapaAutos();
     new bootstrap.Modal(document.getElementById("modalEtapa")).show();
 }
-async function eliminarEtapa(i) { const ok = await confirmarModal("¿Eliminar etapa?"); if (!ok) return; State.etapas.splice(i, 1); refreshEtapas(); recomputeAll(); }
+async function eliminarEtapa(i) { if (ocEsSoloConsulta()) return; const ok = await confirmarModal("¿Eliminar etapa?"); if (!ok) return; State.etapas.splice(i, 1); refreshEtapas(); recomputeAll(); }
 
 /* ---------------- Re-cálculos de cabecera ---------------- */
 function computeTotals() {
@@ -934,6 +1018,7 @@ function camposValidos() {
 function updateBanner() { const ok = camposValidos(); document.getElementById("errorCamposOC")?.classList.toggle("d-none", ok); return ok; }
 
 async function guardarOC() {
+    if (ocEsSoloConsulta()) return;
     if (isSaving) return;
     wasSubmitOC = true; if (!updateBanner()) return;
     if ((State.items || []).length === 0) { return errorModal?.("Agregá al menos un producto."); }
@@ -997,6 +1082,7 @@ async function guardarOC() {
 }
 
 async function eliminarOC() {
+    if (ocEsSoloConsulta()) return;
     if (!State.idOC) return;
     const ok = await confirmarModal("¿Eliminar esta orden de corte?"); if (!ok) return;
     try {
@@ -1008,47 +1094,652 @@ async function eliminarOC() {
 }
 window.volverIndexOC = function () { window.location.href = "/OrdenesCorte/Index"; };
 
-/* ---------------- Exportación PDF ---------------- */
 async function exportarOCPdf() {
     if (!(State.items || []).length) return errorModal?.("Agregá al menos un producto para exportar.");
-    const { jsPDF } = window.jspdf || {}; if (!jsPDF || !window.jspdf?.jsPDF?.API?.autoTable) { return errorModal?.("Falta jsPDF/autoTable."); }
+
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF || !window.jspdf?.jsPDF?.API?.autoTable) {
+        return errorModal?.("Falta jsPDF/autoTable.");
+    }
+
+    // ✅ Elegir si incluir etapas
+    let incluirEtapas = true;
+    if (typeof confirmarModal === "function") {
+        incluirEtapas = await confirmarModal("¿Querés incluir las ETAPAS en el PDF?");
+    } else {
+        incluirEtapas = confirm("¿Querés incluir las ETAPAS en el PDF?");
+    }
 
     recomputeAll();
 
-    const doc = new jsPDF({ unit: "pt", format: "a4" }); const pad = 40;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pad = 40;
 
-    doc.setFont("helvetica", "bold"); doc.setFontSize(18);
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
     doc.text("Orden de Corte", pad, 50);
-    doc.setFontSize(11); doc.setFont("helvetica", "normal");
-    doc.text(`Fecha inicio: ${fView(document.getElementById("dtpFechaInicio").value)}`, pad, 70);
-    doc.text(`Estado: ${document.getElementById("cmbEstado").selectedOptions[0]?.text || "—"}`, pad, 86);
-    doc.text(`Responsable: ${document.getElementById("cmbPersonal").selectedOptions[0]?.text || "—"}`, pad, 102);
 
-    doc.text(`A producir: ${_fmtNumber(State.aProducir)}`, pad, 120);
-    doc.text(`Producidas (corte): ${_fmtNumber(State.producidas)} — Δ Corte: ${_fmtNumber(State.difCorte)}`, pad, 136);
-    doc.text(`Final real (última etapa): ${_fmtNumber(State.finalReal)} — Δ Final: ${_fmtNumber(State.difFinal)}`, pad, 152);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
 
-    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Productos", pad, 180);
-    const body = (State.items || []).map(it => {
+    // ✅ N° de OC (si no hay, mostrar “Sin número”)
+    const nroOC = (State.idOC && State.idOC > 0) ? String(State.idOC) : "Sin número (no registrada)";
+    doc.text(`N° OC: ${nroOC}`, pad, 68);
+
+    doc.text(`Fecha inicio: ${fView(document.getElementById("dtpFechaInicio").value)}`, pad, 84);
+    doc.text(`Estado: ${document.getElementById("cmbEstado").selectedOptions[0]?.text || "—"}`, pad, 100);
+    doc.text(`Responsable: ${document.getElementById("cmbPersonal").selectedOptions[0]?.text || "—"}`, pad, 116);
+
+    doc.text(`A producir: ${_fmtNumber(State.aProducir)}`, pad, 134);
+    doc.text(`Producidas (corte): ${_fmtNumber(State.producidas)} — Δ Corte: ${_fmtNumber(State.difCorte)}`, pad, 150);
+    doc.text(`Final real (última etapa): ${_fmtNumber(State.finalReal)} — Δ Final: ${_fmtNumber(State.difFinal)}`, pad, 166);
+
+    // Productos
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Productos", pad, 194);
+
+    const bodyProd = (State.items || []).map(it => {
         const vars = (it.variantes || []).map(v => `- ${v.nombre} × ${_fmtNumber(v.cantidad)}`).join("\n");
         const prod = it.productoNombre || `Producto ${it.idProducto}`;
         return [vars ? `${prod}\n${vars}` : prod, _fmtNumber(it.cantidad)];
     });
-    doc.autoTable({ startY: 188, head: [["Producto / Variantes", "Cantidad"]], body, margin: { left: pad, right: pad }, styles: { fontSize: 10, cellPadding: 6, overflow: "linebreak" }, headStyles: { fillColor: [28, 39, 54], textColor: [255, 255, 255] }, columnStyles: { 1: { halign: "right", cellWidth: 100 } } });
+
+    doc.autoTable({
+        startY: 202,
+        head: [["Producto / Variantes", "Cantidad"]],
+        body: bodyProd,
+        margin: { left: pad, right: pad },
+        styles: { fontSize: 10, cellPadding: 6, overflow: "linebreak" },
+        headStyles: { fillColor: [28, 39, 54], textColor: [255, 255, 255] },
+        columnStyles: { 1: { halign: "right", cellWidth: 110 } }
+    });
 
     let y = doc.lastAutoTable.finalY + 18;
-    doc.setFont("helvetica", "bold"); doc.text("Insumos", pad, y); y += 8;
+
+    // Insumos (siempre)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Insumos", pad, y);
+    y += 8;
+
     const bodyIns = (State.insumos || []).map(i => [i.nombre, _fmtNumber(i.cantidad)]);
-    doc.autoTable({ startY: y, head: [["Insumo", "Cantidad"]], body: bodyIns, margin: { left: pad, right: pad }, styles: { fontSize: 10, cellPadding: 6 }, headStyles: { fillColor: [46, 125, 50], textColor: [255, 255, 255] }, columnStyles: { 1: { halign: "right", cellWidth: 100 } } });
+    doc.autoTable({
+        startY: y,
+        head: [["Insumo", "Cantidad"]],
+        body: bodyIns,
+        margin: { left: pad, right: pad },
+        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [46, 125, 50], textColor: [255, 255, 255] },
+        columnStyles: { 1: { halign: "right", cellWidth: 110 } }
+    });
 
     y = doc.lastAutoTable.finalY + 18;
-    doc.setFont("helvetica", "bold"); doc.text("Etapas", pad, y); y += 8;
-    const bodyEt = (State.etapas || []).map(e => {
-        const dias = (e.diasReales ?? null);
-        const salidaRealTxt = `${fView(e.fechaSalidaReal)}${dias == null ? "" : ` (${dias} días)`}`;
-        return [e.tallerNombre || "—", fView(e.fechaEntrada), fView(e.fechaSalidaAprox), salidaRealTxt, _fmtNumber(e.aProducir), _fmtNumber(e.producidas), _fmtNumber(e.diferencias), e.estadoNombre || "—", e.nota || ""];
-    });
-    doc.autoTable({ startY: y, head: [["Taller", "Entrada", "Salida aprox.", "Salida real", "A prod.", "Prod.", "Δ", "Estado", "Nota"]], body: bodyEt, margin: { left: pad, right: pad }, styles: { fontSize: 9, cellPadding: 5 }, headStyles: { fillColor: [255, 179, 0], textColor: [0, 0, 0] }, columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" } } });
 
-    doc.save(`OrdenCorte_${document.getElementById("dtpFechaInicio").value}.pdf`);
+    // ✅ Etapas (opcional)
+    if (incluirEtapas) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("Etapas", pad, y);
+        y += 8;
+
+        const bodyEt = (State.etapas || []).map(e => {
+            const dias = (e.diasReales ?? null);
+            const salidaRealTxt = `${fView(e.fechaSalidaReal)}${dias == null ? "" : ` (${dias} días)`}`;
+            return [
+                e.tallerNombre || "—",
+                fView(e.fechaEntrada),
+                fView(e.fechaSalidaAprox),
+                salidaRealTxt,
+                _fmtNumber(e.aProducir),
+                _fmtNumber(e.producidas),
+                _fmtNumber(e.diferencias),
+                e.estadoNombre || "—",
+                e.nota || ""
+            ];
+        });
+
+        doc.autoTable({
+            startY: y,
+            head: [["Taller", "Entrada", "Salida aprox.", "Salida real", "A prod.", "Prod.", "Δ", "Estado", "Nota"]],
+            body: bodyEt,
+            margin: { left: pad, right: pad },
+            styles: { fontSize: 9, cellPadding: 5 },
+            headStyles: { fillColor: [255, 179, 0], textColor: [0, 0, 0] },
+            columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" } }
+        });
+    }
+
+    const fechaNombre = document.getElementById("dtpFechaInicio").value || moment().format("YYYY-MM-DD");
+    doc.save(`OrdenCorte_${nroOC}_${fechaNombre}.pdf`);
+}
+
+
+// ----------------- FLAGS -----------------
+let isSavingInsumoABM = false;
+let wasSubmitInsumoABM = false;
+
+// ----------------- ENDPOINTS FIJOS -----------------
+const URL_INS_CATEGORIAS = "/InsumosCategoria/Lista";
+const URL_PROVEEDORES = "/Proveedores/Lista";
+
+// ----------------- DOM HELPERS -----------------
+function _insABM_el(id) { return document.getElementById(id); }
+function _insABM_val(id) { return (_insABM_el(id)?.value ?? ""); }
+function _insABM_set(id, v) { const el = _insABM_el(id); if (el) el.value = (v ?? ""); }
+
+// ----------------- AUTH HEADERS -----------------
+function _authHeadersJson() {
+    return {
+        Authorization: "Bearer " + _ocJwt(),
+        "Content-Type": "application/json;charset=utf-8"
+    };
+}
+
+// ----------------- SELECT2 (dentro de modal) -----------------
+function _insABM_initSelect2(sel) {
+    if (!window.jQuery || !$.fn.select2) return;
+    const $el = $(sel); if (!$el.length) return;
+
+    const dropdownParent = $(document.body);
+
+    if ($el.hasClass("select2-hidden-accessible")) $el.select2("destroy");
+
+    $el.select2({
+        theme: "bootstrap-5",
+        width: "100%",
+        placeholder: "Seleccione",
+        dropdownParent,
+        language: { noResults: () => "No hay resultados", searching: () => "Buscando..." }
+    });
+}
+
+// Si tenés initSelect2Base del proyecto, lo usa; si no, usa el de arriba
+function _initSelect2PreferProject(sel) {
+    if (typeof initSelect2Base === "function") initSelect2Base(sel);
+    else _insABM_initSelect2(sel);
+}
+
+// ----------------- VALIDACIÓN (usa tus helpers si existen) -----------------
+function _setInvalid(selectorOrEl, msg = "Campo obligatorio") {
+    if (typeof setInvalid === "function") return setInvalid(selectorOrEl, msg);
+
+    const el = typeof selectorOrEl === "string" ? document.querySelector(selectorOrEl) : selectorOrEl;
+    if (!el) return false;
+    el.classList.add("is-invalid");
+    el.classList.remove("is-valid");
+    return false;
+}
+function _setValid(selectorOrEl) {
+    if (typeof setValid === "function") return setValid(selectorOrEl);
+
+    const el = typeof selectorOrEl === "string" ? document.querySelector(selectorOrEl) : selectorOrEl;
+    if (!el) return true;
+    el.classList.add("is-valid");
+    el.classList.remove("is-invalid");
+    return true;
+}
+function _clearValidation(selectorOrEl) {
+    if (typeof clearValidation === "function") return clearValidation(selectorOrEl);
+
+    const el = typeof selectorOrEl === "string" ? document.querySelector(selectorOrEl) : selectorOrEl;
+    if (!el) return;
+    el.classList.remove("is-invalid", "is-valid");
+}
+
+// ----------------- CARGA DE COMBOS (Categorías / Proveedores) -----------------
+let INS_CATS_CACHE = [];
+let INS_PROV_CACHE = [];
+
+function _txtCat(x) { return (x.Nombre || x.Descripcion || x.Denominacion || `Categoría ${x.Id}`); }
+function _txtProv(x) { return (x.Nombre || x.RazonSocial || x.Descripcion || `Proveedor ${x.Id}`); }
+
+async function _loadCatsAndProvsForABM() {
+    // ambos en paralelo
+    const [cats, provs] = await Promise.all([
+        fetch(URL_INS_CATEGORIAS, { headers: { Authorization: "Bearer " + _ocJwt() } })
+            .then(r => (r.ok ? r.json() : []))
+            .catch(() => []),
+        fetch(URL_PROVEEDORES, { headers: { Authorization: "Bearer " + _ocJwt() } })
+            .then(r => (r.ok ? r.json() : []))
+            .catch(() => [])
+    ]);
+
+    INS_CATS_CACHE = Array.isArray(cats) ? cats : [];
+    INS_PROV_CACHE = Array.isArray(provs) ? provs : [];
+
+    // Render combos
+    const cmbCat = _insABM_el("insABM_Categoria");
+    const cmbProv = _insABM_el("insABM_Proveedor");
+
+    if (cmbCat) {
+        cmbCat.innerHTML =
+            `<option value="">Seleccione</option>` +
+            INS_CATS_CACHE.map(x => `<option value="${x.Id}">${_txtCat(x)}</option>`).join("");
+        _initSelect2PreferProject("#insABM_Categoria");
+        if (window.jQuery && $.fn.select2) $("#insABM_Categoria").val("").trigger("change.select2");
+    }
+
+    if (cmbProv) {
+        cmbProv.innerHTML =
+            `<option value="">Seleccione</option>` +
+            INS_PROV_CACHE.map(x => `<option value="${x.Id}">${_txtProv(x)}</option>`).join("");
+        _initSelect2PreferProject("#insABM_Proveedor");
+        if (window.jQuery && $.fn.select2) $("#insABM_Proveedor").val("").trigger("change.select2");
+    }
+}
+
+// ----------------- ABRIR MODAL ABM (SIEMPRE NUEVO) -----------------
+function abrirModalInsumoABM() {
+    if (ocEsSoloConsulta()) return;
+    wasSubmitInsumoABM = false;
+
+    // Título y botón
+    const ttl = _insABM_el("modalInsumoABMLabel");
+    if (ttl) ttl.innerHTML = `<i class="fa fa-wrench me-2 text-success"></i> Nuevo Insumo`;
+
+    const btn = _insABM_el("btnGuardarInsumoABM");
+    if (btn) btn.innerHTML = `<i class="fa fa-check me-1"></i> Registrar`;
+
+    // Limpiar campos (SIEMPRE INSERTA)
+    _insABM_set("insABM_Id", "0");
+    _insABM_set("insABM_Codigo", "");
+    _insABM_set("insABM_Descripcion", "");
+    _insABM_set("insABM_Costo", "");
+
+    // Limpiar validaciones + banner
+    ["#insABM_Codigo", "#insABM_Descripcion", "#insABM_Categoria", "#insABM_Proveedor", "#insABM_Costo"]
+        .forEach(_clearValidation);
+    _insABM_el("insABM_Error")?.classList.add("d-none");
+
+    // Mostrar modal
+    const modalEl = document.getElementById("modalInsumoABM");
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    // Cargar combos al abrir (y reinit select2 dentro del modal)
+    _loadCatsAndProvsForABM().then(() => {
+        // deja selects en blanco
+        if (window.jQuery && $.fn.select2) {
+            $("#insABM_Categoria").val("").trigger("change.select2");
+            $("#insABM_Proveedor").val("").trigger("change.select2");
+        } else {
+            _insABM_set("insABM_Categoria", "");
+            _insABM_set("insABM_Proveedor", "");
+        }
+    });
+
+    // Live validation
+    _attachInsumoABMLiveValidation();
+}
+
+// ----------------- VALIDAR ABM -----------------
+function validarInsumoABM() {
+    const codigo = (_insABM_val("insABM_Codigo") || "").trim();
+    const desc = (_insABM_val("insABM_Descripcion") || "").trim();
+    const idCat = parseInt(_insABM_val("insABM_Categoria") || "0", 10) || 0;
+    const idProv = parseInt(_insABM_val("insABM_Proveedor") || "0", 10) || 0;
+    const costo = parseFloat(_insABM_val("insABM_Costo") || "0") || 0;
+
+    let ok = true;
+    ok = (codigo ? _setValid("#insABM_Codigo") : _setInvalid("#insABM_Codigo")) && ok;
+    ok = (desc ? _setValid("#insABM_Descripcion") : _setInvalid("#insABM_Descripcion")) && ok;
+    ok = (idCat ? _setValid("#insABM_Categoria") : _setInvalid("#insABM_Categoria")) && ok;
+    ok = (idProv ? _setValid("#insABM_Proveedor") : _setInvalid("#insABM_Proveedor")) && ok;
+    ok = (costo >= 0 ? _setValid("#insABM_Costo") : _setInvalid("#insABM_Costo")) && ok; // costo puede ser 0 si querés
+
+    _insABM_el("insABM_Error")?.classList.toggle("d-none", ok);
+    return ok;
+}
+
+let __insAbmLiveBound = false;
+function _attachInsumoABMLiveValidation() {
+    if (__insAbmLiveBound) return;
+    __insAbmLiveBound = true;
+
+    const ids = ["insABM_Codigo", "insABM_Descripcion", "insABM_Costo"];
+    ids.forEach(id => {
+        const el = _insABM_el(id);
+        if (!el) return;
+        ["input", "change", "blur"].forEach(ev => el.addEventListener(ev, () => {
+            if (!wasSubmitInsumoABM) return;
+            validarInsumoABM();
+        }));
+    });
+
+    ["insABM_Categoria", "insABM_Proveedor"].forEach(id => {
+        const el = _insABM_el(id);
+        if (!el) return;
+        ["change", "input"].forEach(ev => el.addEventListener(ev, () => {
+            if (!wasSubmitInsumoABM) return;
+            validarInsumoABM();
+        }));
+        if (window.jQuery && $.fn.select2) {
+            $("#" + id).on("select2:select select2:clear", () => {
+                if (!wasSubmitInsumoABM) return;
+                validarInsumoABM();
+            });
+        }
+    });
+}
+
+// ----------------- REFRESCAR COMBO INSUMOS OC (modal normal) -----------------
+function _refreshComboInsumosOC() {
+    const cmb = document.getElementById("cmbInsumo");
+    if (!cmb) return;
+
+    cmb.innerHTML =
+        `<option value="">Seleccione</option>` +
+        (State.insumosCat || []).map(i => {
+            const txt = (i.Descripcion || i.Nombre || `Insumo ${i.Id}`);
+            return `<option value="${i.Id}">${txt}</option>`;
+        }).join("");
+
+    if (window.jQuery && $.fn.select2) {
+        // reinit preferentemente con tu helper
+        if (typeof initSelect2Base === "function") initSelect2Base("#cmbInsumo");
+        else _insABM_initSelect2("#cmbInsumo");
+        $("#cmbInsumo").trigger("change.select2");
+    }
+}
+
+function _selectInsumoEnModal(idInsumo) {
+    // Selecciona en el modal normal de insumo (#modalInsumo)
+    const sel = document.getElementById("cmbInsumo");
+    if (!sel) return;
+    const sid = String(idInsumo ?? "");
+    if (window.jQuery && $.fn.select2) {
+        // "change" actualiza Select2 y dispara listeners; change.select2 solo no alcanza para revalidar con .on("change", …)
+        $("#cmbInsumo").val(sid).trigger("change");
+    } else {
+        sel.value = sid;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    // Tras alta ABM el usuario pudo haber intentado Registrar antes: reevaluar y limpiar "Campo obligatorio" del combo
+    if (wasSubmitInsumo) validarInsumo();
+}
+
+// ----------------- GUARDAR ABM (SIEMPRE INSERTA + selecciona nuevo) -----------------
+// IMPORTANTE: Para que esto seleccione el nuevo insumo, tu backend debe devolver el Id.
+// Te dejo la lógica lista para ambos casos:
+//  - Si devuelve { valor:true, id:123 } => usa id.
+//  - Si devuelve solo { valor:true } => fallback buscando por Codigo+Descripcion.
+async function guardarInsumoABM() {
+    if (isSavingInsumoABM) return;
+
+    wasSubmitInsumoABM = true;
+    if (!validarInsumoABM()) return;
+
+    // SIEMPRE INSERTAR
+    const payload = {
+        Id: 0,
+        Codigo: (_insABM_val("insABM_Codigo") || "").trim(),
+        Descripcion: (_insABM_val("insABM_Descripcion") || "").trim(),
+        IdCategoria: parseInt(_insABM_val("insABM_Categoria") || "0", 10) || 0,
+        IdProveedor: parseInt(_insABM_val("insABM_Proveedor") || "0", 10) || 0,
+        CostoUnitario: parseFloat(_insABM_val("insABM_Costo") || "0") || 0
+    };
+
+    try {
+        isSavingInsumoABM = true;
+
+        const r = await fetch("/Insumos/Insertar", {
+            method: "POST",
+            headers: _authHeadersJson(),
+            body: JSON.stringify(payload)
+        });
+
+        if (!r.ok) throw new Error(r.statusText);
+        const j = await r.json();
+
+        const ok = (j === true || j?.valor === true);
+        if (!ok) return (window.errorModal ? errorModal("No se pudo guardar el insumo.") : alert("No se pudo guardar el insumo."));
+
+        // ✅ refrescar catálogo OC
+        if (typeof loadInsumos === "function") {
+            await loadInsumos(); // actualiza State.insumosCat
+        }
+
+        // ✅ refrescar combo modal normal
+        _refreshComboInsumosOC();
+
+        // ✅ determinar ID creado
+        let newId = parseInt(j?.id || j?.Id || j?.nuevoId || "0", 10) || 0;
+
+        if (!newId) {
+            // fallback: buscar por Codigo+Descripcion (por si aún no devolvés Id)
+            const cod = payload.Codigo.toUpperCase();
+            const desc = payload.Descripcion.toUpperCase();
+            const found = (State.insumosCat || []).slice().reverse().find(x =>
+                String(x.Codigo || "").toUpperCase() === cod &&
+                String(x.Descripcion || x.Nombre || "").toUpperCase() === desc
+            );
+            newId = found?.Id || 0;
+        }
+
+        if (newId) {
+            _selectInsumoEnModal(newId);
+            if (typeof showToast === "function") showToast("Insumo creado y seleccionado.", "success");
+        } else {
+            if (typeof showToast === "function") showToast("Insumo creado. Seleccionalo en la lista.", "info");
+        }
+
+        const elAbm = document.getElementById("modalInsumoABM");
+        if (elAbm && window.bootstrap?.Modal) {
+            window.bootstrap.Modal.getInstance(elAbm)?.hide();
+        }
+
+    } catch (e) {
+        console.error(e);
+        if (window.errorModal) errorModal("Error guardando el insumo.");
+        else alert("Error guardando el insumo.");
+    } finally {
+        isSavingInsumoABM = false;
+    }
+}
+
+function wirePlusPersonalOrdenesCorte() {
+    if (!window.jQuery) return;
+    const $ = window.jQuery;
+    $(document).off("click.ocNmPersonal", "#btnPlusPersonalOC").on("click.ocNmPersonal", "#btnPlusPersonalOC", async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof nuevoPersonal !== "function") {
+            if (typeof errorModal === "function") await errorModal("No se pudo abrir el alta de personal.");
+            return;
+        }
+        window.__personalByClizaAltaCallback = async function (nuevoId) {
+            try {
+                await loadPersonal();
+                const nid = Number(nuevoId);
+                if (Number.isFinite(nid) && nid > 0) {
+                    $("#cmbPersonal").val(String(nid)).trigger("change.select2");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        nuevoPersonal();
+    });
+}
+
+function wirePlusProductoOrdenesCorte() {
+    if (!window.jQuery) return;
+    const $ = window.jQuery;
+    $(document).off("click.ocNmProd", "#btnPlusProductoOC").on("click.ocNmProd", "#btnPlusProductoOC", async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!window.MProductoByCliza || typeof window.MProductoByCliza.abrir !== "function") {
+            if (typeof errorModal === "function") await errorModal("No se pudo abrir el alta de producto.");
+            return;
+        }
+        await window.MProductoByCliza.abrir({
+            onSuccess: async (newId) => {
+                try {
+                    await loadProductos();
+                    const modal = document.getElementById("modalProducto");
+                    const cmb = document.getElementById("cmbProdModal");
+                    if (!cmb) return;
+                    if (modal && modal.classList.contains("show")) {
+                        cmb.innerHTML = `<option value="">Seleccione</option>` + (State.productos || []).map(p =>
+                            `<option value="${p.Id}">${p.Descripcion || ""}</option>`).join("");
+                        initSelect2Base("#cmbProdModal");
+                        const nid = Number(newId) || 0;
+                        if (nid > 0) {
+                            $(cmb).val(String(nid)).trigger("change");
+                            if (typeof cmb.onchange === "function") await cmb.onchange();
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+    });
+}
+
+function wirePlusEtapaEstadoOrdenesCorte() {
+    if (!window.jQuery) return;
+    window.jQuery(document).off("click.ocNmEtEst", "#btnPlusEtapaEstadoOC").on("click.ocNmEtEst", "#btnPlusEtapaEstadoOC", async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof abrirConfiguracion !== "function") return;
+        try {
+            await abrirConfiguracion(
+                "Etapas Estados Ordenes de Corte",
+                "OrdenesCorteEtapasEstados",
+                null,
+                null,
+                null,
+                true
+            );
+        } catch (err) {
+            console.error(err);
+        }
+    });
+}
+
+function registrarEventosEstadoOC() {
+    const btnCrearEstado = document.getElementById("btnCrearEstadoOC");
+
+    if (!btnCrearEstado) return;
+
+    btnCrearEstado.addEventListener("click", async function () {
+        try {
+            await abrirConfiguracion(
+                "Estados Ordenes de Corte",   // nombre visible
+                "OrdenesCorteEstados",      // controller configuracion
+                null,                 // comboNombre
+                null,                 // comboController
+                null,                  // lblComboNombre
+                true
+            );
+        } catch (e) {
+            console.error("Error al abrir configuraciones de estados", e);
+            errorModal("No se pudo abrir la configuración de estados.");
+        }
+    });
+}
+
+
+function registrarListenerConfiguracionesGlobales() {
+    if (document.documentElement.dataset.ocNmConfigListener) return;
+    document.documentElement.dataset.ocNmConfigListener = "1";
+    document.addEventListener("configuracionActualizada", async function (e) {
+        try {
+            const detail = e.detail || {};
+            const tipo = detail.tipo || "";
+            const nuevoId = detail.nuevoId ?? detail.NuevoId ?? null;
+
+            if (tipo === "OrdenesCorteEstados") {
+                await recargarEstadosOC(true, nuevoId);
+            }
+            if (tipo === "OrdenesCorteEtapasEstados") {
+                await recargarEtapasEstadosOC(true, nuevoId);
+            }
+        } catch (err) {
+            console.error("Error procesando configuracionActualizada", err);
+        }
+    });
+}
+
+async function recargarEstadosOC(mantenerSeleccion = true, idSeleccionar = null) {
+    try {
+        const select = document.getElementById("cmbEstado"); // 👈 IMPORTANTE (no IdEstado)
+        if (!select) return;
+
+        const valorActual = mantenerSeleccion ? select.value : "";
+
+        // 🔥 traemos estados igual que tu sistema
+        const estados = await fetchFirstOk(
+            ["/OrdenesCorte/Estados", "/OrdenesCorteEstados/Lista"],
+            authHeaders()
+        );
+
+        State.estadosOC = Array.isArray(estados) ? estados : [];
+
+        // 🔥 llenar select
+        select.innerHTML =
+            `<option value="">Seleccione</option>` +
+            State.estadosOC.map(x =>
+                `<option value="${x.Id}">${x.Nombre}</option>`
+            ).join("");
+
+        // 🔥 restaurar selección
+        if (idSeleccionar) {
+            select.value = String(idSeleccionar);
+        } else if (valorActual) {
+            const existe = State.estadosOC.some(x => String(x.Id) === String(valorActual));
+            if (existe) {
+                select.value = String(valorActual);
+            }
+        }
+
+        // 🔥 refrescar UI (select2 o normal)
+        if (window.jQuery && $(select)?.hasClass("select2-hidden-accessible")) {
+            $(select).trigger("change.select2");
+        } else if (window.jQuery) {
+            $(select).trigger("change");
+        } else {
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+    } catch (e) {
+        console.error("Error recargando estados OC", e);
+    }
+}
+
+async function recargarEtapasEstadosOC(mantenerSeleccion = true, idSeleccionar = null) {
+    try {
+        const select = document.getElementById("cmbEtEstado");
+        if (!select) return;
+
+        const valorActual = mantenerSeleccion ? select.value : "";
+
+        await loadEtapasEstados();
+
+        select.innerHTML =
+            `<option value="">Seleccione</option>` +
+            (State.etapasEstados || []).map(x =>
+                `<option value="${x.Id}">${x.Nombre}</option>`
+            ).join("");
+
+        if (idSeleccionar) {
+            select.value = String(idSeleccionar);
+        } else if (valorActual) {
+            const existe = (State.etapasEstados || []).some(x => String(x.Id) === String(valorActual));
+            if (existe) select.value = String(valorActual);
+        }
+
+        if (window.jQuery && $(select)?.hasClass("select2-hidden-accessible")) {
+            $(select).trigger("change.select2");
+        } else if (window.jQuery) {
+            $(select).trigger("change");
+        } else {
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+    } catch (e) {
+        console.error("Error recargando estados de etapa OC", e);
+    }
 }

@@ -1,6 +1,7 @@
-﻿/* ================== ENDPOINTS ================== */
+/* ================== ENDPOINTS ================== */
 const API = {
     clientes: "/CuentasCorrientes/ListaClientes",            // GET ?texto=&saldoActivo=&idSucursal=
+    sucursalesOpciones: "/CuentasCorrientes/SucursalesOpciones", // GET — mismas reglas que Ventas (admin: todas; resto: asignadas)
     lista: "/CuentasCorrientes/Lista",                       // GET ?idCliente=&desde=&hasta=&idSucursal=&texto=
     obtener: "/CuentasCorrientes/Obtener",                   // GET ?id=
     insertarManual: "/CuentasCorrientes/InsertarManual",     // POST
@@ -10,7 +11,9 @@ const API = {
 
 /* ================== Estado ================== */
 let gridClientes = null;
-let gridMovs = null;
+/** Movimientos en pantalla (incluye fila sintética de saldo anterior). */
+let movimientosRowsFull = [];
+let movCardsFiltersBound = false;
 let clienteSeleccionado = null;
 let filtros = { desde: null, hasta: null, idSucursal: null, texto: null };
 let editContext = { isEdit: false, idCliente: null };
@@ -75,35 +78,123 @@ function clearValidationScope(scopeSel) {
     showErrorBanner(false);
 }
 
-/* ================== Filtros por columna (cabecera de la grilla) ================== */
-const columnConfigMovs = [
-    { index: 1, filterType: "text" },                                  // Fecha
-    { index: 2, filterType: "select", fetchDataFunc: tiposMovFilter }, // Tipo
-    { index: 3, filterType: "text" },                                  // Concepto
-    { index: 4, filterType: "text" },                                  // Debe
-    { index: 5, filterType: "text" },                                  // Haber
-    { index: 6, filterType: "text" },                                  // Saldo
-    { index: 7, filterType: "select", fetchDataFunc: SucursalesFilter } // Sucursal
-];
-async function tiposMovFilter() {
-    return [
-        { Id: "VENTA", Nombre: "VENTA" },
-        { Id: "COBRO", Nombre: "COBRO" }
-    ];
+/* ================== Movimientos como cards ================== */
+function splitSaldoRows(full) {
+    const saldoRows = (full || []).filter(r => r.__isSaldo);
+    const dataRows = (full || []).filter(r => !r.__isSaldo);
+    return { saldoRows, dataRows };
 }
-async function SucursalesFilter() {
-    try {
-        const r = await fetch("/Sucursales/Lista", { headers: { "Authorization": "Bearer " + (token || "") } });
-        const d = await r.json();
-        return d.map(x => ({ Id: x.Id, Nombre: x.Nombre }));
-    } catch {
-        const uniques = new Set((gridMovs?.rows().data().toArray() || []).map(r => r.Sucursal).filter(Boolean));
-        return [...uniques].map(s => ({ Id: s, Nombre: s }));
+function escapeHtmlMov(s) {
+    if (s == null) return "";
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+function refreshCcMovsSucursalSelect() {
+    const $sel = $("#ccMovsFiltroSucursal");
+    if (!$sel.length) return;
+    const prev = $sel.val();
+    const { dataRows } = splitSaldoRows(movimientosRowsFull);
+    const names = [...new Set(dataRows.map(r => (r.Sucursal || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    $sel.empty().append('<option value="">Todas</option>');
+    names.forEach(n => {
+        $sel.append($("<option></option>").val(n).text(n));
+    });
+    if (prev && names.includes(prev)) $sel.val(prev);
+}
+function getCcMovsFilterState() {
+    return {
+        q: ($("#ccMovsBuscar").val() || "").trim().toLowerCase(),
+        tipo: ($("#ccMovsFiltroTipo").val() || "").trim(),
+        suc: ($("#ccMovsFiltroSucursal").val() || "").trim()
+    };
+}
+function matchesCcMovFilter(row, f) {
+    if (f.tipo && (row.TipoMov || "") !== f.tipo) return false;
+    if (f.suc && (row.Sucursal || "").trim() !== f.suc) return false;
+    if (f.q) {
+        const blob = [
+            row.TipoMov, row.Concepto, row.Sucursal,
+            fmtFechaVista(row.Fecha),
+            String(row.Debe ?? ""), String(row.Haber ?? "")
+        ].join(" ").toLowerCase();
+        if (!blob.includes(f.q)) return false;
+    }
+    return true;
+}
+function getDisplayedMovimientosRows() {
+    const { saldoRows, dataRows } = splitSaldoRows(movimientosRowsFull);
+    const f = getCcMovsFilterState();
+    return [...saldoRows, ...dataRows.filter(r => matchesCcMovFilter(r, f))];
+}
+function pillClassTipoCc(tipo) {
+    const t = (tipo || "").toUpperCase();
+    if (t === "VENTA") return "cc-mov-pill cc-mov-pill--debe";
+    if (t === "COBRO") return "cc-mov-pill cc-mov-pill--haber";
+    return "cc-mov-pill cc-mov-pill--neutral";
+}
+function paintMovsCards() {
+    const $root = $("#ccMovimientosList");
+    if (!$root.length) return;
+    const rows = getDisplayedMovimientosRows();
+    const { saldoRows, dataRows } = splitSaldoRows(rows);
+    let html = '<div class="cc-movs-list-inner">';
+    saldoRows.forEach(r => {
+        const v = Number(r.SaldoAcumulado || 0);
+        const tone = v > 0 ? "pos" : v < 0 ? "neg" : "neu";
+        html += `<div class="cc-mov-saldo cc-mov-saldo--${tone}">
+            <div class="cc-mov-saldo__icon"><i class="fa fa-history"></i></div>
+            <div class="cc-mov-saldo__body"><div class="cc-mov-saldo__label">Arrastre</div><div class="cc-mov-saldo__text">${escapeHtmlMov(r.Concepto || "")}</div></div>
+            <div class="cc-mov-saldo__amt">${escapeHtmlMov(fmtMoney(v))}</div></div>`;
+    });
+    if (!dataRows.length) {
+        html += '<div class="cc-movs-empty"><i class="fa fa-inbox"></i><p>No hay movimientos con los filtros del listado.</p></div>';
+    }
+    dataRows.forEach(r => {
+        const acc = renderAccionesGrid(r.Id, { ver: "verOModificar", verRequiereVerOEditar: true }, "CuentasCorrientes");
+        const sv = parseFloat(r.SaldoAcumulado || 0);
+        const salTone = sv > 0 ? "pos" : sv < 0 ? "neg" : "neu";
+        const sucHtml = r.Sucursal ? `<div class="cc-mov-card__suc"><i class="fa fa-map-marker"></i> ${escapeHtmlMov(r.Sucursal)}</div>` : "";
+        html += `<article class="cc-mov-card" role="listitem"><div class="cc-mov-card__row">
+            <div class="cc-mov-card__main">
+                <div class="cc-mov-card__meta">
+                    <time class="cc-mov-card__fecha">${escapeHtmlMov(fmtFechaVista(r.Fecha) || "—")}</time>
+                    <span class="${pillClassTipoCc(r.TipoMov)}">${escapeHtmlMov(r.TipoMov || "—")}</span>
+                </div>
+                <h3 class="cc-mov-card__concepto">${escapeHtmlMov(r.Concepto || "")}</h3>
+                ${sucHtml}
+            </div>
+            <div class="cc-mov-card__nums">
+                <div class="cc-mov-num"><span>Debe</span><strong class="cc-mov-num--debe">${escapeHtmlMov(fmtMoney(r.Debe))}</strong></div>
+                <div class="cc-mov-num"><span>Haber</span><strong class="cc-mov-num--haber">${escapeHtmlMov(fmtMoney(r.Haber))}</strong></div>
+                <div class="cc-mov-num"><span>Saldo acum.</span><strong class="cc-mov-num--saldo cc-mov-num--${salTone}">${escapeHtmlMov(fmtMoney(sv))}</strong></div>
+            </div>
+            <div class="cc-mov-card__actions">${acc}</div>
+        </div></article>`;
+    });
+    html += "</div>";
+    $root.html(html);
+}
+async function applyMovimientosCardsView(fullRows) {
+    movimientosRowsFull = fullRows || [];
+    window.saldoAnteriorActual = saldoAnteriorActual;
+    refreshCcMovsSucursalSelect();
+    paintMovsCards();
+    if (!movCardsFiltersBound && $("#ccMovsBuscar").length) {
+        movCardsFiltersBound = true;
+        $("#ccMovsBuscar, #ccMovsFiltroTipo, #ccMovsFiltroSucursal").on("input change", () => {
+            paintMovsCards();
+            calcularTotales();
+        });
     }
 }
 
 /* ================== Boot ================== */
 $(document).ready(async () => {
+    Permisos.init();
+    Permisos.aplicarUI("CuentasCorrientes");
     bindUI();
     initFiltrosPanel();
     await cargarClientes(); // carga inicial
@@ -203,7 +294,7 @@ function initFiltrosPanel() {
         if (!$("#fltHasta").val()) $("#fltHasta").val(hoyISO());
     }
 
-    fetch('/Sucursales/Lista', { headers: { 'Authorization': 'Bearer ' + (token || "") } })
+    fetch(API.sucursalesOpciones, { headers: { 'Authorization': 'Bearer ' + (window.token || "") } })
         .then(r => r.ok ? r.json() : [])
         .then(sucs => {
             const current = $("#fltSucursal").val();
@@ -227,7 +318,7 @@ async function cargarClientes() {
         const url = `${API.clientes}?${new URLSearchParams({ texto, saldoActivo, idSucursal: idSuc })}`;
 
         const res = await fetch(url, {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!res.ok) throw new Error(res.statusText);
         const data = await res.json(); // {Id, Nombre, Saldo}
@@ -260,6 +351,8 @@ async function cargarClientes() {
                 dom: "t"
             });
 
+            $("#grd_Clientes").addClass("dt-selectable");
+
             $("#buscarClientes").on("keyup", function () {
                 gridClientes.search(this.value).draw();
             });
@@ -267,8 +360,8 @@ async function cargarClientes() {
             $("#grd_Clientes tbody").on("click", "tr", async function () {
                 const d = gridClientes.row(this).data();
                 if (!d) return;
-                $("#grd_Clientes tbody tr").removeClass("selected");
-                $(this).addClass("selected");
+                $("#grd_Clientes tbody tr").removeClass("seleccionada");
+                $(this).addClass("seleccionada");
                 clienteSeleccionado = d;
                 filtros = readFiltros();
                 await listarMovimientos();
@@ -279,7 +372,7 @@ async function cargarClientes() {
         }
 
         // sin selección por defecto (lista “todos”)
-        $("#grd_Clientes tbody tr").removeClass("selected");
+        $("#grd_Clientes tbody tr").removeClass("seleccionada");
         clienteSeleccionado = null;
 
         filtros = readFiltros();
@@ -300,7 +393,7 @@ async function listarMovimientos() {
     if (filtros.texto) qs.set("texto", filtros.texto);
 
     const res = await fetch(`${API.lista}?${qs.toString()}`, {
-        headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+        headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
     });
     if (!res.ok) { errorModal("No se pudo listar movimientos"); return; }
     const json = await res.json();
@@ -341,20 +434,14 @@ async function listarMovimientos() {
         __isSaldo: true
     };
 
-    await configurarDataTableMovs([saldoRow, ...rows]);
+    await applyMovimientosCardsView([saldoRow, ...rows]);
     calcularTotales();
 }
 
 
 /* ================== Totales ================== */
 function calcularTotales() {
-    if (!gridMovs) return;
-
-    const rows = gridMovs
-        .rows({ search: "applied" })
-        .data()
-        .toArray()
-        .filter(r => !r.__isSaldo);
+    const rows = getDisplayedMovimientosRows().filter(r => !r.__isSaldo);
 
     let debe = 0, haber = 0;
     for (const r of rows) {
@@ -370,166 +457,10 @@ function calcularTotales() {
     const $totSaldo = $("#totSaldo");
     $totSaldo.text(fmtMoney(saldo));
 
-    // Colorear según signo (y en negrita)
     $totSaldo.removeClass("text-success text-danger fw-bold");
     if (saldo > 0) $totSaldo.addClass("text-success fw-bold");
     else if (saldo < 0) $totSaldo.addClass("text-danger fw-bold");
     else $totSaldo.addClass("fw-bold");
-}
-
-async function configurarDataTableMovs(data) {
-    if (!gridMovs) {
-        $('#grd_Movimientos thead tr').clone(true).addClass('filters').appendTo('#grd_Movimientos thead');
-
-        gridMovs = $('#grd_Movimientos').DataTable({
-            data,
-            language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
-            scrollX: "100px",
-            scrollCollapse: true,
-            columns: [
-                {   // 0: Acciones (ojo)
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    orderable: false,
-                    searchable: false,
-                    render: (id, _t, row) => {
-                        if (row.__isSaldo) return ""; // sin acciones para la fila de saldo
-                        return `
-              <div class="acciones-menu" data-id="${id}">
-                <button class='btn btn-sm btnacciones' type='button' onclick='verOModificar(${id})' title='Ver / Editar'>
-                  <i class='fa fa-eye fa-lg text-info'></i>
-                </button>
-              </div>`;
-                    }
-                },
-                {   // 1: Fecha
-                    data: "Fecha",
-                    title: "Fecha",
-                    render: (val, type, row) => {
-                        if (row.__isSaldo) {
-                            return (type === "display" || type === "filter") ? "" : "";
-                        }
-                        return (type === "display" || type === "filter") ? fmtFechaVista(val) || "-" : val;
-                    }
-                },
-                { data: "TipoMov", title: "Tipo" },         // 2
-                {   // 3: Concepto (con estilo especial para saldo anterior)
-                    data: "Concepto",
-                    title: "Concepto",
-                    render: (text, type, row) => {
-                        if (row.__isSaldo) {
-                            if (type === "display" || type === "filter") {
-                                const v = Number(row.SaldoAcumulado || 0);
-                                const cls = v > 0 ? "text-success fw-bold"
-                                    : v < 0 ? "text-danger fw-bold"
-                                        : "text-success fw-bold";
-                                return `<span class="${cls}">${text || ""}</span>`;
-                            }
-                            return text || "";
-                        }
-                        return text ?? "";
-                    }
-                },
-                { data: "Debe", title: "Debe", className: "text-center", render: (n) => fmtMoney(n) },   // 4
-                { data: "Haber", title: "Haber", className: "text-center", render: (n) => fmtMoney(n) },   // 5
-                {   // 6: Saldo acumulado con color
-                    data: "SaldoAcumulado",
-                    title: "Saldo",
-                    className: "text-center",
-                    render: (n) => {
-                        const v = parseFloat(n || 0);
-                        let cls = "";
-                        if (v > 0) cls = "text-success fw-bold";
-                        else if (v < 0) cls = "text-danger fw-bold";
-                        return `<span class="${cls}">${fmtMoney(v)}</span>`;
-                    }
-                },
-                { data: "Sucursal", title: "Sucursal" }     // 7
-            ],
-            dom: 'Bfrtip',
-            buttons: [
-                {
-                    extend: 'excelHtml5',
-                    text: 'Exportar Excel',
-                    filename: 'Reporte Cuentas Corrientes',
-                    title: '',
-                    exportOptions: { columns: [...Array(8).keys()].map(i => i) },
-                    className: 'btn-exportar-excel',
-                },
-                {
-                    extend: 'pdfHtml5',
-                    text: 'Exportar PDF',
-                    filename: 'Reporte Cuentas Corrientes',
-                    title: '',
-                    exportOptions: { columns: [...Array(8).keys()].map(i => i) },
-                    className: 'btn-exportar-pdf',
-                },
-                {
-                    extend: 'print',
-                    text: 'Imprimir',
-                    title: '',
-                    exportOptions: { columns: [...Array(8).keys()].map(i => i) },
-                    className: 'btn-exportar-print'
-                },
-                'pageLength'
-            ],
-            orderCellsTop: true,
-            fixedHeader: true,
-
-            initComplete: async function () {
-                const api = this.api();
-
-                // Filtros por columna
-                for (const config of columnConfigMovs) {
-                    const cell = $(".filters th").eq(config.index);
-
-                    if (config.filterType === "select") {
-                        const select = $(`<select class="form-select form-select-sm"><option value="">Seleccionar</option></select>`)
-                            .appendTo(cell.empty())
-                            .on("change", async function () {
-                                const selectedText = $(this).find("option:selected").text();
-                                if (!this.value) {
-                                    await api.column(config.index).search("").draw();
-                                } else {
-                                    await api.column(config.index).search("^" + escapeRegex(selectedText) + "$", true, false).draw();
-                                }
-                                calcularTotales();
-                            });
-
-                        const items = await config.fetchDataFunc();
-                        (items || []).forEach(it => select.append(`<option value="${it.Id}">${it.Nombre ?? ""}</option>`));
-
-                    } else { // text
-                        const input = $(`<input type="text" placeholder="Buscar..." class="form-control form-control-sm" />`)
-                            .appendTo(cell.empty())
-                            .off("keyup change")
-                            .on("keyup change", function (e) {
-                                e.stopPropagation();
-                                const regexr = "({search})";
-                                const cursorPosition = this.selectionStart;
-                                api.column(config.index)
-                                    .search(this.value !== "" ? regexr.replace("{search}", "(((" + escapeRegex(this.value) + ")))") : "", this.value !== "", this.value === "")
-                                    .draw();
-                                $(this).focus()[0].setSelectionRange(cursorPosition, cursorPosition);
-                                calcularTotales();
-                            });
-                    }
-                }
-
-                // La celda de acciones (índice 0) no lleva filtro
-                $('.filters th').eq(0).html('');
-
-                calcularTotales();
-
-                configurarOpcionesColumnas('#grd_Movimientos', '#configColumnasMenu', 'CC_Columnas');
-
-                setTimeout(() => gridMovs.columns.adjust(), 10);
-            },
-        });
-    } else {
-        gridMovs.clear().rows.add(data).draw();
-    }
 }
 
 /* ================== Ver / Editar ================== */
@@ -539,7 +470,7 @@ async function verOModificar(id) {
         await closeAnyOpenModal(120);
 
         const r = await fetch(`${API.obtener}?id=${encodeURIComponent(id)}`, {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!r.ok) throw new Error("No se pudo obtener el movimiento");
         const m = await r.json();
@@ -579,7 +510,7 @@ async function verDetalle(id) {
         const url = `${API.obtener}?id=${encodeURIComponent(id)}`;
         const r = await fetch(url, {
             headers: {
-                "Authorization": "Bearer " + (token || localStorage.getItem("JwtToken") || ""),
+                "Authorization": "Bearer " + (window.token || localStorage.getItem("JwtToken") || ""),
                 "Content-Type": "application/json"
             }
         });
@@ -637,7 +568,7 @@ async function abrirModalCobro() {
 
     // cargar Sucursales + cuentas de caja
     await Promise.all([
-        fetch("/Sucursales/Lista", { headers: { "Authorization": "Bearer " + (token || "") } })
+        fetch(API.sucursalesOpciones, { headers: { "Authorization": "Bearer " + (window.token || "") } })
             .then(r => r.json())
             .then(arr => {
                 const $s = $("#movSucursal");
@@ -646,7 +577,7 @@ async function abrirModalCobro() {
                     (arr || []).forEach(x => $s.append(`<option value="${x.Id}">${x.Nombre}</option>`));
                 }
             }),
-        fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (token || "") } })
+        fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (window.token || "") } })
             .then(r => r.json())
             .then(arr => {
                 const $c = $("#movCuentaCaja");
@@ -663,7 +594,7 @@ async function abrirModalCobro() {
 async function editarMovimientoManual(id) {
     try {
         const r = await fetch(`${API.obtener}?id=${encodeURIComponent(id)}`, {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!r.ok) throw new Error("No se pudo obtener el movimiento");
         const m = await r.json();
@@ -684,8 +615,8 @@ async function editarMovimientoManual(id) {
         clearValidationScope('#modalMovimiento');
 
         const [sucs, ctas] = await Promise.all([
-            fetch("/Sucursales/Lista", { headers: { "Authorization": "Bearer " + (token || "") } }).then(r => r.json()).catch(() => []),
-            fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (token || "") } }).then(r => r.json()).catch(() => []),
+            fetch(API.sucursalesOpciones, { headers: { "Authorization": "Bearer " + (window.token || "") } }).then(r => r.json()).catch(() => []),
+            fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (window.token || "") } }).then(r => r.json()).catch(() => []),
         ]);
 
         const $s = $("#movSucursal");
@@ -774,7 +705,7 @@ async function guardarMovimientoManual() {
     try {
         const res = await fetch(url, {
             method,
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" },
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
@@ -803,7 +734,7 @@ async function eliminarMovimientoManual(id) {
     try {
         const res = await fetch(`${API.eliminarManual}?id=${id}`, {
             method: "DELETE",
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!res.ok) throw new Error(res.statusText);
         const r = await res.json();
@@ -823,7 +754,7 @@ async function eliminarMovimientoManual(id) {
 
 /* ================== Exportar PDF ================== */
 function exportarPDF() {
-    const rows = gridMovs?.rows({ search: "applied" }).data().toArray() || [];
+    const rows = getDisplayedMovimientosRows();
     if (rows.length === 0) { errorModal("No hay movimientos para exportar."); return; }
 
     const reales = rows.filter(r => !r.__isSaldo);
@@ -892,9 +823,3 @@ function exportarPDF() {
     doc.save(fname);
 }
 
-/* ================== Cierre de dropdowns de acciones ================== */
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) {
-        $('.acciones-dropdown').hide();
-    }
-});

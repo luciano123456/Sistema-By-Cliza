@@ -48,7 +48,8 @@ namespace SistemaByCliza.Application.Controllers
         {
             var entidad = new Insumo
             {
-                Id = model.Id,
+                // OJO: si es Identity, NO lo mandes desde el cliente. Forzalo a 0.
+                Id = 0,
                 Codigo = model.Codigo,
                 Descripcion = model.Descripcion,
                 IdCategoria = model.IdCategoria,
@@ -57,7 +58,9 @@ namespace SistemaByCliza.Application.Controllers
             };
 
             bool ok = await _InsumosService.Insertar(entidad);
-            return Ok(new { valor = ok });
+
+            // entidad.Id ya está cargado si ok = true
+            return Ok(new { valor = ok, id = entidad.Id });
         }
 
         [HttpPut]

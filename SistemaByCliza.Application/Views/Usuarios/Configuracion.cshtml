@@ -1,4 +1,4 @@
-﻿@model SistemaByCliza.Models.User
+@model SistemaByCliza.Models.User
 @{
     ViewData["Title"] = "Configuración";
 }
@@ -14,13 +14,16 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
 
     <link href="~/css/site.css" rel="stylesheet" />
+    <link href="~/css/VentasNuevoModif.css" rel="stylesheet" />
+    <link href="~/css/NavBarLogin.css" rel="stylesheet" />
+    <link href="~/css/Usuarios.css" rel="stylesheet" asp-append-version="true" />
 
 </head>
-<partial name="~/Views/Shared/Partials/BotonMenu.cshtml" />
 
 
-<div class="container d-flex justify-content-center align-items-center " style="min-height: 1vh;">
-    <div class="card p-4" style="background-color: rgba(230, 240, 240, 2); box-shadow: 0 4px 10px rgba(238, 48, 12, 1);; width: 100%; max-width: 700px;">
+
+<div class="container d-flex justify-content-center align-items-center usuarios-config-shell">
+    <div class="card p-4 usuarios-config-card">
         <h2 class="text-center mb-4 text-white">Configuración</h2>
 
         @* Mostrar el mensaje de éxito si se actualizó correctamente *@

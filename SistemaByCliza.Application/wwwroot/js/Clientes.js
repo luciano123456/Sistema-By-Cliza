@@ -1,5 +1,271 @@
-﻿// ========================= Clientes.js (completo) =========================
+// ========================= Clientes.js (completo) =========================
 let gridClientes;
+
+let pendingSeleccionCatalogoCliente = null;
+
+/** Se pone en true al abrir configuración desde el + del modal cliente. */
+let clientesPedirRefrescoTrasInsertConfig = false;
+
+/** true si el guardado viene del flujo + atajo (NavBar manda `detail.esAtajo`; fallback por compat). */
+function clientesEventoConfiguracionEsAtajo(d) {
+    if (d && d.esAtajo === false) return false;
+    if (d && d.esAtajo === true) return true;
+    return window.esModoAtajo === true || window.esModoAtajo === 1 || window.esModoAtajo === "true" || window.esModoAtajo === "1";
+}
+
+function destruirSelect2CombosCliente() {
+    ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia"].forEach((id) => {
+        const $s = $("#" + id);
+        if ($s.length && $s.hasClass("select2-hidden-accessible")) {
+            $s.select2("destroy");
+        }
+    });
+}
+
+/** Con modales apilados `#modalEdicion` puede perder `.show` y `initSelect2` del site no inicializa; forzamos solo estos combos. */
+function inicializarSelect2CombosClienteSiHaceFalta() {
+    const $modal = $("#modalEdicion");
+    if (!$modal.length || !(window.jQuery && $.fn.select2)) return;
+    ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia"].forEach((id) => {
+        const $s = $("#" + id);
+        if (!$s.length || $s.hasClass("no-select2") || $s.is('[data-no-select2="1"]')) return;
+        if ($s.hasClass("select2-hidden-accessible")) return;
+        $s.select2({
+            width: "100%",
+            dropdownParent: $modal
+        });
+    });
+}
+
+function limpiarEstilosValidacionCliente() {
+    $("#errorCampos").addClass("d-none").text("Debes completar los campos obligatorios.");
+    $("#txtNombre").removeClass("is-invalid is-valid");
+    if (typeof clearValidation === "function") {
+        ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) clearValidation(el);
+        });
+    } else {
+        $("#cmbCondicionIva, #cmbListaPrecios, #cmbProvincia").removeClass("is-invalid is-valid");
+        ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia"].forEach((id) => {
+            const $s2 = $("#" + id).next(".select2");
+            if ($s2.length) {
+                $s2.find(".select2-selection").removeClass("is-invalid is-valid");
+            }
+        });
+    }
+}
+
+function validarSelectIndividualCliente(selector) {
+    const val = $(selector).val();
+    const ok = !!val;
+    if (typeof setInvalid === "function" && typeof setValid === "function") {
+        if (!ok) setInvalid(selector, "Campo obligatorio");
+        else setValid(selector);
+    }
+    return ok;
+}
+
+function camposClienteOk() {
+    const nombre = ($("#txtNombre").val() || "").trim();
+    const okNombre = nombre !== "";
+    const okIva = !!$("#cmbCondicionIva").val();
+    const okLp = !!$("#cmbListaPrecios").val();
+    const okProv = !!$("#cmbProvincia").val();
+    return okNombre && okIva && okLp && okProv;
+}
+
+function validarCamposCliente(forzarUI = false) {
+    const ok = camposClienteOk();
+    const modal = document.getElementById("modalEdicion");
+    if (!forzarUI && modal && modal.getAttribute("data-validacion-ui") === "0") {
+        return ok;
+    }
+
+    const nombre = ($("#txtNombre").val() || "").trim();
+    const okNombre = nombre !== "";
+    const idIva = $("#cmbCondicionIva").val();
+    const idLp = $("#cmbListaPrecios").val();
+    const idProv = $("#cmbProvincia").val();
+    const okIva = !!idIva;
+    const okLp = !!idLp;
+    const okProv = !!idProv;
+
+    if (typeof setInvalid === "function" && typeof setValid === "function") {
+        if (!okNombre) setInvalid("#txtNombre", "Campo obligatorio"); else setValid("#txtNombre");
+        if (!okIva) setInvalid("#cmbCondicionIva", "Campo obligatorio"); else setValid("#cmbCondicionIva");
+        if (!okLp) setInvalid("#cmbListaPrecios", "Campo obligatorio"); else setValid("#cmbListaPrecios");
+        if (!okProv) setInvalid("#cmbProvincia", "Campo obligatorio"); else setValid("#cmbProvincia");
+    } else {
+        $("#txtNombre").toggleClass("is-invalid", !okNombre);
+        $("#cmbCondicionIva").toggleClass("is-invalid", !okIva);
+        $("#cmbListaPrecios").toggleClass("is-invalid", !okLp);
+        $("#cmbProvincia").toggleClass("is-invalid", !okProv);
+    }
+
+    $("#errorCampos")
+        .toggleClass("d-none", ok)
+        .text("Debes completar los campos obligatorios.");
+
+    return ok;
+}
+
+function aplicarValorSelectPorIdDom(idDom, nid) {
+    const $s = $("#" + idDom);
+    if (!$s.length) return;
+    const el = $s.get(0);
+    let valStr = String(nid);
+    if (el && el.querySelector) {
+        const esc = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(valStr) : valStr.replace(/["\\]/g, "\\$&");
+        if (!el.querySelector(`option[value="${esc}"]`)) {
+            const match = Array.from(el.options || []).find((o) => Number(o.value) === nid);
+            if (match) valStr = match.value;
+        }
+    }
+    $s.val(valStr).trigger("change");
+}
+
+function aplicarPendienteSeleccionCatalogoCliente(pending) {
+    if (!pending || pending.nuevoId == null) return;
+    const nid = Number(pending.nuevoId);
+    if (!Number.isFinite(nid) || nid <= 0) return;
+
+    switch (pending.tipo) {
+        case "CondicionesIVA":
+            aplicarValorSelectPorIdDom("cmbCondicionIva", nid);
+            break;
+        case "ListasPrecios":
+            aplicarValorSelectPorIdDom("cmbListaPrecios", nid);
+            break;
+        case "Provincias":
+            aplicarValorSelectPorIdDom("cmbProvincia", nid);
+            break;
+        default:
+            break;
+    }
+}
+
+async function refrescarCatalogosTrasConfiguracionCliente() {
+    const pend = pendingSeleccionCatalogoCliente;
+    pendingSeleccionCatalogoCliente = null;
+
+    const vIva = $("#cmbCondicionIva").val();
+    const vLp = $("#cmbListaPrecios").val();
+    const vProv = $("#cmbProvincia").val();
+
+    destruirSelect2CombosCliente();
+
+    await Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()]);
+
+    if (vIva) $("#cmbCondicionIva").val(vIva);
+    if (vLp) $("#cmbListaPrecios").val(vLp);
+    if (vProv) $("#cmbProvincia").val(vProv);
+
+    aplicarPendienteSeleccionCatalogoCliente(pend);
+
+    const cli = document.getElementById("modalEdicion");
+    if (cli && typeof initSelect2 === "function") {
+        if (cli.classList.contains("show")) {
+            initSelect2(cli);
+        } else {
+            inicializarSelect2CombosClienteSiHaceFalta();
+        }
+    }
+    ["#cmbCondicionIva", "#cmbListaPrecios", "#cmbProvincia"].forEach((sel) => {
+        const $x = $(sel);
+        if ($x.length && $x.hasClass("select2-hidden-accessible")) {
+            $x.trigger("change");
+        }
+    });
+}
+
+function bindAtajosCatalogosCliente() {
+    const modalCfg = document.getElementById("modalConfiguracion");
+    if (modalCfg && !modalCfg.dataset.clientesAtajoRefresh) {
+        modalCfg.dataset.clientesAtajoRefresh = "1";
+        modalCfg.addEventListener("hidden.bs.modal", async () => {
+            clientesPedirRefrescoTrasInsertConfig = false;
+            if (!/\/Clientes/i.test(location.pathname || "")) return;
+            if (!document.getElementById("modalEdicion")) return;
+            if (!pendingSeleccionCatalogoCliente) return;
+            await refrescarCatalogosTrasConfiguracionCliente();
+        });
+    }
+
+    if (!document.documentElement.dataset.clientesConfigInsertListener) {
+        document.documentElement.dataset.clientesConfigInsertListener = "1";
+        document.addEventListener("configuracionActualizada", async (e) => {
+            if (!/\/Clientes/i.test(location.pathname || "")) return;
+            if (!document.getElementById("modalEdicion")) return;
+            const d = e.detail || {};
+            const desdeAtajo = clientesEventoConfiguracionEsAtajo(d) || clientesPedirRefrescoTrasInsertConfig;
+            if (!desdeAtajo) return;
+            if (d.accion !== "insertar") {
+                clientesPedirRefrescoTrasInsertConfig = false;
+                return;
+            }
+            const tipo = (d.tipo || "").trim();
+            if (tipo !== "CondicionesIVA" && tipo !== "ListasPrecios" && tipo !== "Provincias") {
+                clientesPedirRefrescoTrasInsertConfig = false;
+                return;
+            }
+            const raw = d.nuevoId ?? d.NuevoId ?? d.nuevoID;
+            const nuevoId = raw != null && raw !== "" ? Number(raw) : NaN;
+            if (!Number.isFinite(nuevoId) || nuevoId <= 0) {
+                try {
+                    await Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()]);
+                    const cli = document.getElementById("modalEdicion");
+                    if (cli && cli.classList.contains("show") && typeof initSelect2 === "function") {
+                        initSelect2(cli);
+                    } else if (cli) {
+                        inicializarSelect2CombosClienteSiHaceFalta();
+                    }
+                } catch (err) {
+                    console.error(err);
+                } finally {
+                    clientesPedirRefrescoTrasInsertConfig = false;
+                }
+                return;
+            }
+            pendingSeleccionCatalogoCliente = { tipo, nuevoId };
+            try {
+                await refrescarCatalogosTrasConfiguracionCliente();
+            } catch (err) {
+                console.error(err);
+            } finally {
+                clientesPedirRefrescoTrasInsertConfig = false;
+            }
+        });
+    }
+
+    $("#btnPlusCondicionIva").off("click.clientesAtajo").on("click.clientesAtajo", async () => {
+        if (typeof window.abrirConfiguracion !== "function") return;
+        clientesPedirRefrescoTrasInsertConfig = true;
+        try {
+            await window.abrirConfiguracion("Condiciones IVA", "CondicionesIVA", null, null, null, true);
+        } catch (_) {
+            clientesPedirRefrescoTrasInsertConfig = false;
+        }
+    });
+    $("#btnPlusListaPrecios").off("click.clientesAtajo").on("click.clientesAtajo", async () => {
+        if (typeof window.abrirConfiguracion !== "function") return;
+        clientesPedirRefrescoTrasInsertConfig = true;
+        try {
+            await window.abrirConfiguracion("Lista de Precios", "ListasPrecios", null, null, null, true);
+        } catch (_) {
+            clientesPedirRefrescoTrasInsertConfig = false;
+        }
+    });
+    $("#btnPlusProvincia").off("click.clientesAtajo").on("click.clientesAtajo", async () => {
+        if (typeof window.abrirConfiguracion !== "function") return;
+        clientesPedirRefrescoTrasInsertConfig = true;
+        try {
+            await window.abrirConfiguracion("Provincia", "Provincias", null, null, null, true);
+        } catch (_) {
+            clientesPedirRefrescoTrasInsertConfig = false;
+        }
+    });
+}
 
 // --- Modelo base ---
 const Modelo_base = {
@@ -8,6 +274,7 @@ const Modelo_base = {
     Telefono: "",
     TelefonoAlternativo: "",
     Dni: "",
+
     Cuit: "",
     IdCondicionIva: null,
     Domicilio: "",
@@ -34,19 +301,32 @@ const columnConfig = [
 ];
 
 $(document).ready(() => {
+    Permisos.init();
+    Permisos.aplicarUI("Clientes");
     listaClientes();
-    attachLiveValidation('#modalEdicion');  // helper global
-    // Mejoramos validación en selects select2
-    wireSelect2Validation();
+    attachLiveValidation("#modalEdicion");
+    if (typeof wireSelect2Validation === "function") {
+        wireSelect2Validation("#modalEdicion");
+    }
+    $("#cmbCondicionIva, #cmbListaPrecios, #cmbProvincia")
+        .off("select2:close.clientesBlur")
+        .on("select2:close.clientesBlur", function () {
+            if ($(this).prop("disabled")) return;
+            validarSelectIndividualCliente("#" + this.id);
+        });
+    bindAtajosCatalogosCliente();
 });
 
 /* ======================= Crear / Editar ======================= */
 
 function guardarCambios() {
-    // Validación genérica (HTML5 + helpers)
-    if (!validarCampos()) {
-        // fuerza feedback de selects2 si están vacíos
-        forceSelect2Invalid('#modalEdicion');
+    if (!camposClienteOk()) {
+        if (typeof forzarValidacionModal === "function") {
+            forzarValidacionModal("#modalEdicion", "#errorCampos");
+        } else {
+            document.getElementById("modalEdicion")?.setAttribute("data-validacion-ui", "1");
+        }
+        validarCamposCliente(true);
         return;
     }
 
@@ -85,49 +365,64 @@ function guardarCambios() {
 }
 
 function nuevoCliente() {
-    limpiarModal('#modalEdicion', '#errorCampos');
+    if (!Permisos.tiene("Clientes", "Crear")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
 
-    Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()])
-        .then(() => {
-            $('#modalEdicion').one('shown.bs.modal', function () {
-                initSelect2('#modalEdicion');      // genérico
-                ensureFeedbackBlocks('#modalEdicion'); // asegura feedback en selects/inputs
-                wireSelect2Validation('#modalEdicion');
-            });
-            $('#modalEdicion').modal('show');
-            $("#btnGuardar").text("Registrar");
-            $("#modalEdicionLabel").text("Nuevo Cliente");
-        });
+    $("#modalEdicion").attr("data-validacion-ui", "0");
+    limpiarModal("#modalEdicion", "#errorCampos");
+    limpiarEstilosValidacionCliente();
+    destruirSelect2CombosCliente();
+
+    Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()]).then(() => {
+        $("#btnGuardar").removeClass("d-none").text("Registrar");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
+        $("#btnPlusCondicionIva, #btnPlusListaPrecios, #btnPlusProvincia").prop("disabled", false);
+        $("#modalEdicionLabel").text("Nuevo Cliente");
+        $("#modalEdicion").modal("show");
+    });
 }
 
-async function mostrarModal(modelo) {
-    limpiarModal('#modalEdicion', '#errorCampos');
+async function mostrarModal(modelo, opts = {}) {
+    const readOnly = !!opts.readOnly;
+
+    $("#modalEdicion").attr("data-validacion-ui", "0");
+    limpiarModal("#modalEdicion", "#errorCampos");
+    limpiarEstilosValidacionCliente();
+    destruirSelect2CombosCliente();
 
     await Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()]);
 
-    $("#cmbCondicionIva").val(modelo.IdCondicionIva ?? '').trigger('change');
-    $("#cmbListaPrecios").val(modelo.IdListaPrecio ?? '').trigger('change');
-    $("#cmbProvincia").val(modelo.IdProvincia ?? '').trigger('change');
-
     $("#txtId").val(modelo.Id ?? 0);
-    $("#txtNombre").val(modelo.Nombre ?? '');
-    $("#txtTelefono").val(modelo.Telefono ?? '');
-    $("#txtTelefonoAlternativo").val(modelo.TelefonoAlternativo ?? '');
-    $("#txtDni").val(modelo.Dni ?? '');
-    $("#txtCuit").val(modelo.Cuit ?? '');
-    $("#txtDomicilio").val(modelo.Domicilio ?? '');
-    $("#txtLocalidad").val(modelo.Localidad ?? '');
-    $("#txtEmail").val(modelo.Email ?? '');
-    $("#txtCodigoPostal").val(modelo.CodigoPostal ?? '');
+    $("#txtNombre").val(modelo.Nombre ?? "");
+    $("#txtTelefono").val(modelo.Telefono ?? "");
+    $("#txtTelefonoAlternativo").val(modelo.TelefonoAlternativo ?? "");
+    $("#txtDni").val(modelo.Dni ?? "");
+    $("#txtCuit").val(modelo.Cuit ?? "");
+    $("#txtDomicilio").val(modelo.Domicilio ?? "");
+    $("#txtLocalidad").val(modelo.Localidad ?? "");
+    $("#txtEmail").val(modelo.Email ?? "");
+    $("#txtCodigoPostal").val(modelo.CodigoPostal ?? "");
 
-    $('#modalEdicion').one('shown.bs.modal', function () {
-        initSelect2('#modalEdicion');
-        ensureFeedbackBlocks('#modalEdicion');
-        wireSelect2Validation('#modalEdicion');
-    });
-    $('#modalEdicion').modal('show');
-    $("#btnGuardar").text("Guardar");
-    $("#modalEdicionLabel").text("Editar Cliente");
+    $("#cmbCondicionIva").val(modelo.IdCondicionIva ?? "").trigger("change");
+    $("#cmbListaPrecios").val(modelo.IdListaPrecio ?? "").trigger("change");
+    $("#cmbProvincia").val(modelo.IdProvincia ?? "").trigger("change");
+
+    limpiarEstilosValidacionCliente();
+
+    $("#modalEdicionLabel").text(readOnly ? "Ver Cliente" : "Editar Cliente");
+    if (readOnly) {
+        $("#btnGuardar").addClass("d-none");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", true);
+        $("#btnPlusCondicionIva, #btnPlusListaPrecios, #btnPlusProvincia").prop("disabled", true);
+    } else {
+        $("#btnGuardar").removeClass("d-none").text("Guardar");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
+        $("#btnPlusCondicionIva, #btnPlusListaPrecios, #btnPlusProvincia").prop("disabled", false);
+    }
+
+    $("#modalEdicion").modal("show");
 }
 
 /* ======================= Lista / Acciones ======================= */
@@ -144,19 +439,47 @@ async function listaClientes() {
     actualizarKpiTotalClientes(); // inicial
 }
 
+async function verCliente(id) {
+    Permisos.init();
+    if (!Permisos.tiene("Clientes", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    try {
+        const r = await fetch("/Clientes/EditarInfo?id=" + id, {
+            method: "GET",
+            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }
+        });
+        if (!r.ok) throw new Error();
+        const json = await r.json();
+        if (json) await mostrarModal(json, { readOnly: true });
+        else throw new Error();
+    } catch {
+        errorModal("Ha ocurrido un error.");
+    }
+}
+
 const editarCliente = id => {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Clientes", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     fetch("/Clientes/EditarInfo?id=" + id, {
         method: 'GET',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
     })
         .then(r => { if (!r.ok) throw new Error("Ha ocurrido un error."); return r.json(); })
-        .then(json => json ? mostrarModal(json) : (() => { throw new Error("Ha ocurrido un error."); })())
+        .then(json => json ? mostrarModal(json, { readOnly: false }) : (() => { throw new Error("Ha ocurrido un error."); })())
         .catch(() => errorModal("Ha ocurrido un error."));
 };
 
 async function eliminarCliente(id) {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Clientes", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const confirmado = await confirmarModal("¿Desea eliminar este cliente?");
     if (!confirmado) return;
 
@@ -195,20 +518,11 @@ async function configurarDataTableClientes(data) {
                     title: '',
                     width: "1%",
                     render: function (data) {
-                        return `
-                <div class="acciones-menu" data-id="${data}">
-                    <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${data})' title='Acciones'>
-                        <i class='fa fa-ellipsis-v fa-lg text-white' aria-hidden='true'></i>
-                    </button>
-                    <div class="acciones-dropdown" style="display: none;">
-                        <button class='btn btn-sm btneditar' type='button' onclick='editarCliente(${data})' title='Editar'>
-                            <i class='fa fa-pencil-square-o fa-lg text-success' aria-hidden='true'></i> Editar
-                        </button>
-                        <button class='btn btn-sm btneliminar' type='button' onclick='eliminarCliente(${data})' title='Eliminar'>
-                            <i class='fa fa-trash-o fa-lg text-danger' aria-hidden='true'></i> Eliminar
-                        </button>
-                    </div>
-                </div>`;
+                        return renderAccionesGrid(data, {
+                            ver: "verCliente",
+                            editar: "editarCliente",
+                            eliminar: "eliminarCliente"
+                        }, "Clientes");
                     },
                     orderable: false,
                     searchable: false,
@@ -226,7 +540,7 @@ async function configurarDataTableClientes(data) {
                 { data: 'CodigoPostal', title: 'Código Postal' }
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("Clientes", [
                 {
                     extend: 'excelHtml5',
                     text: 'Exportar Excel',
@@ -247,8 +561,7 @@ async function configurarDataTableClientes(data) {
                     exportOptions: { columns: Array.from({ length: 11 }, (_, i) => i + 1) },
                     className: 'btn-exportar-print'
                 },
-                'pageLength'
-            ],
+            ]),
             orderCellsTop: true,
             fixedHeader: true,
             initComplete: async function () {
@@ -292,6 +605,10 @@ async function configurarDataTableClientes(data) {
 
                 // KPI al paginar/filtrar
                 api.on("draw", actualizarKpiTotalClientes);
+
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Clientes", "clientes");
+                }
 
                 setTimeout(() => gridClientes.columns.adjust(), 10);
             }
@@ -408,85 +725,6 @@ async function listaProvinciasFilter() {
     const data = await response.json();
     return data.map(item => ({ Id: item.Id, Nombre: item.Nombre }));
 }
-
-/* ======================= Validación Select2 (genérico) ======================= */
-/**
- * Inserta bloques .invalid-feedback si faltan (inputs y selects).
- */
-function ensureFeedbackBlocks(scope) {
-    const root = scope ? document.querySelector(scope) : document;
-    if (!root) return;
-
-    root.querySelectorAll('input[required], select[required], textarea[required]').forEach(el => {
-        // si ya existe un feedback inmediato, no duplicar
-        let fb = el.nextElementSibling;
-        const isSelect2 = el.classList.contains('select2-hidden-accessible');
-
-        if (!(fb && fb.classList.contains('invalid-feedback'))) {
-            // para select2, el feedback debe ir DESPUÉS del container renderizado
-            if (isSelect2) {
-                const $container = $(el).next('.select2');
-                if ($container.length && !$container.next('.invalid-feedback').length) {
-                    $('<div class="invalid-feedback">Campo obligatorio</div>').insertAfter($container);
-                }
-            } else {
-                const div = document.createElement('div');
-                div.className = 'invalid-feedback';
-                div.textContent = 'Campo obligatorio';
-                el.parentNode.insertBefore(div, el.nextSibling);
-            }
-        }
-    });
-}
-
-/**
- * Marca inválidos los select2 vacíos dentro del scope cuando el form falla.
- */
-function forceSelect2Invalid(scope) {
-    const root = scope ? document.querySelector(scope) : document;
-    if (!root) return;
-
-    root.querySelectorAll('select.select2-hidden-accessible[required]').forEach(sel => {
-        const $sel = $(sel);
-        const $c = $sel.next('.select2');
-        const hasValue = !!$sel.val();
-
-        $sel.toggleClass('is-invalid', !hasValue).toggleClass('is-valid', hasValue);
-        $c.toggleClass('is-invalid', !hasValue).toggleClass('is-valid', hasValue);
-        // asegurar feedback
-        ensureFeedbackBlocks(scope);
-    });
-}
-
-/**
- * Enlaza validación live a Select2 (al cambiar/abrir/cerrar).
- */
-function wireSelect2Validation(scope) {
-    const $scope = $(scope || document);
-    // al cambiar valor -> validar
-    $scope.off('change.select2val', 'select.select2-hidden-accessible')
-        .on('change.select2val', 'select.select2-hidden-accessible', function () {
-            const $sel = $(this);
-            const $c = $sel.next('.select2');
-            const ok = this.checkValidity();
-
-            $sel.toggleClass('is-invalid', !ok).toggleClass('is-valid', ok);
-            $c.toggleClass('is-invalid', !ok).toggleClass('is-valid', ok);
-
-            // feedback
-            ensureFeedbackBlocks(scope);
-            const $fb = $c.next('.invalid-feedback');
-            if ($fb.length) $fb.text(ok ? 'Campo obligatorio' : 'Campo obligatorio');
-        });
-}
-
-/* ======================= Utils acciones dropdown ======================= */
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) {
-        $('.acciones-dropdown').hide();
-        $('.acciones-dropdown-clone').remove();
-    }
-});
 
 /* ======================= Helpers de filtro por columna ======================= */
 function escapeRegex(text) {

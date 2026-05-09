@@ -11,7 +11,7 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SistemaByCliza.DAL.Repository
 {
-    public class RolesRepository : IRolesRepository<Rol>
+    public class RolesRepository : IRolesRepository<UsuariosRol>
     {
 
         private readonly SistemaByClizaContext _dbcontext;
@@ -20,36 +20,36 @@ namespace SistemaByCliza.DAL.Repository
         {
             _dbcontext = context;
         }
-        public async Task<bool> Actualizar(Rol model)
+        public async Task<bool> Actualizar(UsuariosRol model)
         {
-            _dbcontext.Roles.Update(model);
+            _dbcontext.UsuariosRoles.Update(model);
             await _dbcontext.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> Eliminar(int id)
         {
-            Rol model = _dbcontext.Roles.First(c => c.Id == id);
-            _dbcontext.Roles.Remove(model);
+            UsuariosRol model = _dbcontext.UsuariosRoles.First(c => c.Id == id);
+            _dbcontext.UsuariosRoles.Remove(model);
             await _dbcontext.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> Insertar(Rol model)
+        public async Task<bool> Insertar(UsuariosRol model)
         {
-            _dbcontext.Roles.Add(model);
+            _dbcontext.UsuariosRoles.Add(model);
             await _dbcontext.SaveChangesAsync();
             return true;
         }
 
-        public async Task<Rol> Obtener(int id)
+        public async Task<UsuariosRol> Obtener(int id)
         {
-            Rol model = await _dbcontext.Roles.FindAsync(id);
+            UsuariosRol model = await _dbcontext.UsuariosRoles.FindAsync(id);
             return model;
         }
-        public async Task<IQueryable<Rol>> ObtenerTodos()
+        public async Task<IQueryable<UsuariosRol>> ObtenerTodos()
         {
-            IQueryable<Rol> query = _dbcontext.Roles;
+            IQueryable<UsuariosRol> query = _dbcontext.UsuariosRoles;
             return await Task.FromResult(query);
         }
 

@@ -1,32 +1,53 @@
-﻿// ============================== Ventas.js ==============================
+// ============================== Ventas.js ==============================
 let gridVentas;
 
 const columnConfigVentas = [
-    { index: 1, filterType: 'text' },                                  // Fecha
-    { index: 2, filterType: 'select', fetchDataFunc: listaClientesFilter }, // Cliente
-    { index: 3, filterType: 'select', fetchDataFunc: listaVendedoresFilter }, // Vendedor
-    { index: 4, filterType: 'text' },                                  // Subtotal
-    { index: 5, filterType: 'text' },                                  // Descuentos
-    { index: 6, filterType: 'text' },                                  // IVA
-    { index: 7, filterType: 'text' },                                  // Total
+    { index: 1, filterType: 'text' },
+    { index: 2, filterType: 'select', fetchDataFunc: listaSucursalesVentasFilter },
+    { index: 3, filterType: 'select', fetchDataFunc: listaClientesFilter },
+    { index: 4, filterType: 'text' },
+    { index: 5, filterType: 'text' },
+    { index: 6, filterType: 'text' },
+    { index: 7, filterType: 'text' },
 ];
 
 $(document).ready(() => {
+    Permisos.init();
+    Permisos.aplicarUI("Ventas");
     initFiltrosVentas();
 });
 
 /* ---------------- Navegación / Acciones ---------------- */
 function nuevaVenta() {
+    if (!Permisos.tiene("Ventas", "Crear")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     window.location.href = "/Ventas/NuevoModif";
 }
 
+function verVenta(id) {
+    Permisos.init();
+    if (!Permisos.tiene("Ventas", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    window.location.href = "/Ventas/NuevoModif?id=" + id + "&ver=1";
+}
+
 const editarVenta = (id) => {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("Ventas", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     window.location.href = "/Ventas/NuevoModif?id=" + id;
 };
 
 async function eliminarVenta(id) {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("Ventas", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const ok = await confirmarModal("¿Desea eliminar esta venta?");
     if (!ok) return;
 
@@ -81,34 +102,26 @@ async function configurarDataTableVentas(data) {
             columns: [
                 {
                     data: "Id", title: "", width: "1%", orderable: false, searchable: false,
-                    render: (id) => `
-                        <div class="acciones-menu" data-id="${id}">
-                            <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${id})' title='Acciones'>
-                                <i class='fa fa-ellipsis-v fa-lg text-white'></i>
-                            </button>
-                            <div class="acciones-dropdown" style="display:none;">
-                                <button class='btn btn-sm btneditar' type='button' onclick='editarVenta(${id})'>
-                                    <i class='fa fa-pencil-square-o fa-lg text-success'></i> Abrir
-                                </button>
-                                <button class='btn btn-sm btneliminar' type='button' onclick='eliminarVenta(${id})'>
-                                    <i class='fa fa-trash-o fa-lg text-danger'></i> Eliminar
-                                </button>
-                            </div>
-                        </div>`
+                    render: (id) => renderAccionesGrid(id, {
+                        ver: "verVenta",
+                        editar: "editarVenta",
+                        eliminar: "eliminarVenta"
+                    }, "Ventas")
                 },
                 { data: "Fecha", title: "Fecha", render: f => formatearFechaParaVista(f) },
+                { data: "Sucursal", title: "Sucursal" },
                 { data: "Cliente", title: "Cliente" },
-                { data: "Vendedor", title: "Vendedor" },
                 { data: "Subtotal", title: "Subtotal", className: "text-end", render: n => formatNumber(n) },
                 { data: "Descuentos", title: "Descuentos", className: "text-end", render: n => formatNumber(n) },
                 { data: "TotalIva", title: "IVA", className: "text-end", render: n => formatNumber(n) },
                 { data: "ImporteTotal", title: "Total", className: "text-end", render: n => formatNumber(n) },
             ],
             dom: 'Bfrtip',
-            buttons: [
-                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] }, className: 'btn-exportar-excel' },
-                'pageLength'
-            ],
+            buttons: dataTableButtonsExportCondicional("Ventas", [
+                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] }, className: 'btn-exportar-excel' },
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] }, className: 'btn-exportar-print' },
+            ]),
             order: [[1, "desc"], [0, "desc"]],
             orderCellsTop: true,
             fixedHeader: true,
@@ -161,6 +174,10 @@ async function configurarDataTableVentas(data) {
                     configurarOpcionesColumnas('#grd_Ventas', '#configColumnasMenu', 'Ventas_Columnas');
                 }
 
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Ventas", "ventas");
+                }
+
                 // Ajustar ancho y recalcular totales en cada draw
                 setTimeout(() => gridVentas?.columns.adjust(), 10);
                 $('#grd_Ventas').on('draw.dt', calcularTotalesVentas);
@@ -204,20 +221,35 @@ function calcularTotalesVentas() {
 
 /* ---------------- Panel de filtros superior (FilterManager like sueldos) ---------------- */
 async function initFiltrosVentas() {
-    // 1) Cargar combos de Cliente y Vendedor
+    // 1) Combos: cliente, sucursal (según rol), vendedor (solo administrador)
     try {
-        const [clientes, vendedores] = await Promise.all([
+        const reqs = [
             fetch('/Clientes/Lista', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json()),
-            fetch('/Personal/Lista', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json())
-        ]);
+            fetch('/Ventas/SucursalesOpciones', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json())
+        ];
+        if (Permisos.esRolAdministrador()) {
+            reqs.push(fetch('/Personal/Lista', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json()));
+        }
+        const results = await Promise.all(reqs);
+        const clientes = results[0];
+        const sucursales = results[1];
+        const vendedores = results.length > 2 ? results[2] : [];
 
         if ($('#fltCliente').length) {
             const $c = $('#fltCliente').empty().append('<option value="">Todos</option>');
             (clientes || []).forEach(x => $c.append(`<option value="${x.Id}">${x.Nombre}</option>`));
         }
-        if ($('#fltVendedor').length) {
-            const $v = $('#fltVendedor').empty().append('<option value="">Todos</option>');
-            (vendedores || []).forEach(x => $v.append(`<option value="${x.Id}">${x.Nombre}</option>`));
+        if ($('#fltSucursal').length) {
+            const $s = $('#fltSucursal').empty().append('<option value="">Todas</option>');
+            (sucursales || []).forEach(x => $s.append(`<option value="${x.Id}">${x.Nombre}</option>`));
+        }
+        if (Permisos.esRolAdministrador()) {
+            if ($('#fltVendedor').length) {
+                const $v = $('#fltVendedor').empty().append('<option value="">Todos</option>');
+                (vendedores || []).forEach(x => $v.append(`<option value="${x.Id}">${x.Nombre}</option>`));
+            }
+        } else {
+            $('#wrapFiltroVendedor').addClass('d-none');
         }
     } catch (e) {
         console.warn("No se pudieron cargar combos de filtros", e);
@@ -236,6 +268,7 @@ async function initFiltrosVentas() {
             desde: { el: '#fltDesde', param: 'fechaDesde', parse: v => v || null, default: Filters.FilterManager.firstOfMonthISO },
             hasta: { el: '#fltHasta', param: 'fechaHasta', parse: v => v || null, default: Filters.FilterManager.todayISO },
             cliente: { el: '#fltCliente', param: 'idCliente', parse: v => v ? Number(v) : null },
+            sucursal: { el: '#fltSucursal', param: 'idSucursal', parse: v => v ? Number(v) : null },
             vendedor: { el: '#fltVendedor', param: 'idVendedor', parse: v => v ? Number(v) : null },
             estado: { el: '#fltEstado', param: 'estado', parse: v => v || null },
             texto: { el: '#fltTexto', param: 'texto', parse: v => (v || '').trim() || null }
@@ -275,16 +308,11 @@ async function listaVendedoresFilter() {
     const d = await r.json();
     return (d || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
-
-/* ---------------- Dropdown acciones ---------------- */
-function toggleAcciones(id) {
-    const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-    if ($dd.is(":visible")) $dd.hide();
-    else { $('.acciones-dropdown').hide(); $dd.show(); }
+async function listaSucursalesVentasFilter() {
+    const r = await fetch('/Ventas/SucursalesOpciones', { headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
+    const d = await r.json();
+    return (d || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-});
 
 /* ---------------- Util: escapeRegex (fallback) ---------------- */
 function escapeRegex(text) {

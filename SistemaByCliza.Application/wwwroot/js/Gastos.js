@@ -1,4 +1,4 @@
-﻿let gridGastos;
+let gridGastos;
 
 const columnConfig = [
     { index: 1, filterType: 'text' },                          // Fecha (texto o yyyy-mm-dd)
@@ -20,6 +20,8 @@ const Modelo_base = {
 };
 
 $(document).ready(() => {
+    Permisos.init();
+    Permisos.aplicarUI("Gastos");
     initFiltros();               // filtros + primera carga
     attachLiveValidation('#modalEdicion'); // reutiliza tu helper
 });
@@ -75,13 +77,15 @@ function nuevoGasto() {
         listaGastosCategorias(),
         listaCuentas(),
     ]).then(() => {
+        $("#btnGuardar").removeClass("d-none").text("Registrar");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
         $('#modalEdicion').modal('show');
-        $("#btnGuardar").text("Registrar");
         $("#modalEdicionLabel").text("Nuevo Gasto");
     });
 }
 
-async function mostrarModal(modelo) {
+async function mostrarModal(modelo, opts = {}) {
+    const readOnly = !!opts.readOnly;
     limpiarModal('#modalEdicion', '#errorCampos');
 
     await Promise.all([
@@ -101,9 +105,17 @@ async function mostrarModal(modelo) {
     $("#txtConcepto").val(modelo.Concepto ?? '');
     $("#txtImporte").val(formatearMiles(modelo.Importe) ?? 0);
 
+    if (readOnly) {
+        $("#modalEdicionLabel").text("Ver Gasto");
+        $("#btnGuardar").addClass("d-none");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", true);
+    } else {
+        $("#modalEdicionLabel").text("Editar Gasto");
+        $("#btnGuardar").removeClass("d-none").text("Guardar");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
+    }
+
     $('#modalEdicion').modal('show');
-    $("#btnGuardar").text("Guardar");
-    $("#modalEdicionLabel").text("Editar Gasto");
 }
 
 /* -------- Listado / EditarInfo / Eliminar -------- */
@@ -136,8 +148,35 @@ async function listaGastos(params = {}) {
     calcularGastos()
 }
 
+async function verGasto(id) {
+    Permisos.init();
+    if (!Permisos.tiene("Gastos", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    try {
+        const r = await fetch("/Gastos/EditarInfo?id=" + id, {
+            method: "GET",
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+        if (!r.ok) throw new Error();
+        const dataJson = await r.json();
+        if (dataJson) await mostrarModal(dataJson, { readOnly: true });
+        else throw new Error();
+    } catch {
+        errorModal("Ha ocurrido un error.");
+    }
+}
+
 const editarGasto = id => {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Gastos", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
 
     fetch("/Gastos/EditarInfo?id=" + id, {
         method: 'GET',
@@ -150,12 +189,16 @@ const editarGasto = id => {
             if (!r.ok) throw new Error("Ha ocurrido un error.");
             return r.json();
         })
-        .then(dataJson => dataJson ? mostrarModal(dataJson) : (() => { throw new Error("Ha ocurrido un error."); })())
+        .then(dataJson => dataJson ? mostrarModal(dataJson, { readOnly: false }) : (() => { throw new Error("Ha ocurrido un error."); })())
         .catch(() => errorModal("Ha ocurrido un error."));
 };
 
 async function eliminarGasto(id) {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Gastos", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const confirmado = await confirmarModal("¿Desea eliminar este gasto?");
     if (!confirmado) return;
 
@@ -201,20 +244,11 @@ async function configurarDataTableGastos(data) {
                     title: '',
                     width: "1%",
                     render: function (data) {
-                        return `
-                <div class="acciones-menu" data-id="${data}">
-                    <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${data})' title='Acciones'>
-                        <i class='fa fa-ellipsis-v fa-lg text-white' aria-hidden='true'></i>
-                    </button>
-                    <div class="acciones-dropdown" style="display: none;">
-                        <button class='btn btn-sm btneditar' type='button' onclick='editarGasto(${data})' title='Editar'>
-                            <i class='fa fa-pencil-square-o fa-lg text-success' aria-hidden='true'></i> Editar
-                        </button>
-                        <button class='btn btn-sm btneliminar' type='button' onclick='eliminarGasto(${data})' title='Eliminar'>
-                            <i class='fa fa-trash-o fa-lg text-danger' aria-hidden='true'></i> Eliminar
-                        </button>
-                    </div>
-                </div>`;
+                        return renderAccionesGrid(data, {
+                            ver: "verGasto",
+                            editar: "editarGasto",
+                            eliminar: "eliminarGasto"
+                        }, "Gastos");
                     },
                     orderable: false,
                     searchable: false,
@@ -227,7 +261,7 @@ async function configurarDataTableGastos(data) {
                 { data: 'Cuenta' },       // 6 (string del back)
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("Gastos", [
                 {
                     extend: 'excelHtml5',
                     text: 'Exportar Excel',
@@ -251,8 +285,7 @@ async function configurarDataTableGastos(data) {
                     exportOptions: { columns: [...Array(7).keys()].map(i => i + 1) },
                     className: 'btn-exportar-print'
                 },
-                'pageLength'
-            ],
+            ]),
             orderCellsTop: true,
             fixedHeader: true,
 
@@ -307,6 +340,10 @@ async function configurarDataTableGastos(data) {
 
                 // Configuración de columnas (dropdown)
                 configurarOpcionesColumnas('#grd_Gastos', '#configColumnasMenu', 'Gastos_Columnas');
+
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Gastos", "gastos");
+                }
 
                 setTimeout(() => gridGastos.columns.adjust(), 10);
             },

@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --bg: #0b1320;
     --panel: #131d2b;
     --tile-from: #232c3b;
@@ -35,10 +35,9 @@ a {
 }
 
 .brand-logo {
-    height: 150px;
+    height: 62px;
     object-fit: contain;
     filter: drop-shadow(0 6px 16px rgba(0,0,0,.35));
-    margin-bottom: 20px;
 }
 
 /* GRID */
@@ -71,6 +70,15 @@ a {
     box-shadow: 0 12px 28px rgba(0,0,0,.35);
     overflow: visible;
 }
+
+/* Cabeceras por sección (antes en style inline / solo data-default-style en HTML) */
+.dash-card[data-card-id="favoritos"] { --hdr-from: #e08700; --hdr-to: #ef990a; }
+.dash-card[data-card-id="produccion"] { --hdr-from: #7446d8; --hdr-to: #9b69e7; }
+.dash-card[data-card-id="inventario"] { --hdr-from: #0aa57d; --hdr-to: #18c3a2; }
+.dash-card[data-card-id="ventas"] { --hdr-from: #2546bd; --hdr-to: #2f5ae7; }
+.dash-card[data-card-id="provper"] { --hdr-from: #128f80; --hdr-to: #1ab39f; }
+.dash-card[data-card-id="finanzas"] { --hdr-from: #c77b03; --hdr-to: #e39813; }
+.dash-card[data-card-id="extras"] { --hdr-from: #6a11cb; --hdr-to: #2575fc; }
 
 .dash-card__header {
     display: flex;

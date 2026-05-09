@@ -7,64 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="wwwroot\css\NavBarLogin.css~RF1f800e21.TMP" />
-    <Content Remove="wwwroot\js\Cajas.js" />
-    <Content Remove="wwwroot\js\Clientes.js" />
-    <Content Remove="wwwroot\js\Compras.js" />
-    <Content Remove="wwwroot\js\ComprasNuevoModif.js" />
-    <Content Remove="wwwroot\js\CuentasCorrientes.js" />
-    <Content Remove="wwwroot\js\CuentasCorrientesProveedores.js" />
-    <Content Remove="wwwroot\js\CuentasCorrientesTalleres.js" />
-    <Content Remove="wwwroot\js\Gastos.js" />
-    <Content Remove="wwwroot\js\Insumos.js" />
-    <Content Remove="wwwroot\js\Inventario.js" />
-    <Content Remove="wwwroot\js\Login.js" />
-    <Content Remove="wwwroot\js\NavBarLogin.js" />
-    <Content Remove="wwwroot\js\OrdenesCorte.js" />
-    <Content Remove="wwwroot\js\OrdenesCorteNuevoModif.js" />
-    <Content Remove="wwwroot\js\PagosSueldos.js" />
-    <Content Remove="wwwroot\js\PagosSueldosNuevoModif.js" />
-    <Content Remove="wwwroot\js\Personal.js" />
-    <Content Remove="wwwroot\js\Productos.js" />
-    <Content Remove="wwwroot\js\Proveedores.js" />
-    <Content Remove="wwwroot\js\Talleres.js" />
-    <Content Remove="wwwroot\js\Usuarios.js" />
-    <Content Remove="wwwroot\js\UsuariosConfiguracion.js" />
-    <Content Remove="wwwroot\js\Utils\moment.js" />
-    <Content Remove="wwwroot\js\Ventas.js" />
-    <Content Remove="wwwroot\js\VentasNuevoModif.js" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="wwwroot\Imagenes\Clientes.png" />
-    <None Include="wwwroot\js\Cajas.js" />
-    <None Include="wwwroot\js\CuentasCorrientesTalleres.js" />
-    <None Include="wwwroot\js\OrdenesCorteNuevoModif.js" />
-    <None Include="wwwroot\js\OrdenesCorte.js" />
-    <None Include="wwwroot\js\Inventario.js" />
-    <None Include="wwwroot\js\Gastos.js" />
-    <None Include="wwwroot\js\CuentasCorrientes.js" />
-    <None Include="wwwroot\js\Insumos.js" />
-    <None Include="wwwroot\js\Compras.js" />
-    <None Include="wwwroot\js\CuentasCorrientesProveedores.js" />
-    <None Include="wwwroot\js\Talleres.js" />
-    <None Include="wwwroot\js\Proveedores.js" />
-    <None Include="wwwroot\js\ComprasNuevoModif.js" />
-    <None Include="wwwroot\js\VentasNuevoModif.js" />
-    <None Include="wwwroot\js\Ventas.js" />
-    <None Include="wwwroot\js\PagosSueldosNuevoModif.js" />
-    <None Include="wwwroot\js\PagosSueldos.js" />
-    <None Include="wwwroot\js\Productos.js" />
-    <None Include="wwwroot\js\Personal.js" />
-    <None Include="wwwroot\js\Login.js" />
-    <None Include="wwwroot\js\Clientes.js" />
-    <None Include="wwwroot\js\UsuariosConfiguracion.js" />
-    <None Include="wwwroot\js\Usuarios.js" />
-    <None Include="wwwroot\js\NavBarLogin.js" />
-    <None Include="wwwroot\js\Utils\moment.js" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\SistemaByCliza.BLL\SistemaByCliza.BLL.csproj" />
     <ProjectReference Include="..\SistemaByCliza.Models\SistemaByCliza.Models.csproj" />
   </ItemGroup>
@@ -78,6 +20,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Views\SueldosPagos\" />
   </ItemGroup>
 
 </Project>

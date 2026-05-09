@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SistemaByCliza.DAL.DataContext;
 using SistemaByCliza.Models;
 using System;
@@ -35,11 +35,11 @@ namespace SistemaByCliza.DAL.Repository
             return true;
         }
 
-        public async Task<bool> Insertar(Cuenta model)
+        public async Task<int> Insertar(Cuenta model)
         {
             _dbcontext.Cuentas.Add(model);
             await _dbcontext.SaveChangesAsync();
-            return true;
+            return model.Id;
         }
 
         public async Task<Cuenta> Obtener(int id)

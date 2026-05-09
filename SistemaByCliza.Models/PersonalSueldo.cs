@@ -21,7 +21,19 @@ public partial class PersonalSueldo
 
     public string? NotaInterna { get; set; }
 
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
+
     public virtual Personal IdPersonalNavigation { get; set; } = null!;
+
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
+
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
 
     public virtual ICollection<PersonalSueldosPago> PersonalSueldosPagos { get; set; } = new List<PersonalSueldosPago>();
 }

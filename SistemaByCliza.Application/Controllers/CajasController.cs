@@ -44,47 +44,85 @@ namespace SistemaByCliza.Application.Controllers
 
         [HttpGet]
         public async Task<IActionResult> Lista(
-    DateTime? FechaDesde = null,
-    DateTime? FechaHasta = null,
-    int IdSucursal = -1,
-    int IdCuenta = -1,
-    string Tipo = "TODOS",
-    string Concepto = ""
-)
+     DateTime? FechaDesde = null,
+     DateTime? FechaHasta = null,
+     int IdSucursal = -1,
+     int IdCuenta = -1,
+     string Tipo = "TODOS",
+     string Concepto = ""
+ )
         {
             try
             {
-                // Ojo: este método del service debe devolver (List<Caja> Lista, decimal SaldoAnterior)
-                var (cajas, saldoAnterior) = await _CajaService.ObtenerFiltradoConSaldoAnterior(
-                    FechaDesde, FechaHasta, IdSucursal, IdCuenta, Tipo, Concepto);
+                var (cajas, saldoAnterior) =
+                    await _CajaService.ObtenerFiltradoConSaldoAnterior(
+                        FechaDesde, FechaHasta, IdSucursal, IdCuenta, Tipo, Concepto
+                    );
 
-                var movimientos = cajas.Select(c => new VMCaja
+                // 1️⃣ ORDEN CONTABLE REAL
+                var cajasOrdenadas = cajas
+                    .OrderBy(c => c.Fecha)
+                    .ThenBy(c => c.Id)
+                    .ToList();
+
+                decimal saldoCorriente = saldoAnterior;
+                var movimientos = new List<VMCaja>();
+
+                // 2️⃣ SALDO ACUMULADO CORRECTO
+                foreach (var c in cajasOrdenadas)
                 {
-                    Id = c.Id,
-                    IdSucursal = c.IdSucursal != null ? (int)c.IdSucursal : -1,
-                    IdCuenta = c.IdCuenta,
-                    Fecha = c.Fecha,
-                    TipoMov = c.TipoMov,
-                    IdMov = c.IdMov,
-                    Concepto = c.Concepto,
-                    Ingreso = c.Ingreso,
-                    Egreso = c.Egreso,
-                    Importe = c.Ingreso > 0 ? c.Ingreso : c.Egreso,
-                    Cuenta = c.IdCuentaNavigation?.Nombre ?? "",
-                    Sucursal = c.IdSucursal != null ? c.IdSucursalNavigation?.Nombre : "",
-                    EsTransferencia = (c.Concepto ?? "").IndexOf("Transferencia", StringComparison.OrdinalIgnoreCase) >= 0,
-                    PuedeEliminar = c.IdMov == null || (c.Concepto ?? "").Contains("Transferencia", StringComparison.OrdinalIgnoreCase)
-                }).ToList();
+                    saldoCorriente += (c.Ingreso - c.Egreso);
 
-                // 👉 Devolvemos saldo + lista
-                return Ok(new { SaldoAnterior = saldoAnterior, Movimientos = movimientos });
+                    movimientos.Add(new VMCaja
+                    {
+                        Id = c.Id,
+                        IdSucursal = c.IdSucursal ?? -1,
+                        IdCuenta = c.IdCuenta,
+                        Fecha = c.Fecha,
+                        TipoMov = c.TipoMov,
+                        IdMov = c.IdMov,
+                        Concepto = c.Concepto,
+
+                        Ingreso = c.Ingreso,
+                        Egreso = c.Egreso,
+                        Importe = c.Ingreso > 0 ? c.Ingreso : c.Egreso,
+
+                        Saldo = saldoCorriente,
+
+                        Cuenta = c.IdCuentaNavigation?.Nombre ?? "",
+                        Sucursal = c.IdSucursalNavigation?.Nombre ?? "",
+
+                        EsTransferencia =
+                            (c.Concepto ?? "").IndexOf(
+                                "Transferencia",
+                                StringComparison.OrdinalIgnoreCase
+                            ) >= 0,
+
+                        PuedeEliminar =
+                            c.IdMov == null ||
+                            (c.Concepto ?? "").Contains(
+                                "Transferencia",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                    });
+                }
+
+                // ❌ NO REORDENAR ACÁ
+                // El orden contable es el único válido para el saldo
+
+                return Ok(new
+                {
+                    SaldoAnterior = saldoAnterior,
+                    Movimientos = movimientos
+                });
             }
             catch
             {
-                return BadRequest("Ha ocurrido un error al mostrar la lista de movimientos de caja.");
+                return BadRequest(
+                    "Ha ocurrido un error al mostrar la lista de movimientos de caja."
+                );
             }
         }
-
 
 
         // POST: /Cajas/Insertar

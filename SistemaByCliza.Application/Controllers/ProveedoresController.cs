@@ -1,4 +1,4 @@
-﻿// /Application/Controllers/ProveedoresController.cs
+// /Application/Controllers/ProveedoresController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaByCliza.Application.Models;
@@ -43,7 +43,7 @@ namespace SistemaByCliza.Application.Controllers
             };
 
             bool ok = await _service.Insertar(entidad);
-            return Ok(new { valor = ok });
+            return Ok(new { valor = ok, id = entidad.Id });
         }
 
         [HttpPut]

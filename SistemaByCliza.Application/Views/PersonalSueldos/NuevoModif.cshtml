@@ -1,20 +1,25 @@
-﻿@{
+@{
     ViewData["Title"] = "Pago de Sueldo";
     var id = Context.Request.Query["id"].ToString();
 }
 
 @section Estilos {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link href="~/css/Productos.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/DisenoPantallas.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/personal.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/PagosSueldosNuevoModif.css" />
 }
 
-<div class="container-fluid " style="margin-top: 100px">
+<div class="container-fluid mt-layout-100">
 
     <div class="page-header rounded-3 p-4 mb-4 d-flex justify-content-between align-items-center">
         <div>
             <h2 class="fw-bold mb-0">Pago de Sueldo</h2>
-            <small class="text-muted">@(string.IsNullOrEmpty(id) ? "Nuevo" : "Edición")</small>
+            <small class="text-muted">@(Context.Request.Query["ver"] == "1" && !string.IsNullOrEmpty(id) ? "Consulta" : (string.IsNullOrEmpty(id) ? "Nuevo" : "Edición"))</small>
         </div>
         <button class="btn btn-ghost" onclick="volverIndex()">
             <i class="fa fa-arrow-left me-2"></i> Volver
@@ -26,7 +31,7 @@
         <div class="col-lg-7">
             <div class="card-glass p-4 h-100">
                 <h5 class="fw-bold mb-3"><i class="fa fa-file-invoice-dollar me-2 text-primary"></i>Datos del Sueldo</h5>
-                <form id="formSueldo" class="row g-3">
+                <form id="formSueldo" class="row g-3" data-validacion-ui="0">
                     <input type="hidden" id="txtId" value="@id" />
 
                     <div class="col-md-4">
@@ -36,11 +41,17 @@
                     </div>
 
                     <div class="col-md-8">
-                        <label class="form-label">Personal</label>
-                        <select id="cmbPersonal" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
-                        <div class="invalid-feedback">Campo obligatorio</div>
+                        <label class="form-label" for="cmbPersonal">Personal</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbPersonal" class="form-select select2 no-select2" required data-s2-parent="body">
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusPersonalSueldo" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo personal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
@@ -51,7 +62,7 @@
 
                     <div class="col-md-6">
                         <label class="form-label">Importe</label>
-                        <input type="text" id="txtImporte" class="form-control Inputmiles" required />
+                        <input type="text" id="txtImporte" class="form-control pr-precio-input" required inputmode="decimal" autocomplete="off" />
                              <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
@@ -66,7 +77,7 @@
                     </div>
                 </form>
 
-                <div class="row mt-3 g-3">
+                <div class="row mt-3 g-3 kpi-solo-rol-finanzas">
                     <div class="col-md-4">
                         <div class="stat-card p-3 text-center">
                             <div class="label">Importe</div>
@@ -104,16 +115,16 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0"><i class="fa fa-wallet me-2 text-success"></i>Pagos</h5>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-dark btn-sm" type="button" onclick="exportarReciboPdf()">
+                        <button type="button" id="btnExportarPdf" class="btn btn-dark btn-sm" data-modulo="PersonalSueldos" data-permiso="exportar" onclick="exportarReciboPdf()">
                             <i class="fa fa-file-pdf me-1"></i> Exportar PDF
                         </button>
-                        <button class="btn btn-success btn-sm" type="button" onclick="abrirModalPago()">
+                        <button type="button" id="btnAgregarPago" class="btn btn-success btn-sm" onclick="abrirModalPago()">
                             <i class="fa fa-plus"></i> Registrar Pago
                         </button>
                     </div>
                 </div>
 
-                <table class="display nowrap compact" id="grd_Pagos" style="width:100%">
+                <table class="w-100 display nowrap compact" id="grd_Pagos">
                     <thead>
                         <tr>
                             <th></th>
@@ -130,49 +141,56 @@
     </div>
 </div>
 
-<!-- Modal Pago -->
-<div class="modal fade" id="modalPago" tabindex="-1">
+<!-- Modal Pago (misma línea visual que modales con DisenoPantallas / Ventas) -->
+<div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="modalPagoTitulo" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-glass">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="fa fa-plus-circle me-2 text-success"></i>Registrar Pago</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header colorEncabezado border-0">
+                <h5 class="modal-title fw-bold" id="modalPagoTitulo"><i class="fa fa-plus-circle me-2"></i>Registrar Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <form id="formPago" class="row g-3">
+                <form id="formPago" class="row g-3" data-validacion-ui="0">
                     <div class="col-md-4">
                         <label class="form-label">Fecha</label>
                         <input type="date" id="dtpPagoFecha" class="form-control" required />
-                        <div class="invalid-feedback">Campo obligatorio</div>  <!-- <- FALTABA -->
+                        <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Cuenta</label>
-                        <select id="cmbCuenta" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
-                        <div class="invalid-feedback">Campo obligatorio</div>
+                        <label class="form-label" for="cmbCuenta">Cuenta</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbCuenta" class="form-select select2 no-select2" required data-s2-parent="#modalPago">
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusCuentaSueldo" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva cuenta">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Importe</label>
-                        <input type="text" id="txtPagoImporte" class="form-control Inputmiles" required />
-                      
+                        <label class="form-label" for="txtPagoImporte">Importe</label>
+                        <input type="text" id="txtPagoImporte" class="form-control pr-precio-input" required inputmode="decimal" autocomplete="off" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
                     <div class="col-md-12">
                         <label class="form-label">Nota</label>
                         <input type="text" id="txtPagoNota" class="form-control" />
                     </div>
-                    <div id="errorCamposPago" class="alert alert-danger d-none">
+                    <div id="errorCamposPago" class="alert alert-danger d-none mt-1" role="alert">
+                        <i class="fa fa-exclamation-triangle me-1"></i>
                         Debes completar los campos obligatorios.
                     </div>
                 </form>
             </div>
             <div class="modal-footer border-0">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fa fa-times me-1"></i> Cancelar
                 </button>
-                <button class="btn btn-success" onclick="guardarPago()">
+                <button type="button" class="btn btn-success" id="btnGuardarPago">
                     <i class="fa fa-check me-1"></i> Registrar
                 </button>
             </div>
@@ -180,18 +198,22 @@
     </div>
 </div>
 
+<partial name="~/Views/Shared/Partials/M_Personal.cshtml" />
+
 <partial name="~/Views/Utils/Modals.cshtml" />
 
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/site.js"></script>
     <script src="~/js/utils/moment.js"></script>
+    <script src="~/js/Entities/M_Personal.js?v=1.0"></script>
 
     <!-- jsPDF + AutoTable (para exportar PDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
 
-    <script src="~/js/PagosSueldosNuevoModif.js?v=1.0"></script>
+    <script src="~/js/PagosSueldosNuevoModif.js?v=2.7"></script>
 }

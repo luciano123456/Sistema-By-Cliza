@@ -36,13 +36,13 @@ namespace SistemaByCliza.Application.Controllers
         [HttpPost]
         public async Task<IActionResult> Insertar([FromBody] VMRoles model)
         {
-            var Rol = new Rol
+            var UsuariosRol = new UsuariosRol
             {
                 Id = model.Id,
                 Nombre = model.Nombre,
             };
 
-            bool respuesta = await _RolesService.Insertar(Rol);
+            bool respuesta = await _RolesService.Insertar(UsuariosRol);
 
             return Ok(new { valor = respuesta });
         }
@@ -50,13 +50,13 @@ namespace SistemaByCliza.Application.Controllers
         [HttpPut]
         public async Task<IActionResult> Actualizar([FromBody] VMRoles model)
         {
-            var Rol = new Rol
+            var UsuariosRol = new UsuariosRol
             {
                 Id = model.Id,
                 Nombre = model.Nombre,
             };
 
-            bool respuesta = await _RolesService.Actualizar(Rol);
+            bool respuesta = await _RolesService.Actualizar(UsuariosRol);
 
             return Ok(new { valor = respuesta });
         }
@@ -72,11 +72,11 @@ namespace SistemaByCliza.Application.Controllers
         [HttpGet]
         public async Task<IActionResult> EditarInfo(int id)
         {
-             var Rol = await _RolesService.Obtener(id);
+             var UsuariosRol = await _RolesService.Obtener(id);
 
-            if (Rol != null)
+            if (UsuariosRol != null)
             {
-                return StatusCode(StatusCodes.Status200OK, Rol);
+                return StatusCode(StatusCodes.Status200OK, UsuariosRol);
             }
             else
             {

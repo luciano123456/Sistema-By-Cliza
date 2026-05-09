@@ -1,0 +1,86 @@
+@* Alta rápida de producto (talles/colores + atajos) — ids con prefijo mpa_* para no chocar con M_Personal / otras pantallas. *@
+<div class="modal fade" id="modalAltaProductoOC" tabindex="-1" aria-labelledby="modalAltaProductoOCLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-edicion modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header colorEncabezado border-0">
+                <h5 class="modal-title fw-bold" id="modalAltaProductoOCLabel"><i class="fa fa-cubes me-2"></i> Nuevo producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAltaProductoOC" class="row g-3" data-validacion-ui="0">
+                    <div class="col-md-6">
+                        <label class="form-label" for="mpa_txtDescripcion">Descripción</label>
+                        <input type="text" class="form-control" id="mpa_txtDescripcion" autocomplete="off" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="mpa_cmbCategoria">Categoría</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="mpa_cmbCategoria" class="form-select select2">
+                                    <option value="">Seleccione</option>
+                                </select>
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+                            <button type="button" id="mpa_btnPlusCategoria" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva categoría">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="mpa_txtPrecio">Precio unitario</label>
+                        <input type="text" inputmode="decimal" class="form-control pr-precio-input" id="mpa_txtPrecio" autocomplete="off" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label">Talles</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <div class="pr-field-with-plus__main position-relative">
+                                    <div id="mpa_btnTalles" class="form-select text-truncate pr-fake-select" tabindex="0"
+                                         onclick="toggleChecklist('mpa_btnTalles','mpa_listaTalles')">Seleccionar talles</div>
+                                    <div class="invalid-feedback">Seleccioná al menos un talle.</div>
+                                    <div id="mpa_listaTalles" class="select-checklist shadow p-2 d-none"></div>
+                                </div>
+                            </div>
+                            <button type="button" id="mpa_btnPlusTalles" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo talle (según categoría)">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <small id="mpa_hintTalles" class="text-muted">Podés seleccionar múltiples talles</small>
+                    </div>
+
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label">Colores</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <div class="pr-field-with-plus__main position-relative">
+                                    <div id="mpa_btnColores" class="form-select text-truncate pr-fake-select" tabindex="0"
+                                         onclick="toggleChecklist('mpa_btnColores','mpa_listaColores')">Seleccionar colores</div>
+                                    <div class="invalid-feedback">Seleccioná al menos un color.</div>
+                                    <div id="mpa_listaColores" class="select-checklist shadow p-2 d-none"></div>
+                                </div>
+                            </div>
+                            <button type="button" id="mpa_btnPlusColores" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo color">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <small id="mpa_hintColores" class="text-muted">Podés seleccionar múltiples colores</small>
+                    </div>
+
+                    <div class="col-12 form-check mt-2" hidden>
+                        <input class="form-check-input" type="checkbox" id="mpa_chkVariantes" checked>
+                        <label class="form-check-label" for="mpa_chkVariantes">Generar variantes</label>
+                    </div>
+
+                    <div id="mpa_errorCampos" class="alert alert-danger d-none col-12">Completá descripción, categoría, precio y al menos un talle y un color.</div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times me-1"></i> Cancelar</button>
+                <button type="button" id="mpa_btnGuardar" class="btn btn-success"><i class="fa fa-check me-1"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>

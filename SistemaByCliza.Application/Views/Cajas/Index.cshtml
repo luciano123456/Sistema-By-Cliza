@@ -3,16 +3,13 @@
 }
 
 @section Estilos {
-    <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link href="~/css/cajas.css" rel="stylesheet" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <!-- Header estilo CC -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -24,7 +21,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Ingresos (período)</div>
                     <div class="value" id="kpiIngresos">$0,00</div>
@@ -55,14 +52,6 @@
                         <button class="btn btn-outline-primary d-flex align-items-center" type="button" id="btnToggleFiltros">
                             <i class="fa fa-arrow-up me-2" id="iconFiltros"></i> Filtros
                         </button>
-
-                        <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" type="button" id="btnConfigCols"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fa fa-cog me-2"></i> Config. Columnas
-                            </button>
-                            <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
-                        </div>
                     </div>
 
                     <!-- Panel de filtros -->
@@ -111,31 +100,18 @@
                         </div>
                     </form>
 
-                    <!-- Tabla -->
-                    <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Caja" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>Fecha</th>
-                                    <th>Tipo</th>
-                                    <th>Concepto</th>
-                                    <th>Ingreso</th>
-                                    <th>Egreso</th>
-                                    <th>Sucursal</th>
-                                    <th>Cuenta</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div id="cardsCaja" class="cajas-cards-grid"></div>
+                    <div id="cardsCajaEmpty" class="alert alert-info d-none mt-3 mb-0">
+                        No hay movimientos para los filtros seleccionados.
                     </div>
+
 
                     <!-- Botonera inferior -->
                     <div class="d-flex align-items-center justify-content-end mt-3 gap-2">
-                        <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="nuevoCaja()">
+                        <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2 text-center" data-modulo="Cajas" data-permiso="crear" onclick="nuevoCaja()">
                             <i class="fa fa-plus-square me-2"></i> Nuevo mov.
                         </button>
-                        <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="abrirModalTransfer()">
+                        <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2 text-center" data-modulo="Cajas" data-permiso="crear" onclick="abrirModalTransfer()">
                             <i class="fa fa-exchange me-2"></i> Nueva transferencia
                         </button>
                     </div>
@@ -313,7 +289,7 @@
                                             <th>Destino</th>
                                             <th>Importe</th>
                                             <th>Nota</th>
-                                            <th style="width:42px;"></th>
+                                            <th class="th-caja-action-col" aria-hidden="true"></th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -344,23 +320,12 @@
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-
-    <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
-
-    <!-- Export opcional -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
 
     <!-- Utils del proyecto -->
     <script src="~/js/site.js"></script>
     <script src="~/js/utils/moment.js"></script>
 
     <!-- Lógica Cajas -->
-    <script src="~/js/Cajas.js?v=2.3"></script>
+    <script src="~/js/Cajas.js?v=2.8"></script>
 }

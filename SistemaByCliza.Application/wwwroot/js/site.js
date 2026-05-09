@@ -1,5 +1,8 @@
 ﻿/* ============================== SITE.JS ============================== */
 const token = localStorage.getItem('JwtToken');
+try {
+    window.token = token;
+} catch (_) { /* no window (tests) */ }
 
 async function MakeAjax(options) {
     return $.ajax({
@@ -35,10 +38,38 @@ function formatNumber(number) {
     return "$ " + parts.join(",");
 }
 
+/**
+ * NavBarLogin eleva #modalConfiguracion a ~32000; estos modales deben ir por encima (y su backdrop).
+ */
+const Z_INDEX_MODAL_FEEDBACK = 45000;
+const Z_INDEX_MODAL_FEEDBACK_BACKDROP = 44980;
+
+function aplicarZIndexModalFeedback(modalEl) {
+    if (!modalEl) return function noop() { };
+    modalEl.style.setProperty("z-index", String(Z_INDEX_MODAL_FEEDBACK), "important");
+    let backdrop = null;
+    const subirBackdrop = () => {
+        const backs = document.querySelectorAll(".modal-backdrop");
+        backdrop = backs[backs.length - 1];
+        if (backdrop) backdrop.style.setProperty("z-index", String(Z_INDEX_MODAL_FEEDBACK_BACKDROP), "important");
+    };
+    setTimeout(subirBackdrop, 0);
+    requestAnimationFrame(subirBackdrop);
+    return function limpiarZIndexModalFeedback() {
+        modalEl.style.removeProperty("z-index");
+        if (backdrop && backdrop.isConnected) backdrop.style.removeProperty("z-index");
+    };
+}
+
 function mostrarModalConContador(modal, texto, tiempo) {
     $(`#${modal}Text`).text(texto);
-    $(`#${modal}`).modal('show');
-    setTimeout(function () { $(`#${modal}`).modal('hide'); }, tiempo);
+    $(`#${modal}`).modal("show");
+    const el = document.getElementById(modal);
+    const limpiar = aplicarZIndexModalFeedback(el);
+    setTimeout(function () {
+        $(`#${modal}`).modal("hide");
+        limpiar();
+    }, tiempo);
 }
 function exitoModal(texto) { mostrarModalConContador('exitoModal', texto, 1000); }
 function errorModal(texto) { mostrarModalConContador('ErrorModal', texto, 3000); }
@@ -49,6 +80,11 @@ function confirmarModal(mensaje) {
         const modalEl = document.getElementById('modalConfirmar');
         const mensajeEl = document.getElementById('modalConfirmarMensaje');
         const btnAceptar = document.getElementById('btnModalConfirmarAceptar');
+
+        if (!modalEl || !mensajeEl || !btnAceptar) {
+            resolve(window.confirm(mensaje || '¿Confirmar?'));
+            return;
+        }
 
         mensajeEl.innerText = mensaje;
 
@@ -64,6 +100,7 @@ function confirmarModal(mensaje) {
         const nuevoBtnAceptar = document.getElementById('btnModalConfirmarAceptar');
 
         const nuevoModal = new bootstrap.Modal(nuevoModalEl, { backdrop: 'static', keyboard: false });
+        let limpiarZFeedback = function noop() { };
 
         nuevoBtnAceptar.onclick = function () {
             if (resuelto) return;
@@ -73,12 +110,14 @@ function confirmarModal(mensaje) {
         };
 
         nuevoModalEl.addEventListener('hidden.bs.modal', () => {
+            limpiarZFeedback();
             if (resuelto) return;
             resuelto = true;
             resolve(false);
         }, { once: true });
 
         nuevoModal.show();
+        limpiarZFeedback = aplicarZIndexModalFeedback(nuevoModalEl);
     });
 }
 
@@ -110,6 +149,7 @@ function formatMoneda(valor) {
 
 function toggleAcciones(id) {
     const dropdown = document.querySelector(`.acciones-menu[data-id='${id}'] .acciones-dropdown`);
+    if (!dropdown) return;
     const isVisible = dropdown.style.display === 'block';
 
     // Oculta todos los demás
@@ -134,6 +174,41 @@ function toggleAcciones(id) {
         document.body.appendChild(dropdownClone);
     }
 }
+
+/** Checklist tipo multiselect (#btnTalles / #listaTalles, #btnSucursales / #listaSucursales, …). */
+function toggleChecklist(btnId, panelId) {
+    const panel = document.getElementById(panelId);
+    const btn = typeof btnId === "string" ? document.getElementById(btnId) : btnId;
+    if (!panel) return;
+    panel.classList.toggle("d-none");
+    if (btn && btn.hasAttribute("aria-expanded")) {
+        btn.setAttribute("aria-expanded", panel.classList.contains("d-none") ? "false" : "true");
+    }
+}
+window.toggleChecklist = toggleChecklist;
+
+document.addEventListener("click", function (e) {
+    document.querySelectorAll(".select-checklist").forEach(panel => {
+        const pid = panel.id || "";
+        if (!pid.startsWith("lista") && !pid.startsWith("mpa_lista")) return;
+        if (panel.classList.contains("d-none")) return;
+        if (panel.contains(e.target)) return;
+        const host = panel.closest(".pr-field-with-plus") || panel.closest(".pr-select-plus--flex");
+        if (host && host.contains(e.target)) return;
+        let btn = null;
+        if (pid.startsWith("mpa_lista")) {
+            btn = document.getElementById("mpa_btn" + pid.slice("mpa_lista".length));
+        } else if (pid.startsWith("lista")) {
+            // "lista" = 5 caracteres (listaTalles → btnTalles, listaSucursales → btnSucursales)
+            btn = document.getElementById("btn" + pid.slice("lista".length));
+        }
+        if (btn && btn.contains(e.target)) return;
+        panel.classList.add("d-none");
+        if (btn && btn.hasAttribute("aria-expanded")) {
+            btn.setAttribute("aria-expanded", "false");
+        }
+    });
+});
 
 function formatearFechaParaInput(fecha) {
     const m = moment(fecha, [moment.ISO_8601, 'YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD']);
@@ -190,9 +265,11 @@ function formatearMiles(valor) {
     return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 function formatearSinMiles(valor) {
-    if (!valor) return 0;
-    if (!valor.includes('.')) return parseFloat(valor) || 0;
-    const limpio = valor.replace(/\./g, '').replace(',', '.');
+    if (valor == null || valor === "") return 0;
+    let s = String(valor).trim().replace(/\$/g, "").replace(/\s/g, "");
+    if (!s) return 0;
+    if (!s.includes(".")) return parseFloat(s.replace(",", ".")) || 0;
+    const limpio = s.replace(/\./g, "").replace(",", ".");
     const num = parseFloat(limpio);
     return isNaN(num) ? 0 : num;
 }
@@ -235,9 +312,22 @@ function limpiarModal(modalSelector, errorSelector) {
 }
 
 /* ======================= VALIDACIÓN CAMPO A CAMPO ======================= */
-function validarCampoIndividual(elOrSelector) {
+function validarCampoIndividual(elOrSelector, eventKind) {
     const el = typeof elOrSelector === 'string' ? document.querySelector(elOrSelector) : elOrSelector;
     if (!el) return true;
+
+    const validationHost = el.closest('[data-validacion-ui]') || el.closest('#modalEdicion');
+    const modoSoloCampo = validationHost && validationHost.getAttribute('data-validacion-ui') === '0';
+    if (modoSoloCampo) {
+        // Select2: blur nativo al abrir/cerrar el desplegable — no tocar estado aquí.
+        if (eventKind === 'blur' && el.tagName === 'SELECT' && el.classList.contains('select2-hidden-accessible')) {
+            return true;
+        }
+        // Texto: no marcar "required" vacío en cada tecla; sí en blur/change.
+        if (eventKind === 'input' && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+            return true;
+        }
+    }
 
     const valor = (el.value || '').trim();
     let valido = true;
@@ -303,9 +393,9 @@ function attachLiveValidation(modalSelector, errorSelector = '#errorCampos') {
 
     root.querySelectorAll('input, select, textarea').forEach(el => {
         el.setAttribute('autocomplete', 'off');
-        el.addEventListener('input', () => { validarCampoIndividual(el); recheck(); });
-        el.addEventListener('change', () => { validarCampoIndividual(el); recheck(); });
-        el.addEventListener('blur', () => { validarCampoIndividual(el); recheck(); });
+        el.addEventListener('input', () => { validarCampoIndividual(el, 'input'); recheck(); });
+        el.addEventListener('change', () => { validarCampoIndividual(el, 'change'); recheck(); });
+        el.addEventListener('blur', () => { validarCampoIndividual(el, 'blur'); recheck(); });
     });
 }
 
@@ -350,58 +440,167 @@ function llenarSelect(selectId, data, valueField = 'Id', textField = 'Nombre', c
     (data || []).forEach(it => {
         const opt = document.createElement('option');
         opt.value = it[valueField];
-        opt.textContent = it[textField];
+        const label = it[textField] ?? it.Nombre ?? it.Descripcion ?? String(it[valueField] ?? '');
+        opt.textContent = label;
+        if (it.CostoUnitario != null && it.CostoUnitario !== '') {
+            opt.setAttribute('data-costo', String(it.CostoUnitario));
+        }
         sel.appendChild(opt);
     });
 }
 
-/* ======================= OPCIONES DE COLUMNAS (DataTables) ======================= */
-function configurarOpcionesColumnas(tableSelector, menuSelector, storageKey) {
+/* ======================= OPCIONES DE COLUMNAS (DataTables, todos los ABMs) ======================= */
+/**
+ * @param {string} tableSelector
+ * @param {string} menuSelector
+ * @param {string} storageKey
+ * @param {{ getTitle?: (col: object, index: number) => string }} [options]
+ */
+function configurarOpcionesColumnas(tableSelector, menuSelector, storageKey, options) {
+    options = options || {};
+    const getTitle = typeof options.getTitle === "function"
+        ? options.getTitle
+        : function (col, index) {
+            return (typeof col.title === "string" && col.title.trim() !== "")
+                ? col.title
+                : (col.data || `Col ${index}`);
+        };
+
     const grid = $(tableSelector).DataTable();
     const columnas = grid.settings().init().columns;
     const container = $(menuSelector);
-    const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
 
     container.empty();
+    container.addClass("column-config-dropdown");
+
+    const $searchLi = $('<li class="column-config-dd-search" role="presentation"></li>');
+    const $searchInner = $('<div class="column-config-dd-search-inner"></div>');
+    const $filterInput = $("<input>", {
+        type: "search",
+        class: "form-control form-control-sm column-config-dd-filter",
+        placeholder: "Buscar columna…",
+        autocomplete: "off",
+        "aria-label": "Buscar columnas visibles"
+    });
+    $searchInner.append($filterInput);
+    $searchLi.append($searchInner);
+    container.append($searchLi);
+
+    $searchLi.on("click", function (e) {
+        e.stopPropagation();
+    });
+
     columnas.forEach((col, index) => {
-        if (!col.data) return;                   // Saltar acciones
-        if (col.data && col.data !== "Id") {     // No "Id"
+        if (!col.data) return;
+        /* Columna de acciones (data "Id", sin entrar al menú): siempre visible.
+           Antes no se aplicaba .visible() aquí; un col_0:false viejo en localStorage dejaba la grilla sin acciones. */
+        if (col.data === "Id") {
+            grid.column(index).visible(true);
+            delete saved[`col_${index}`];
+            localStorage.setItem(storageKey, JSON.stringify(saved));
+            return;
+        }
+        if (col.data && col.data !== "Id") {
             const isChecked = saved[`col_${index}`] !== undefined ? saved[`col_${index}`] : true;
             grid.column(index).visible(isChecked);
 
-            const nombre = (typeof col.title === 'string' && col.title.trim() !== '') ? col.title : (col.data || `Col ${index}`);
+            const nombre = getTitle(col, index);
+            const filterText = String(nombre).toLowerCase();
 
-            container.append(`
-            <li>
-              <label class="dropdown-item">
-                <input type="checkbox" class="toggle-column" data-column="${index}" ${isChecked ? 'checked' : ''}>
-                ${nombre}
-              </label>
-            </li>`);
+            const $row = $('<li class="column-config-dd-row" role="presentation"></li>');
+            $row.attr("data-filter-text", filterText);
+
+            const $label = $('<label class="dropdown-item column-config-dd-label"></label>');
+            const $cb = $("<input>", {
+                type: "checkbox",
+                class: "toggle-column form-check-input flex-shrink-0",
+                "data-column": index
+            }).prop("checked", isChecked);
+            const $text = $('<span class="column-config-dd-text"></span>').text(nombre);
+
+            $label.append($cb, $text);
+            $row.append($label);
+            container.append($row);
         }
     });
 
-    container.find('.toggle-column').on('change', function () {
-        const idx = parseInt($(this).data('column'), 10);
-        const on = $(this).is(':checked');
+    $filterInput.on("input", function () {
+        const q = String($(this).val() || "").trim().toLowerCase();
+        container.find(".column-config-dd-row").each(function () {
+            const t = ($(this).attr("data-filter-text") || "");
+            $(this).toggleClass("d-none", q !== "" && !t.includes(q));
+        });
+    });
+
+    container.find(".toggle-column").on("change", function () {
+        const idx = parseInt($(this).data("column"), 10);
+        const on = $(this).is(":checked");
         saved[`col_${idx}`] = on;
         localStorage.setItem(storageKey, JSON.stringify(saved));
         grid.column(idx).visible(on);
     });
 }
 
+/**
+ * Marca la tabla como seleccionable por fila: clase .seleccionada (una por tbody a la vez).
+ * Añade `dt-selectable` al table para estilos en site.css.
+ * @param {string} tableSelector ej. '#grd_Clientes'
+ * @param {string} [namespace] sufijo único por tabla (eventos namespaced)
+ */
+function bindDataTableSeleccionFila(tableSelector, namespace) {
+    const ns = String(namespace || "dtRowSel").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const $tbl = $(tableSelector);
+    if (!$tbl.length) return;
+    $tbl.addClass("dt-selectable");
+    $tbl.off("click." + ns, "tbody tr").on("click." + ns, "tbody tr", function (e) {
+        if ($(e.target).closest("button, a, input, select, textarea, label, .rp-row-actions, .acciones-menu, .dropdown, .dropdown-menu, .dt-buttons").length) {
+            return;
+        }
+        const $tr = $(this);
+        if ($tr.hasClass("seleccionada")) {
+            $tr.removeClass("seleccionada");
+        } else {
+            $tr.addClass("seleccionada").siblings().removeClass("seleccionada");
+        }
+    });
+    $tbl.off("draw.dt." + ns).on("draw.dt." + ns, function () {
+        $tbl.find("tbody tr.seleccionada").removeClass("seleccionada");
+    });
+}
+
 /* ======================= BANNER DE ERRORES GLOBAL (ocultar/mostrar) ======================= */
+/** Criterio alineado con validarCampoIndividual: Select2 deja el select nativo recortado y checkValidity() puede fallar en algunos navegadores. */
+function requiredFieldOkForErrorBanner(el) {
+    if (!el || !el.hasAttribute('required')) return true;
+    if (el.tagName === 'SELECT') {
+        return !!(el.value && String(el.value).trim() !== '');
+    }
+    if (el.type === 'checkbox' || el.type === 'radio') return !!el.checked;
+    const valor = (el.value || '').toString().trim();
+    if (valor === '') return false;
+    try {
+        return el.checkValidity();
+    } catch (_) {
+        return true;
+    }
+}
+
 function updateErrorBanner(modalOrSelector = '#modalEdicion', errorSelector = '#errorCampos') {
     const root = typeof modalOrSelector === 'string' ? document.querySelector(modalOrSelector) : modalOrSelector;
     const err = document.querySelector(errorSelector);
     if (!root || !err) return;
+    if (err.getAttribute('data-banner-reason') === 'negocio') return;
+    if (root.getAttribute('data-validacion-ui') === '0') return;
 
     let allValid = true;
     root.querySelectorAll('input[required], select[required], textarea[required]').forEach(el => {
-        const ok = el.checkValidity() && !!(el.value && el.value.toString().trim() !== '');
-        if (!ok) allValid = false;
+        if (!requiredFieldOkForErrorBanner(el)) allValid = false;
     });
     err.classList.toggle('d-none', allValid);
+    if (allValid) {
+        root.setAttribute('data-validacion-ui', '0');
+    }
 }
 
 /* ======================= SELECT2 – validación genérica ======================= */
@@ -409,7 +608,18 @@ function wireSelect2Validation(scope, errorSelector = '#errorCampos') {
     const $scope = $(scope || document);
     $scope.off('change.select2val', 'select.select2-hidden-accessible')
         .on('change.select2val', 'select.select2-hidden-accessible', function () {
-            const ok = this.checkValidity() && !!this.value;
+            const host = this.closest('[data-validacion-ui]') || this.closest('#modalEdicion');
+            if (host && host.getAttribute('data-validacion-ui') === '0') {
+                const ok = this.hasAttribute('required')
+                    ? requiredFieldOkForErrorBanner(this)
+                    : (this.checkValidity() && !!String(this.value || '').trim());
+                if (ok) setValid(this);
+                else clearValidation(this);
+                return;
+            }
+            const ok = this.hasAttribute('required')
+                ? requiredFieldOkForErrorBanner(this)
+                : (this.checkValidity() && !!String(this.value || '').trim());
             if (ok) setValid(this); else setInvalid(this);
             if (typeof updateErrorBanner === 'function') updateErrorBanner(scope || '#modalEdicion', errorSelector);
         });
@@ -422,13 +632,25 @@ function validarCampos() {
     return ok;
 }
 
+function forzarValidacionModal(modalSelector = '#modalEdicion', errorSelector = '#errorCampos') {
+    const root = document.querySelector(modalSelector);
+    if (!root) return false;
+    root.setAttribute('data-validacion-ui', '1');
+    const ok = verificarErroresGenerales(modalSelector, errorSelector);
+    updateErrorBanner(modalSelector, errorSelector);
+    return ok;
+}
+
 /* ======================= CIERRE DE MENÚS ======================= */
 $(document).on('click', function (e) {
     if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
 });
 
 /* ======================= INPUTMILES (formateo) ======================= */
-document.querySelectorAll("input.Inputmiles").forEach(input => {
+function bindInputMilesElement(input) {
+    if (!input || !input.classList.contains("Inputmiles")) return;
+    if (input.dataset.inputMilesBound === "1") return;
+    input.dataset.inputMilesBound = "1";
     input.addEventListener("input", function () {
         const cursorPos = input.selectionStart;
         const originalLength = input.value.length;
@@ -439,7 +661,9 @@ document.querySelectorAll("input.Inputmiles").forEach(input => {
         const newLength = formateado.length;
         input.setSelectionRange(cursorPos + (newLength - originalLength), cursorPos + (newLength - originalLength));
     });
-});
+}
+
+document.querySelectorAll("input.Inputmiles").forEach(bindInputMilesElement);
 
 /* ======================= MÓDULO DE FILTROS REUTILIZABLE ======================= */
 const Filters = (() => {
@@ -559,14 +783,194 @@ window.FiltersUI = (function () {
 
 /* ======================= SELECT2 init genérico ======================= */
 function initSelect2(scope) {
-    $(scope || document).find('select.select2').each(function () {
+    if (!(window.jQuery && $.fn && typeof $.fn.select2 === 'function')) return;
+    $(scope || document).find('select.select2, select.form-select').each(function () {
         const $sel = $(this);
+        if ($sel.hasClass('no-select2') || $sel.is('[data-no-select2="1"]')) return;
+        if ($sel.hasClass('select2-hidden-accessible')) return;
+        const $modal = $sel.closest('.modal');
+        if ($modal.length && !$modal.hasClass('show')) return;
         $sel.select2({
             width: '100%',
             dropdownParent: $sel.closest('.modal').length ? $sel.closest('.modal') : $(document.body)
         });
     });
 }
+
+function bindDeferredValidationModal(modalSelector = '#modalEdicion', saveBtnSelector = '#btnGuardar') {
+    const modalEl = document.querySelector(modalSelector);
+    if (!modalEl || modalEl.dataset.deferredValidationBound === '1') return;
+    modalEl.dataset.deferredValidationBound = '1';
+
+    // Evita que un clic “afuera” (p. ej. desplegable Select2 / backdrop) cierre el ABM.
+    if (!modalEl.hasAttribute('data-bs-backdrop')) {
+        modalEl.setAttribute('data-bs-backdrop', 'static');
+    }
+    if (!modalEl.hasAttribute('data-bs-keyboard')) {
+        modalEl.setAttribute('data-bs-keyboard', 'false');
+    }
+
+    modalEl.addEventListener('shown.bs.modal', () => {
+        // Validación completa + banner solo tras Guardar/Registrar (forzarValidacionModal / click abajo).
+        modalEl.setAttribute('data-validacion-ui', '0');
+        const err = modalEl.querySelector('#errorCampos');
+        if (err) err.classList.add('d-none');
+        requestAnimationFrame(() => {
+            initSelect2(modalEl);
+            initAbmSelectShortcuts(modalEl);
+        });
+    });
+
+    modalEl.addEventListener('click', (ev) => {
+        const btn = ev.target?.closest?.(saveBtnSelector);
+        if (!btn) return;
+        modalEl.setAttribute('data-validacion-ui', '1');
+    }, true);
+}
+
+const ABM_SELECT_SHORTCUTS = [
+    { path: /^\/Productos/i, selectId: 'cmbCategoria', nombre: 'Productos Categorias', controller: 'ProductosCategoria' },
+    { path: /^\/Insumos/i, selectId: 'cmbCategoria', nombre: 'Insumos Categorias', controller: 'InsumosCategoria' },
+    { path: /^\/Insumos/i, selectId: 'cmbProveedor', nombre: 'Proveedor', controller: 'Proveedores' },
+    { path: /^\/Compras\/NuevoModif/i, selectId: 'cmbProveedor', nombre: 'Proveedor', controller: 'Proveedores' },
+    { path: /^\/Compras\/NuevoModif/i, selectId: 'cmbItemInsumo', nombre: 'Insumo', controller: 'Insumos' },
+    { path: /^\/Compras\/NuevoModif/i, selectId: 'cmbCuenta', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/Ventas\/NuevoModif/i, selectId: 'cmbCliente', nombre: 'Cliente', controller: 'Clientes' },
+    /* Lista de precios / sucursal: botones pr-btn-plus en Ventas/NuevoModif (igual que Clientes). */
+    { path: /^\/Ventas\/NuevoModif/i, selectId: 'cmbCuenta', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/Gastos/i, selectId: 'cmbCategoria', nombre: 'Gastos Categorias', controller: 'GastosCategorias' },
+    { path: /^\/Gastos/i, selectId: 'cmbSucursal', nombre: 'Sucursal', controller: 'Sucursales' },
+    { path: /^\/Gastos/i, selectId: 'cmbCuenta', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/Clientes/i, selectId: 'cmbCondicionIva', nombre: 'Condiciones IVA', controller: 'CondicionesIVA' },
+    { path: /^\/Clientes/i, selectId: 'cmbListaPrecios', nombre: 'Lista de Precios', controller: 'ListasPrecios' },
+    { path: /^\/Clientes/i, selectId: 'cmbProvincia', nombre: 'Provincia', controller: 'Provincias' },
+    { path: /^\/Personal/i, selectId: 'cmbCondicionIva', nombre: 'Condiciones IVA', controller: 'CondicionesIVA' },
+    { path: /^\/Personal/i, selectId: 'cmbProvincia', nombre: 'Provincia', controller: 'Provincias' },
+    { path: /^\/Personal/i, selectId: 'cmbBanco', nombre: 'Banco', controller: 'Bancos' },
+    { path: /^\/Personal/i, selectId: 'cmbPuesto', nombre: 'Personal Puesto', controller: 'PersonalPuestos' },
+    { path: /^\/Personal/i, selectId: 'cmbSucursal', nombre: 'Sucursal', controller: 'Sucursales' },
+    { path: /^\/Cajas/i, selectId: 'cmbSucursal', nombre: 'Sucursal', controller: 'Sucursales' },
+    { path: /^\/Cajas/i, selectId: 'cmbCuenta', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/Cajas/i, selectId: 'cmbSucursalTransf', nombre: 'Sucursal', controller: 'Sucursales' },
+    { path: /^\/Cajas/i, selectId: 'cmbCuentaOrigen', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/Cajas/i, selectId: 'cmbCuentaDestino', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/CuentasCorrientes/i, selectId: 'movSucursal', nombre: 'Sucursal', controller: 'Sucursales' },
+    { path: /^\/CuentasCorrientes/i, selectId: 'movCuentaCaja', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/CuentasCorrientesProveedores/i, selectId: 'pagoCuentaCajaProv', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/CuentasCorrientesTalleres/i, selectId: 'pagoCuentaCajaTall', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/PersonalSueldos/i, selectId: 'cmbPersonal', nombre: 'Personal', controller: 'Personal' },
+    { path: /^\/PersonalSueldos/i, selectId: 'cmbCuenta', nombre: 'Cuenta', controller: 'Cuentas' },
+    { path: /^\/OrdenesCorte\/NuevoModif/i, selectId: 'cmbPersonal', nombre: 'Personal', controller: 'Personal' },
+    { path: /^\/OrdenesCorte\/NuevoModif/i, selectId: 'cmbTaller', nombre: 'Taller', controller: 'Talleres' },
+    { path: /^\/OrdenesCorte\/NuevoModif/i, selectId: 'cmbEtEstado', nombre: 'Etapas Estados Ordenes de Corte', controller: 'OrdenesCorteEtapasEstados' },
+    { path: /^\/OrdenesCorte\/NuevoModif/i, selectId: 'insABM_Categoria', nombre: 'Insumos Categorias', controller: 'InsumosCategoria' },
+    { path: /^\/OrdenesCorte\/NuevoModif/i, selectId: 'insABM_Proveedor', nombre: 'Proveedor', controller: 'Proveedores' }
+];
+
+const _abmShortcutState = { bySelectId: new Map() };
+
+function getShortcutCfgForSelect(selectEl) {
+    const pathname = window.location.pathname || '';
+    return ABM_SELECT_SHORTCUTS.find(x => x.selectId === selectEl.id && x.path.test(pathname)) || null;
+}
+
+function wrapSelectWithShortcutButton(selectEl, cfg) {
+    if (!selectEl || !cfg) return;
+    if (selectEl.dataset.atajoApplied === '1') return;
+    if (selectEl.closest('.pr-select-plus') || selectEl.closest('.abm-select-plus')) return;
+    const alreadyHasCustomPlus = selectEl.parentElement?.parentElement?.querySelector?.('.pr-btn-plus, .pr-atajo-catalogo');
+    if (alreadyHasCustomPlus) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'abm-select-plus';
+    const grow = document.createElement('div');
+    grow.className = 'abm-select-grow';
+    selectEl.parentNode.insertBefore(wrapper, selectEl);
+    wrapper.appendChild(grow);
+    grow.appendChild(selectEl);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'abm-btn-plus';
+    btn.title = `Nuevo ${cfg.nombre}`;
+    btn.innerHTML = '<i class="fa fa-plus"></i>';
+    btn.addEventListener('click', async () => {
+        if (typeof window.abrirConfiguracion !== 'function') return;
+        _abmShortcutState.bySelectId.set(selectEl.id, {
+            controller: cfg.controller,
+            selectId: selectEl.id,
+            lastNuevoId: null
+        });
+        await window.abrirConfiguracion(cfg.nombre, cfg.controller, null, null, null, true);
+    });
+    wrapper.appendChild(btn);
+    selectEl.dataset.atajoApplied = '1';
+}
+
+async function refreshSelectFromController(selectId, controller, preferId) {
+    const selectEl = document.getElementById(selectId);
+    if (!selectEl) return;
+    const prev = (preferId ?? selectEl.value ?? '').toString();
+    try {
+        const r = await fetch(`/${controller}/Lista`, {
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (typeof llenarSelect === 'function') {
+            const textField = controller === 'Insumos' ? 'Descripcion' : 'Nombre';
+            llenarSelect(selectId, data, 'Id', textField);
+        }
+        if (prev && Array.from(selectEl.options).some(o => String(o.value) === prev)) {
+            $(selectEl).val(prev).trigger('change');
+        } else {
+            $(selectEl).trigger('change');
+        }
+        initSelect2(selectEl.closest('.modal') || document);
+    } catch (_) { /* noop */ }
+}
+
+function initAbmSelectShortcuts(scope) {
+    const root = scope || document;
+    root.querySelectorAll('select').forEach(sel => {
+        const cfg = getShortcutCfgForSelect(sel);
+        if (!cfg) return;
+        wrapSelectWithShortcutButton(sel, cfg);
+    });
+}
+
+document.addEventListener('configuracionActualizada', (e) => {
+    const d = e?.detail || {};
+    if (!d.tipo) return;
+    _abmShortcutState.bySelectId.forEach((st, selectId) => {
+        if (st.controller !== d.tipo) return;
+        if (d.accion === 'insertar' && d.nuevoId != null) {
+            st.lastNuevoId = String(d.nuevoId);
+            _abmShortcutState.bySelectId.set(selectId, st);
+        }
+    });
+});
+
+document.addEventListener('hidden.bs.modal', (e) => {
+    if (e?.target?.id !== 'modalConfiguracion') return;
+    _abmShortcutState.bySelectId.forEach((st, selectId) => {
+        refreshSelectFromController(selectId, st.controller, st.lastNuevoId);
+    });
+});
+
+$(function () {
+    initSelect2(document);
+    initAbmSelectShortcuts(document);
+    bindDeferredValidationModal('#modalEdicion', '#btnGuardar');
+    if (!window.__select2ModalDropdownReposition) {
+        window.__select2ModalDropdownReposition = true;
+        $(document).on('select2:open.select2ModalReposition', function (e) {
+            const t = e.target;
+            if (!t || typeof t.closest !== 'function' || !t.closest('.modal.show')) return;
+            window.setTimeout(() => $(window).trigger('resize'), 0);
+        });
+    }
+});
 
 /* ======================= ---- NUEVOS HELPERS GENÉRICOS ---- ======================= */
 /* Soporte de validación visual unificada (Inputs + Select2) */
@@ -576,9 +980,75 @@ function isSelect2(el) {
 function getSelect2Selection(el) {
     return isSelect2(el) ? $(el).next('.select2').find('.select2-selection').get(0) : null;
 }
+function getPrSelectPlusRow(el) {
+    if (!el) return null;
+    return el.closest(".pr-select-plus--flex") || el.closest(".pr-select-plus--infield");
+}
+
+/** Todos los nodos .invalid-feedback asociados a un select Select2 (evita duplicados visibles bajo pr-select-plus). */
+function collectSelect2InvalidFeedbackElements(el) {
+    const nodes = [];
+    const add = (n) => {
+        if (n && n.nodeType === 1 && n.classList.contains("invalid-feedback") && nodes.indexOf(n) === -1) {
+            nodes.push(n);
+        }
+    };
+    if (!el) return nodes;
+    const row = getPrSelectPlusRow(el);
+    const esSelect = el.tagName === "SELECT";
+    if (!isSelect2(el) && !(esSelect && row)) return nodes;
+    if (row) {
+        row.querySelectorAll(".invalid-feedback").forEach(add);
+        const afterRow = row.nextElementSibling;
+        if (afterRow?.classList.contains("invalid-feedback")) add(afterRow);
+    }
+    if (isSelect2(el)) {
+        const s2 = $(el).next(".select2").get(0);
+        if (s2) {
+            const x = s2.nextElementSibling;
+            if (x?.classList.contains("invalid-feedback")) add(x);
+        }
+    }
+    return nodes;
+}
+
+function hideAllSelect2InvalidFeedback(el) {
+    collectSelect2InvalidFeedbackElements(el).forEach((fb) => {
+        fb.classList.add("d-none");
+        fb.style.display = "none";
+    });
+}
+
 function ensureInvalidFeedback(el) {
     if (!el) return null;
-    const anchor = isSelect2(el) ? $(el).next('.select2').get(0) : el;
+    const prRow = el.tagName === "SELECT" ? getPrSelectPlusRow(el) : null;
+    if (prRow) {
+        // Siempre fuera de la fila select + botón +: si el select aún no tiene Select2,
+        // la rama "nativa" insertaba el mensaje dentro de .pr-select-plus__grow y el + quedaba centrado
+        // respecto a (control + texto de error).
+        prRow.querySelectorAll(".invalid-feedback").forEach((n) => n.remove());
+        let fb = prRow.nextElementSibling;
+        if (fb && fb.classList?.contains("invalid-feedback")) {
+            return fb;
+        }
+        fb = document.createElement("div");
+        fb.className = "invalid-feedback";
+        fb.style.display = "none";
+        prRow.insertAdjacentElement("afterend", fb);
+        return fb;
+    }
+    if (isSelect2(el)) {
+        const anchor = $(el).next(".select2").get(0);
+        let fb = anchor?.nextElementSibling;
+        if (!(fb && fb.classList?.contains("invalid-feedback"))) {
+            fb = document.createElement("div");
+            fb.className = "invalid-feedback";
+            fb.style.display = "none";
+            anchor?.parentNode?.insertBefore(fb, anchor.nextSibling);
+        }
+        return fb;
+    }
+    const anchor = el;
     let fb = anchor?.nextElementSibling;
     if (!(fb && fb.classList?.contains('invalid-feedback'))) {
         fb = document.createElement('div');
@@ -595,7 +1065,11 @@ function setInvalid(selector, message = 'Campo obligatorio') {
     visual.classList.remove('is-valid');
     visual.classList.add('is-invalid');
     const fb = ensureInvalidFeedback(el);
-    if (fb) { fb.textContent = message; fb.style.display = 'block'; }
+    if (fb) {
+        fb.textContent = message;
+        fb.classList.remove('d-none');
+        fb.style.display = 'block';
+    }
     return false;
 }
 function setValid(selector) {
@@ -604,8 +1078,21 @@ function setValid(selector) {
     const visual = getSelect2Selection(el) || el;
     visual.classList.remove('is-invalid');
     visual.classList.add('is-valid');
-    const fb = isSelect2(el) ? $(el).next('.select2').get(0)?.nextElementSibling : el.nextElementSibling;
-    if (fb && fb.classList?.contains('invalid-feedback')) fb.style.display = 'none';
+    if (isSelect2(el)) {
+        hideAllSelect2InvalidFeedback(el);
+    } else {
+        let fb = el.nextElementSibling;
+        if (!(fb && fb.classList?.contains('invalid-feedback')) && el.tagName === 'SELECT') {
+            const r = getPrSelectPlusRow(el);
+            if (r?.nextElementSibling?.classList?.contains('invalid-feedback')) {
+                fb = r.nextElementSibling;
+            }
+        }
+        if (fb && fb.classList?.contains('invalid-feedback')) {
+            fb.classList.add('d-none');
+            fb.style.display = 'none';
+        }
+    }
     return true;
 }
 function clearValidation(selector) {
@@ -613,8 +1100,21 @@ function clearValidation(selector) {
     if (!el) return;
     const visual = getSelect2Selection(el) || el;
     visual.classList.remove('is-invalid', 'is-valid');
-    const fb = isSelect2(el) ? $(el).next('.select2').get(0)?.nextElementSibling : el.nextElementSibling;
-    if (fb && fb.classList?.contains('invalid-feedback')) fb.style.display = 'none';
+    if (isSelect2(el)) {
+        hideAllSelect2InvalidFeedback(el);
+    } else {
+        let fb = el.nextElementSibling;
+        if (!(fb && fb.classList?.contains('invalid-feedback')) && el.tagName === 'SELECT') {
+            const r = getPrSelectPlusRow(el);
+            if (r?.nextElementSibling?.classList?.contains('invalid-feedback')) {
+                fb = r.nextElementSibling;
+            }
+        }
+        if (fb && fb.classList?.contains('invalid-feedback')) {
+            fb.classList.add('d-none');
+            fb.style.display = 'none';
+        }
+    }
 }
 
 /* (Opcional) para pantallas que lo pidan: crea bloques .invalid-feedback si faltan */
@@ -642,8 +1142,138 @@ function ensureFeedbackBlocks(scope) {
 $(document)
     .off('change.select2-global', 'select.select2-hidden-accessible')
     .on('change.select2-global', 'select.select2-hidden-accessible', function () {
-        const ok = this.checkValidity() && !!this.value;
+        const host = this.closest('[data-validacion-ui]') || this.closest('#modalEdicion');
+        if (host && host.getAttribute('data-validacion-ui') === '0') {
+            const ok = this.hasAttribute('required')
+                ? requiredFieldOkForErrorBanner(this)
+                : (this.checkValidity() && !!String(this.value || '').trim());
+            if (ok) setValid(this);
+            else clearValidation(this);
+            return;
+        }
+        const ok = this.hasAttribute('required')
+            ? requiredFieldOkForErrorBanner(this)
+            : (this.checkValidity() && !!String(this.value || '').trim());
         if (ok) setValid(this); else setInvalid(this);
     });
+
+/* ==============================
+   DataTables — Excel / PDF / Imprimir (mismo criterio que Levels getBotonesExportacion)
+   Solo se agregan si Permisos.tiene(módulo, "Exportar"); siempre se agrega pageLength.
+============================== */
+function dataTableButtonsExportCondicional(modulo, botonesExport) {
+    if (typeof Permisos !== "undefined" && Permisos && typeof Permisos.init === "function") {
+        Permisos.init();
+    }
+    const puede =
+        typeof Permisos !== "undefined" &&
+        Permisos &&
+        typeof Permisos.tiene === "function" &&
+        Permisos.tiene(modulo, "Exportar");
+    const tienePrint =
+        typeof jQuery !== "undefined" &&
+        jQuery.fn &&
+        jQuery.fn.dataTable &&
+        jQuery.fn.dataTable.ext &&
+        jQuery.fn.dataTable.ext.buttons &&
+        typeof jQuery.fn.dataTable.ext.buttons.print === "object";
+    let bloque = puede && Array.isArray(botonesExport) ? botonesExport.slice() : [];
+    if (!tienePrint) {
+        bloque = bloque.filter(b => !b || b.extend !== "print");
+    }
+    return [...bloque, "pageLength"];
+}
+
+window.dataTableButtonsExportCondicional = dataTableButtonsExportCondicional;
+
+/* ==============================
+   GS-UI — Acciones en grilla (mismo contrato que Sistema Levels)
+   return renderAccionesGrid(id, { ver: "verUsuario", editar: "...", eliminar: "..." }, "Usuarios");
+   Usa Permisos.tiene si está cargado; si no, lee userSession como Levels.
+============================== */
+
+function renderAccionesGrid(id, acciones, modulo) {
+    const a = acciones || {};
+    const mod = (modulo != null && modulo !== "")
+        ? String(modulo)
+        : (a.modulo != null ? String(a.modulo) : "");
+
+    const idStr =
+        typeof id === "number" && Number.isFinite(id)
+            ? String(id)
+            : String(id ?? "").replace(/[^\d-]/g, "");
+    if (idStr === "") {
+        return '<span class="text-muted abm-sin-acciones">—</span>';
+    }
+
+    const nombreFnOk = (n) => typeof n === "string" && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(n);
+
+    function tienePermisoGrid(mod, tipo) {
+        const tipoNorm = (tipo || "VER").toString().trim().toUpperCase();
+        if (typeof Permisos !== "undefined" && Permisos && typeof Permisos.init === "function" && typeof Permisos.tiene === "function") {
+            Permisos.init();
+            const map = { VER: "Ver", EDITAR: "Editar", ELIMINAR: "Eliminar", CREAR: "Crear", EXPORTAR: "Exportar" };
+            const accionUi = map[tipoNorm] || tipoNorm;
+            return Permisos.tiene(mod, accionUi);
+        }
+
+        try {
+            const user = JSON.parse(localStorage.getItem("userSession") || "null");
+            const permisos = user?.Permisos || [];
+            const modBuscado = (mod || "").toString().trim().toLowerCase();
+            return permisos.some(p => {
+                const nombreModulo = (p.Modulo || "").toString().trim().toLowerCase();
+                const codigoModulo = (p.CodigoModulo || "").toString().trim().toLowerCase();
+                if (nombreModulo !== modBuscado && codigoModulo !== modBuscado) return false;
+                if (!p.Permisos) return false;
+                const permiso = p.Permisos.find(x =>
+                    (x.Codigo || "").toString().trim().toUpperCase() === tipoNorm
+                );
+                return !!permiso?.Activo;
+            });
+        } catch {
+            return false;
+        }
+    }
+
+    const verRequiereVerOEditar = !!a.verRequiereVerOEditar;
+    const puedeVer = a.ver && nombreFnOk(a.ver) && (
+        verRequiereVerOEditar
+            ? (tienePermisoGrid(mod, "VER") || tienePermisoGrid(mod, "EDITAR"))
+            : tienePermisoGrid(mod, "VER")
+    );
+
+    const parts = [];
+    if (puedeVer) {
+        parts.push(
+            `<button type="button" class="btn btn-sm rp-act rp-act-view" title="Ver" onclick="${a.ver}(${idStr})"><i class="fa fa-file-text-o"></i></button>`
+        );
+    }
+    if (a.editar && nombreFnOk(a.editar) && tienePermisoGrid(mod, "EDITAR")) {
+        parts.push(
+            `<button type="button" class="btn btn-sm rp-act rp-act-edit" title="Editar" onclick="${a.editar}(${idStr})"><i class="fa fa-pencil-square-o"></i></button>`
+        );
+    }
+    if (a.eliminar && nombreFnOk(a.eliminar) && tienePermisoGrid(mod, "ELIMINAR")) {
+        parts.push(
+            `<button type="button" class="btn btn-sm rp-act rp-act-del" title="Eliminar" onclick="${a.eliminar}(${idStr})"><i class="fa fa-trash-o"></i></button>`
+        );
+    }
+
+    if (!parts.length) {
+        return '<span class="text-muted abm-sin-acciones" title="Sin acciones">—</span>';
+    }
+    return `<div class="rp-row-actions" data-id="${idStr}">${parts.join("")}</div>`;
+}
+
+window.renderAccionesGrid = renderAccionesGrid;
+
+document.addEventListener("DOMContentLoaded", function () {
+    try {
+        if (typeof Permisos !== "undefined" && Permisos && typeof Permisos.init === "function") {
+            Permisos.init();
+        }
+    } catch (_) { /* páginas sin Permisos.js */ }
+});
 
 /* ============================== FIN SITE.JS ============================== */

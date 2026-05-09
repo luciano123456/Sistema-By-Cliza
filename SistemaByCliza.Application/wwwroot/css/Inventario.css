@@ -1,4 +1,4 @@
-﻿/* ===== Layout generales ===== */
+/* ===== Layout generales ===== */
 .container {
     min-width: 99% !important;
 }
@@ -213,6 +213,10 @@ body {
     border-radius: 12px;
     padding: 8px;
     background: #1a2233;
+}
+
+#trVariantesWrap.variantes-wrap {
+    max-height: 280px;
 }
 
 .var-row {
@@ -671,3 +675,370 @@ thead, tr, tbody, th, td {
 }
 
 
+
+
+.producto-accordion {
+    border-radius: 10px;
+    margin-bottom: 8px;
+    background: #1b2230;
+    overflow: hidden;
+}
+
+.producto-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 14px;
+    cursor: pointer;
+    background: #202a3c;
+    font-weight: 600;
+}
+
+    .producto-header.open {
+        background: #25314a;
+    }
+
+.producto-arrow {
+    transition: transform .2s;
+}
+
+.producto-header.open .producto-arrow {
+    transform: rotate(180deg);
+}
+
+.producto-body {
+    display: none;
+    padding: 10px;
+}
+
+.variantes-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+}
+
+.variante-card {
+    min-width: 70px;
+    padding: 8px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    background: #111827;
+}
+
+    .variante-card.pos {
+        color: #22c55e;
+    }
+
+    .variante-card.neg {
+        color: #ef4444;
+    }
+
+    .variante-card.active {
+        outline: 2px solid #3b82f6;
+    }
+
+
+.variante-nombre {
+    font-size: 11px;
+    opacity: .8;
+    text-transform: uppercase;
+}
+
+.variante-talle {
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 2px;
+}
+
+.variante-stock {
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+
+.variante-card {
+    min-width: 80px;
+}
+
+.tr-items-wrap {
+    max-height: 260px;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+    .tr-items-wrap::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .tr-items-wrap::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,.15);
+        border-radius: 8px;
+    }
+
+
+/* ===== TIMELINE ===== */
+
+.timeline-container {
+    position: relative;
+    padding-left: 30px;
+}
+
+    .timeline-container::before {
+        content: "";
+        position: absolute;
+        left: 12px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #2b3647;
+    }
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -2px;
+    top: 10px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+}
+
+    .timeline-dot.green {
+        background: #22c55e;
+    }
+
+    .timeline-dot.red {
+        background: #ef4444;
+    }
+
+    .timeline-dot.blue {
+        background: #3b82f6;
+    }
+
+.timeline-card {
+    background: #151c28;
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,.06);
+    box-shadow: 0 6px 20px rgba(0,0,0,.3);
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+    .timeline-header .fecha {
+        font-weight: 600;
+        color: #9ca3af;
+    }
+
+    .timeline-header .tipo {
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+.timeline-body .producto {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.timeline-body .concepto {
+    font-size: 13px;
+    color: #a8b4c5;
+    margin-top: 2px;
+}
+
+.timeline-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+    .timeline-footer .mov {
+        font-weight: bold;
+        font-size: 15px;
+    }
+
+        .timeline-footer .mov.green {
+            color: #22c55e;
+        }
+
+        .timeline-footer .mov.red {
+            color: #ef4444;
+        }
+
+        .timeline-footer .mov.blue {
+            color: #3b82f6;
+        }
+
+    .timeline-footer .stock {
+        font-size: 13px;
+        color: #e5e7eb;
+    }
+
+.timeline-body .sucursal {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* ===== STOCK ANTERIOR ===== */
+
+.stock-anterior-card {
+    background: linear-gradient(135deg,#1e293b,#0f172a);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .stock-anterior-card .titulo {
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .stock-anterior-card .detalle {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .stock-anterior-card .valor {
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+        .stock-anterior-card .valor.pos {
+            color: #22c55e;
+        }
+
+        .stock-anterior-card .valor.neg {
+            color: #ef4444;
+        }
+
+/* ===== FECHA ===== */
+
+.timeline-date {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 15px 0 6px;
+    font-weight: 600;
+}
+
+/* ===== CARD ===== */
+
+.mov-card {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    border-radius: 12px;
+    background: #0f172a;
+    border: 1px solid rgba(255,255,255,.06);
+    margin-bottom: 8px;
+    transition: .15s;
+}
+
+    .mov-card:hover {
+        background: #172036;
+    }
+
+/* IZQUIERDA */
+
+.mov-left .producto {
+    font-weight: 700;
+}
+
+.mov-left .variante {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.mov-left .concepto {
+    font-size: 13px;
+    margin-top: 3px;
+}
+
+.mov-left .sucursal {
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* DERECHA */
+
+.mov-right {
+    text-align: right;
+}
+
+    .mov-right .tipo {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .mov-right .cantidad {
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+    .mov-right .stock {
+        font-size: 12px;
+        color: #cbd5f5;
+    }
+
+/* COLORES */
+
+.green .cantidad {
+    color: #22c55e;
+}
+
+.red .cantidad {
+    color: #ef4444;
+}
+
+.blue .cantidad {
+    color: #3b82f6;
+}
+
+.tipo-chip {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+
+/* ENTRADA */
+.tipo-entrada {
+    background: rgba(34,197,94,.15);
+    color: #22c55e;
+    border: 1px solid rgba(34,197,94,.3);
+}
+
+/* SALIDA / VENTA */
+.tipo-salida {
+    background: rgba(239,68,68,.15);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,.3);
+}
+
+/* TRANSFERENCIA */
+.tipo-transfer {
+    background: rgba(59,130,246,.15);
+    color: #3b82f6;
+    border: 1px solid rgba(59,130,246,.3);
+}
+
+/* DEFAULT */
+.tipo-default {
+    background: rgba(148,163,184,.15);
+    color: #94a3b8;
+}

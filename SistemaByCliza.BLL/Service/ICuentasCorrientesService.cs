@@ -8,9 +8,10 @@ namespace SistemaByCliza.BLL.Service
         Task<List<Cliente>> ListarClientes(string? texto);
 
         Task<(List<ClientesCuentaCorriente> Lista, decimal SaldoAnterior)> ListarConSaldoAnterior(
-            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto);
+            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto,
+            IReadOnlyList<int>? idsSucursalesPermitidas = null);
 
-        Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal);
+        Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal, IReadOnlyList<int>? idsSucursalesPermitidas = null);
 
         Task<ClientesCuentaCorriente?> Obtener(int id);
 

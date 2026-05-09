@@ -1,4 +1,4 @@
-﻿using SistemaByCliza.DAL.Repository;
+using SistemaByCliza.DAL.Repository;
 using SistemaByCliza.Models;
 
 namespace SistemaByCliza.BLL.Service
@@ -22,7 +22,7 @@ namespace SistemaByCliza.BLL.Service
             return await _contactRepo.Eliminar(id);
         }
 
-        public async Task<bool> Insertar(Cuenta model)
+        public async Task<int> Insertar(Cuenta model)
         {
             return await _contactRepo.Insertar(model);
         }

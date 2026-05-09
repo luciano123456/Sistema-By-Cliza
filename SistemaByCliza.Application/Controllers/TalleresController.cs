@@ -74,7 +74,7 @@ namespace SistemaByCliza.Application.Controllers
             var p = await _service.Obtener(id);
             if (p == null) return StatusCode(StatusCodes.Status404NotFound);
 
-            var vm = new VMTaller { Id = p.Id, Nombre = p.Nombre ?? string.Empty };
+            var vm = new VMTaller { Id = p.Id, Nombre = p.Nombre ?? string.Empty, DiasEntrega = p.DiasEntrega };
             return Ok(vm);
         }
 

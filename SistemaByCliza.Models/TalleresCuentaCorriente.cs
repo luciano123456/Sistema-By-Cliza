@@ -21,5 +21,17 @@ public partial class TalleresCuentaCorriente
 
     public decimal Haber { get; set; }
 
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
+
     public virtual Taller IdTallerNavigation { get; set; } = null!;
+
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
+
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
 }
