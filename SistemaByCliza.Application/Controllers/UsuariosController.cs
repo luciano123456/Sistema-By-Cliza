@@ -84,16 +84,18 @@ namespace SistemaByCliza.Application.Controllers
                 Nombre = model.Nombre,
                 Apellido = model.Apellido,
                 Dni = model.Dni,
-                Telefono = model.Telefono,
-                Direccion = model.Direccion,
+                Telefono = model.Telefono ?? "",
+                Direccion = model.Direccion ?? "",
                 IdRol = model.IdRol,
                 IdEstado = model.IdEstado,
                 Contrasena = passwordHasher.HashPassword(null, model.Contrasena)
             };
 
-            // ✔️ Insert con Sucursales
+            // ✔️ Insert con Sucursales (Id queda en Usuario tras SaveChanges)
             bool respuesta = await _Usuarioservice.Insertar(Usuario, model.IdSucursales ?? new List<int>());
-            return Ok(new { valor = respuesta });
+            if (respuesta && Usuario.Id > 0)
+                return Ok(new { valor = true, Id = Usuario.Id });
+            return Ok(new { valor = false });
         }
 
         [HttpPut]
@@ -123,8 +125,8 @@ namespace SistemaByCliza.Application.Controllers
             userbase.Usuario = model.Usuario;
             userbase.Apellido = model.Apellido;
             userbase.Dni = model.Dni;
-            userbase.Telefono = model.Telefono;
-            userbase.Direccion = model.Direccion;
+            userbase.Telefono = model.Telefono ?? "";
+            userbase.Direccion = model.Direccion ?? "";
             userbase.IdRol = model.IdRol;
             userbase.IdEstado = model.IdEstado;
             userbase.Contrasena = passnueva;
@@ -138,7 +140,13 @@ namespace SistemaByCliza.Application.Controllers
         public async Task<IActionResult> Eliminar(int id)
         {
             bool respuesta = await _Usuarioservice.Eliminar(id);
-            return StatusCode(StatusCodes.Status200OK, new { valor = respuesta });
+            if (respuesta)
+                return Ok(new { valor = true });
+            return Ok(new
+            {
+                valor = false,
+                mensaje = "No se pudo eliminar el usuario. Puede tener movimientos u otros datos asociados en el sistema."
+            });
         }
 
 

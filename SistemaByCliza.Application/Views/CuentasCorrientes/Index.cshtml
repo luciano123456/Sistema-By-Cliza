@@ -10,7 +10,7 @@
     <link href="~/css/CuentasCorrientes.css" rel="stylesheet" />
 }
 
-<div class="container cc-container px-4" style="margin-top: 100px">
+<div class="container cc-container px-4">
     <!-- Header totales -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -22,7 +22,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat"><div class="label">Debe</div><div class="value" id="totDebe">–</div></div>
                 <div class="cc-stat"><div class="label">Haber</div><div class="value" id="totHaber">–</div></div>
                 <div class="cc-stat"><div class="label">Saldo</div><div class="value" id="totSaldo">–</div></div>
@@ -75,12 +75,6 @@
                         <button class="btn btn-ghost btn-sm d-flex align-items-center" type="button" id="btnToggleFiltros">
                             <i id="iconFiltros" class="fa fa-arrow-up me-2"></i> Filtros
                         </button>
-                        <div class="dropdown">
-                            <button class="btn btn-ghost btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fa fa-cog"></i> Config. columnas
-                            </button>
-                            <ul id="configColumnasMenu" class="dropdown-menu dropdown-menu-end p-2"></ul>
-                        </div>
                     </div>
                 </div>
 
@@ -110,32 +104,38 @@
                     </div>
                 </form>
 
-                <!-- Tabla -->
-                <div class="p-3 pt-0 flex-grow-1 d-flex flex-column dt-dark-wrap">
-                    <table class="dt-dark display nowrap" id="grd_Movimientos" style="width:100%">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Fecha</th>
-                                <th>Tipo</th>
-                                <th>Concepto</th>
-                                <th>Debe</th>
-                                <th>Haber</th>
-                                <th>Saldo</th>
-                                <th>Sucursal</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <!-- Listado movimientos (cards) -->
+                <div class="cc-movs-toolbar filter-bar shadow-sm rounded-3 mx-3 mb-3 p-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small mb-1">Buscar en el listado</label>
+                            <input type="text" id="ccMovsBuscar" class="form-control form-control-sm" placeholder="Concepto, tipo, sucursal…" autocomplete="off">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small mb-1">Tipo</label>
+                            <select id="ccMovsFiltroTipo" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                <option value="VENTA">VENTA</option>
+                                <option value="COBRO">COBRO</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small mb-1">Sucursal</label>
+                            <select id="ccMovsFiltroSucursal" class="form-select form-select-sm">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
+                <div id="ccMovimientosList" class="cc-movs-list flex-grow-1 mx-3 mb-3" role="list"></div>
             </div>
         </div>
     </div>
 
     <!-- Acciones -->
     <div class="cc-footer-actions">
-        <button id="btnExportarPdf" class="btn btn-dark btn-export"><i class="fa fa-file-pdf-o"></i> Exportar PDF</button>
-        <button id="btnNuevo" class="btn btn-success"><i class="fa fa-plus"></i> Nuevo cobro</button>
+        <button type="button" id="btnExportarPdf" class="btn btn-dark btn-export" data-modulo="CuentasCorrientes" data-permiso="exportar"><i class="fa fa-file-pdf-o"></i> Exportar PDF</button>
+        <button type="button" id="btnNuevo" class="btn btn-success" data-modulo="CuentasCorrientes" data-permiso="crear"><i class="fa fa-plus"></i> Nuevo cobro</button>
     </div>
 </div>
 
@@ -238,5 +238,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
 
-    <script src="~/js/CuentasCorrientes.js?v=1.2"></script>
+    <script src="~/js/CuentasCorrientes.js?v=1.7"></script>
 }

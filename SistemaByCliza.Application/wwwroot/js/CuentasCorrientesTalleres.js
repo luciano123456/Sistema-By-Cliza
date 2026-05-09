@@ -1,4 +1,4 @@
-﻿/* ================== ENDPOINTS (TALLERES) ================== */
+/* ================== ENDPOINTS (TALLERES) ================== */
 const API_T = {
     talleres: "/CuentasCorrientesTalleres/ListaTalleres",   // GET ?texto=
     lista: "/CuentasCorrientesTalleres/Lista",              // GET ?idTaller=&desde=&hasta=&texto=
@@ -10,7 +10,8 @@ const API_T = {
 
 /* ================== Estado ================== */
 let gridTalleres = null;
-let gridMovsTall = null;
+let movimientosRowsFullTall = [];
+let movCardsFiltersBoundTall = false;
 let tallerSeleccionado = null;
 let filtrosT = { desde: null, hasta: null, texto: null };
 let editContextTall = { isEdit: false, idTaller: null };
@@ -72,24 +73,100 @@ function clearValidationScopePagoTall() {
     showErrorBannerPagoTall(false);
 }
 
-/* ================== Filtros por columna (cabecera) ================== */
-const columnConfigMovsTall = [
-    { index: 1, filterType: "text" },                                   // Fecha
-    { index: 2, filterType: "select", fetchDataFunc: tiposMovFilterTall }, // Tipo
-    { index: 3, filterType: "text" },                                   // Concepto
-    { index: 4, filterType: "text" },                                   // Debe
-    { index: 5, filterType: "text" },                                   // Haber
-    { index: 6, filterType: "text" }                                    // Saldo
-];
-async function tiposMovFilterTall() {
-    return [
-        { Id: "SERVICIO", Nombre: "SERVICIO" },
-        { Id: "PAGO", Nombre: "PAGO" }
-    ];
+/* ================== Movimientos como cards ================== */
+function splitSaldoRowsTall(full) {
+    return {
+        saldoRows: (full || []).filter(r => r.__isSaldo),
+        dataRows: (full || []).filter(r => !r.__isSaldo)
+    };
+}
+function escapeHtmlMovTall(s) {
+    if (s == null) return "";
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function getCctMovsFilterState() {
+    return {
+        q: ($("#cctMovsBuscar").val() || "").trim().toLowerCase(),
+        tipo: ($("#cctMovsFiltroTipo").val() || "").trim()
+    };
+}
+function matchesCctMovFilter(row, f) {
+    if (f.tipo && (row.TipoMov || "") !== f.tipo) return false;
+    if (f.q) {
+        const blob = [row.TipoMov, row.Concepto, fmtFechaVista(row.Fecha), String(row.Debe ?? ""), String(row.Haber ?? "")]
+            .join(" ").toLowerCase();
+        if (!blob.includes(f.q)) return false;
+    }
+    return true;
+}
+function getDisplayedMovimientosRowsTall() {
+    const { saldoRows, dataRows } = splitSaldoRowsTall(movimientosRowsFullTall);
+    const f = getCctMovsFilterState();
+    return [...saldoRows, ...dataRows.filter(r => matchesCctMovFilter(r, f))];
+}
+function pillClassTipoTall(tipo) {
+    const t = (tipo || "").toUpperCase();
+    if (t === "SERVICIO") return "cc-mov-pill cc-mov-pill--debe";
+    if (t === "PAGO") return "cc-mov-pill cc-mov-pill--haber";
+    return "cc-mov-pill cc-mov-pill--neutral";
+}
+function paintMovsCardsTall() {
+    const $root = $("#cctMovimientosList");
+    if (!$root.length) return;
+    const rows = getDisplayedMovimientosRowsTall();
+    const { saldoRows, dataRows } = splitSaldoRowsTall(rows);
+    let html = '<div class="cc-movs-list-inner">';
+    saldoRows.forEach(r => {
+        const v = Number(r.SaldoAcumulado || 0);
+        const tone = v > 0 ? "pos" : v < 0 ? "neg" : "neu";
+        html += `<div class="cc-mov-saldo cc-mov-saldo--${tone}">
+            <div class="cc-mov-saldo__icon"><i class="fa fa-history"></i></div>
+            <div class="cc-mov-saldo__body"><div class="cc-mov-saldo__label">Arrastre</div><div class="cc-mov-saldo__text">${escapeHtmlMovTall(r.Concepto || "")}</div></div>
+            <div class="cc-mov-saldo__amt">${escapeHtmlMovTall(fmtMoney(v))}</div></div>`;
+    });
+    if (!dataRows.length) {
+        html += '<div class="cc-movs-empty"><i class="fa fa-inbox"></i><p>No hay movimientos con los filtros del listado.</p></div>';
+    }
+    dataRows.forEach(r => {
+        const acc = renderAccionesGrid(r.Id, { ver: "verOModificarTall", verRequiereVerOEditar: true }, "CuentasCorrientesTalleres");
+        const sv = parseFloat(r.SaldoAcumulado || 0);
+        const salTone = sv > 0 ? "pos" : sv < 0 ? "neg" : "neu";
+        html += `<article class="cc-mov-card" role="listitem"><div class="cc-mov-card__row">
+            <div class="cc-mov-card__main">
+                <div class="cc-mov-card__meta">
+                    <time class="cc-mov-card__fecha">${escapeHtmlMovTall(fmtFechaVista(r.Fecha) || "—")}</time>
+                    <span class="${pillClassTipoTall(r.TipoMov)}">${escapeHtmlMovTall(r.TipoMov || "—")}</span>
+                </div>
+                <h3 class="cc-mov-card__concepto">${escapeHtmlMovTall(r.Concepto || "")}</h3>
+            </div>
+            <div class="cc-mov-card__nums">
+                <div class="cc-mov-num"><span>Debe</span><strong class="cc-mov-num--debe">${escapeHtmlMovTall(fmtMoney(r.Debe))}</strong></div>
+                <div class="cc-mov-num"><span>Haber</span><strong class="cc-mov-num--haber">${escapeHtmlMovTall(fmtMoney(r.Haber))}</strong></div>
+                <div class="cc-mov-num"><span>Saldo acum.</span><strong class="cc-mov-num--saldo cc-mov-num--${salTone}">${escapeHtmlMovTall(fmtMoney(sv))}</strong></div>
+            </div>
+            <div class="cc-mov-card__actions">${acc}</div>
+        </div></article>`;
+    });
+    html += "</div>";
+    $root.html(html);
+}
+async function applyMovimientosCardsViewTall(fullRows) {
+    movimientosRowsFullTall = fullRows || [];
+    window.saldoAnteriorActualTall = saldoAnteriorActualTall;
+    paintMovsCardsTall();
+    if (!movCardsFiltersBoundTall && $("#cctMovsBuscar").length) {
+        movCardsFiltersBoundTall = true;
+        $("#cctMovsBuscar, #cctMovsFiltroTipo").on("input change", () => {
+            paintMovsCardsTall();
+            calcularTotalesTall();
+        });
+    }
 }
 
 /* ================== Boot ================== */
 $(document).ready(async () => {
+    Permisos.init();
+    Permisos.aplicarUI("CuentasCorrientesTalleres");
     bindUITall();
     initFiltrosPanelTall();
     await cargarTalleres();  // carga inicial
@@ -199,7 +276,7 @@ async function cargarTalleres() {
         const texto = $("#buscarTalleres").val() || "";
         const url = `${API_T.talleres}?${new URLSearchParams({ texto })}`;
         const res = await fetch(url, {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!res.ok) throw new Error(res.statusText);
         let data = await res.json(); // {Id, Nombre, Saldo}
@@ -236,11 +313,13 @@ async function cargarTalleres() {
                 dom: "t"
             });
 
+            $("#grd_Talleres").addClass("dt-selectable");
+
             $("#grd_Talleres tbody").on("click", "tr", async function () {
                 const d = gridTalleres.row(this).data();
                 if (!d) return;
-                $("#grd_Talleres tbody tr").removeClass("selected");
-                $(this).addClass("selected");
+                $("#grd_Talleres tbody tr").removeClass("seleccionada");
+                $(this).addClass("seleccionada");
                 tallerSeleccionado = d;
                 filtrosT = readFiltrosTall();
                 await listarMovimientosTall();
@@ -250,7 +329,7 @@ async function cargarTalleres() {
             gridTalleres.clear().rows.add(data).draw();
         }
 
-        $("#grd_Talleres tbody tr").removeClass("selected");
+        $("#grd_Talleres tbody tr").removeClass("seleccionada");
         tallerSeleccionado = null;
 
         filtrosT = readFiltrosTall();
@@ -270,7 +349,7 @@ async function listarMovimientosTall() {
     if (filtrosT.texto) qs.set("texto", filtrosT.texto);
 
     const res = await fetch(`${API_T.lista}?${qs.toString()}`, {
-        headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+        headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
     });
     if (!res.ok) { errorModal("No se pudo listar movimientos"); return; }
     const json = await res.json();
@@ -304,18 +383,12 @@ async function listarMovimientosTall() {
         __isSaldo: true
     };
 
-    await configurarDataTableMovsTall([saldoRow, ...rows]);
+    await applyMovimientosCardsViewTall([saldoRow, ...rows]);
     calcularTotalesTall();
 }
 
 function calcularTotalesTall() {
-    if (!gridMovsTall) return;
-
-    const rows = gridMovsTall
-        .rows({ search: "applied" })
-        .data()
-        .toArray()
-        .filter(r => !r.__isSaldo);
+    const rows = getDisplayedMovimientosRowsTall().filter(r => !r.__isSaldo);
 
     let debe = 0, haber = 0;
     for (const r of rows) {
@@ -336,166 +409,13 @@ function calcularTotalesTall() {
     else $totSaldo.addClass("fw-bold");
 }
 
-async function configurarDataTableMovsTall(data) {
-    if (!gridMovsTall) {
-        $('#grd_MovimientosTall thead tr').clone(true).addClass('filters').appendTo('#grd_MovimientosTall thead');
-
-        gridMovsTall = $('#grd_MovimientosTall').DataTable({
-            data,
-            language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
-            scrollX: "100px",
-            scrollCollapse: true,
-            columns: [
-                {   // 0: Acciones (ver/editar)
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    orderable: false,
-                    searchable: false,
-                    render: (id, _t, row) => {
-                        if (row.__isSaldo) return "";
-                        return `
-              <div class="acciones-menu" data-id="${id}">
-                <button class='btn btn-sm btnacciones' type='button' onclick='verOModificarTall(${id})' title='Ver / Editar'>
-                  <i class='fa fa-eye fa-lg text-info'></i>
-                </button>
-              </div>`;
-                    }
-                },
-                {   // 1: Fecha
-                    data: "Fecha",
-                    title: "Fecha",
-                    render: (val, type, row) => {
-                        if (row.__isSaldo) return (type === "display" || type === "filter") ? "" : "";
-                        return (type === "display" || type === "filter") ? fmtFechaVista(val) || "-" : val;
-                    }
-                },
-                { data: "TipoMov", title: "Tipo" }, // 2
-                {   // 3: Concepto
-                    data: "Concepto",
-                    title: "Concepto",
-                    render: (text, type, row) => {
-                        if (row.__isSaldo) {
-                            if (type === "display" || type === "filter") {
-                                const v = Number(row.SaldoAcumulado || 0);
-                                const cls = v > 0 ? "text-success fw-bold"
-                                    : v < 0 ? "text-danger fw-bold"
-                                        : "text-success fw-bold";
-                                return `<span class="${cls}">${text || ""}</span>`;
-                            }
-                            return text || "";
-                        }
-                        return text ?? "";
-                    }
-                },
-                { data: "Debe", title: "Debe", className: "text-center", render: n => fmtMoney(n) }, // 4
-                { data: "Haber", title: "Haber", className: "text-center", render: n => fmtMoney(n) }, // 5
-                {   // 6: Saldo acumulado
-                    data: "SaldoAcumulado",
-                    title: "Saldo",
-                    className: "text-center",
-                    render: n => {
-                        const v = parseFloat(n || 0);
-                        let cls = "";
-                        if (v > 0) cls = "text-success fw-bold";
-                        else if (v < 0) cls = "text-danger fw-bold";
-                        return `<span class="${cls}">${fmtMoney(v)}</span>`;
-                    }
-                }
-            ],
-            dom: 'Bfrtip',
-            buttons: [
-                {
-                    extend: 'excelHtml5',
-                    text: 'Exportar Excel',
-                    filename: 'Reporte Cuentas Corrientes Talleres',
-                    title: '',
-                    exportOptions: { columns: [...Array(7).keys()].map(i => i) },
-                    className: 'btn-exportar-excel',
-                },
-                {
-                    extend: 'pdfHtml5',
-                    text: 'Exportar PDF',
-                    filename: 'Reporte Cuentas Corrientes Talleres',
-                    title: '',
-                    exportOptions: { columns: [...Array(7).keys()].map(i => i) },
-                    className: 'btn-exportar-pdf',
-                },
-                {
-                    extend: 'print',
-                    text: 'Imprimir',
-                    title: '',
-                    exportOptions: { columns: [...Array(7).keys()].map(i => i) },
-                    className: 'btn-exportar-print'
-                },
-                'pageLength'
-            ],
-            orderCellsTop: true,
-            fixedHeader: true,
-
-            initComplete: async function () {
-                const api = this.api();
-
-                // filtros por columna
-                for (const config of columnConfigMovsTall) {
-                    const cell = $(".filters th").eq(config.index);
-
-                    if (config.filterType === "select") {
-                        const select = $(`<select class="form-select form-select-sm"><option value="">Seleccionar</option></select>`)
-                            .appendTo(cell.empty())
-                            .on("change", async function () {
-                                const selectedText = $(this).find("option:selected").text();
-                                if (!this.value) {
-                                    await api.column(config.index).search("").draw();
-                                } else {
-                                    await api.column(config.index).search("^" + escapeRegex(selectedText) + "$", true, false).draw();
-                                }
-                                calcularTotalesTall();
-                            });
-
-                        const items = await config.fetchDataFunc();
-                        (items || []).forEach(it => select.append(`<option value="${it.Id}">${it.Nombre ?? ""}</option>`));
-
-                    } else { // text
-                        const input = $(`<input type="text" placeholder="Buscar..." class="form-control form-control-sm" />`)
-                            .appendTo(cell.empty())
-                            .off("keyup change")
-                            .on("keyup change", function (e) {
-                                e.stopPropagation();
-                                const regexr = "({search})";
-                                const cursorPosition = this.selectionStart;
-                                api.column(config.index)
-                                    .search(this.value !== "" ? regexr.replace("{search}", "(((" + escapeRegex(this.value) + ")))") : "", this.value !== "", this.value === "")
-                                    .draw();
-                                $(this).focus()[0].setSelectionRange(cursorPosition, cursorPosition);
-                                calcularTotalesTall();
-                            });
-                    }
-                }
-
-                // celda acciones sin filtro
-                $('.filters th').eq(0).html('');
-
-                calcularTotalesTall();
-
-                // Config columnas (usa tu helper de site.js)
-                configurarOpcionesColumnas('#grd_MovimientosTall', '#configColumnasMenuTall', 'CCT_Columnas');
-
-                setTimeout(() => gridMovsTall.columns.adjust(), 10);
-            },
-        });
-    } else {
-        gridMovsTall.clear().rows.add(data).draw();
-    }
-}
-
 /* ================== Ver / Editar ================== */
 async function verOModificarTall(id) {
     try {
         await closeAnyOpenModal(120);
 
         const r = await fetch(`${API_T.obtener}?id=${encodeURIComponent(id)}`, {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!r.ok) throw new Error("No se pudo obtener el movimiento");
         const m = await r.json();
@@ -530,7 +450,7 @@ async function verDetalleTall(id) {
     try {
         const url = `${API_T.obtener}?id=${encodeURIComponent(id)}`;
         const r = await fetch(url, {
-            headers: { "Authorization": "Bearer " + (token || localStorage.getItem("JwtToken") || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || localStorage.getItem("JwtToken") || ""), "Content-Type": "application/json" }
         });
 
         if (r.status === 401) { errorModal("Sesión expirada. Iniciá sesión nuevamente."); return; }
@@ -570,7 +490,7 @@ async function abrirModalPagoTall() {
     editContextTall = { isEdit: false, idTaller: null };
 
     // cargar cuentas de caja
-    await fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (token || "") } })
+    await fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (window.token || "") } })
         .then(r => r.json())
         .then(arr => {
             const $c = $("#pagoCuentaCajaTall");
@@ -586,7 +506,7 @@ async function abrirModalPagoTall() {
 async function editarPagoManualTall(id) {
     try {
         const r = await fetch(`${API_T.obtener}?id=${encodeURIComponent(id)}`, {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!r.ok) throw new Error("No se pudo obtener el movimiento");
         const m = await r.json();
@@ -600,7 +520,7 @@ async function editarPagoManualTall(id) {
 
         clearValidationScopePagoTall();
 
-        const cuentas = await fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (token || "") } })
+        const cuentas = await fetch("/Cuentas/Lista", { headers: { "Authorization": "Bearer " + (window.token || "") } })
             .then(r => r.json()).catch(() => []);
 
         const $c = $("#pagoCuentaCajaTall");
@@ -673,7 +593,7 @@ async function guardarPagoManualTall() {
     try {
         const res = await fetch(url, {
             method,
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" },
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
@@ -702,7 +622,7 @@ async function eliminarPagoManualTall(id) {
     try {
         const res = await fetch(`${API_T.eliminar}?id=${id}`, {
             method: "DELETE",
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { "Authorization": "Bearer " + (window.token || ""), "Content-Type": "application/json" }
         });
         if (!res.ok) throw new Error(res.statusText);
         const r = await res.json();
@@ -722,7 +642,7 @@ async function eliminarPagoManualTall(id) {
 
 /* ================== Exportar PDF ================== */
 function exportarPDFTall() {
-    const rows = gridMovsTall?.rows({ search: "applied" }).data().toArray() || [];
+    const rows = getDisplayedMovimientosRowsTall();
     if (rows.length === 0) { errorModal("No hay movimientos para exportar."); return; }
 
     const reales = rows.filter(r => !r.__isSaldo);
@@ -790,9 +710,3 @@ function exportarPDFTall() {
     doc.save(fname);
 }
 
-/* ================== Cierre de dropdowns acciones ================== */
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) {
-        $('.acciones-dropdown').hide();
-    }
-});

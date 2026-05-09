@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Clientes";
 }
 
@@ -8,13 +8,13 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
 
-    <!-- Icons / Select2 (si usás en el modal) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link href="~/css/usuarios.css" rel="stylesheet" />
+    <link href="~/css/Productos.css" rel="stylesheet" asp-append-version="true" />
     <link href="~/css/clientes.css" rel="stylesheet" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
 
     <!-- Header estilo Inventario -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
@@ -27,7 +27,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Total clientes</div>
                     <div class="value kpi-azul" id="kpiTotalClientes">0</div>
@@ -49,13 +49,13 @@
                             </button>
                             <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
                         </div>
-                        <button class="btn btn-primary" onclick="nuevoCliente()">
+                        <button type="button" class="btn btn-primary" data-modulo="Clientes" data-permiso="crear" onclick="nuevoCliente()">
                             <i class="fa fa-plus me-1"></i> Nuevo
                         </button>
                     </div>
 
                     <div class="dt-dark-wrap">
-                    <table class="dt-dark display nowrap compact" id="grd_Clientes" style="width:100%">
+                    <table class="w-100 dt-dark display nowrap compact" id="grd_Clientes">
                         <thead>
                             <tr>
                                 <th></th>
@@ -79,7 +79,7 @@
                     <div class="tabla-footer d-flex align-items-center justify-content-between">
                         <div></div>
                         <div class="acciones-externas d-flex justify-content-end mt-2 gap-2">
-                            <button class="btn btn-outline-info d-flex align-items-center" onclick="exportarClientesPdf()">
+                            <button type="button" class="btn btn-outline-info d-flex align-items-center" data-modulo="Clientes" data-permiso="exportar" onclick="exportarClientesPdf()">
                                 <i class="fa fa-file-pdf-o me-2"></i> Exportar PDF
                             </button>
                         </div>
@@ -133,16 +133,30 @@
 
                     <div class="col-md-3">
                         <label for="cmbCondicionIva" class="form-label">Condición IVA</label>
-                        <select id="cmbCondicionIva" class="form-control" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbCondicionIva" class="form-select select2" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusCondicionIva" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva condición IVA">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="col-md-3">
                         <label for="cmbListaPrecios" class="form-label">Lista de Precios</label>
-                        <select id="cmbListaPrecios" class="form-control" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbListaPrecios" class="form-select select2" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusListaPrecios" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva lista de precios">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="col-md-3">
@@ -152,9 +166,16 @@
 
                     <div class="col-md-3">
                         <label for="cmbProvincia" class="form-label">Provincia</label>
-                        <select id="cmbProvincia" class="form-control" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbProvincia" class="form-select select2" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusProvincia" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva provincia">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="col-md-3">
@@ -192,9 +213,6 @@
 <partial name="~/Views/Utils/Modals.cshtml" />
 
 @section Scripts {
-    <!-- jQuery (si ya lo carga el layout, no lo dupliques) -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-
     <!-- DataTables núcleo -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
@@ -222,10 +240,8 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- utilidades del proyecto -->
-    <script src="~/js/site.js"></script>
     <script src="~/js/utils/moment.js"></script>
 
     <!-- lógica Clientes -->
-    <script src="~/js/Clientes.js?v=2.1"></script>
+    <script src="~/js/Clientes.js?v=3.0"></script>
 }

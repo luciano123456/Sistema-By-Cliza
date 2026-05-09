@@ -6,13 +6,13 @@ namespace SistemaByCliza.BLL.Service
     public class RolesService : IRolesService
     {
 
-        private readonly IRolesRepository<Rol> _contactRepo;
+        private readonly IRolesRepository<UsuariosRol> _contactRepo;
 
-        public RolesService(IRolesRepository<Rol> contactRepo)
+        public RolesService(IRolesRepository<UsuariosRol> contactRepo)
         {
             _contactRepo = contactRepo;
         }
-        public async Task<bool> Actualizar(Rol model)
+        public async Task<bool> Actualizar(UsuariosRol model)
         {
             return await _contactRepo.Actualizar(model);
         }
@@ -22,18 +22,18 @@ namespace SistemaByCliza.BLL.Service
             return await _contactRepo.Eliminar(id);
         }
 
-        public async Task<bool> Insertar(Rol model)
+        public async Task<bool> Insertar(UsuariosRol model)
         {
             return await _contactRepo.Insertar(model);
         }
 
-        public async Task<Rol> Obtener(int id)
+        public async Task<UsuariosRol> Obtener(int id)
         {
             return await _contactRepo.Obtener(id);
         }
 
 
-        public async Task<IQueryable<Rol>> ObtenerTodos()
+        public async Task<IQueryable<UsuariosRol>> ObtenerTodos()
         {
             return await _contactRepo.ObtenerTodos();
         }

@@ -1,4 +1,4 @@
-﻿using SistemaByCliza.Models;
+using SistemaByCliza.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +12,7 @@ namespace SistemaByCliza.DAL.Repository
     {
         Task<bool> Eliminar(int id);
         Task<bool> Actualizar(Personal model);
-        Task<bool> Insertar(Personal model);
+        Task<int> Insertar(Personal model);
         Task<Personal> Obtener(int id);
         Task<IQueryable<Personal>> ObtenerTodos();
     }

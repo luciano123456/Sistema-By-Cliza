@@ -178,4 +178,26 @@ namespace SistemaByCliza.Application.Models.ViewModels
         public int Cantidad { get; set; }
     }
 
+    public class VMTransferFrontMulti
+    {
+        public DateTime Fecha { get; set; }
+        public int IdSucursalOrigen { get; set; }
+        public int IdSucursalDestino { get; set; }
+        public string? Nota { get; set; }
+        public List<VMTransferFrontMultiProducto> Productos { get; set; } = new();
+    }
+
+    public class VMTransferFrontMultiProducto
+    {
+        public int IdProducto { get; set; }
+        public List<VMTransferFrontVarianteCant> Variantes { get; set; } = new();
+    }
+
+    public class VMTransferFrontVarianteCant
+    {
+        public int IdProductoVariante { get; set; }
+        public int Cantidad { get; set; }
+    }
+
+
 }

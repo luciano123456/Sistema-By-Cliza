@@ -1,15 +1,15 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using SistemaByCliza.Application.Models.ViewModels;
 using SistemaByCliza.Application.Models;
 using SistemaByCliza.BLL.Service;
 using SistemaByCliza.Models;
-using Microsoft.AspNetCore.Authorization;
 
 namespace SistemaBronx.Application.Controllers
 {
@@ -18,13 +18,18 @@ namespace SistemaBronx.Application.Controllers
 
         private readonly ILoginService _loginService;
         private readonly IConfiguration _config;
+        private readonly IUsuariosPermisosService _permisosService;
 
-        public LoginController(ILoginService loginService, IConfiguration config)
+
+        public LoginController(
+      ILoginService loginService,
+      IConfiguration config,
+      IUsuariosPermisosService permisosService)
         {
             _loginService = loginService;
             _config = config;
+            _permisosService = permisosService;
         }
-
 
 
         public IActionResult Index()
@@ -40,11 +45,11 @@ namespace SistemaBronx.Application.Controllers
         {
             try
             {
-                var user = await _loginService.Login(model.Usuario, model.Contrasena); // Llama al servicio de login
+                var user = await _loginService.Login(model.Usuario, model.Contrasena);
 
                 if (user == null)
                 {
-                    return Unauthorized(new { success = false, message = "Usuario o contraseña incorrectos." });
+                    return Unauthorized(new { success = false, message = "El usuario no existe." });
                 }
 
                 if (user.IdEstado == 2)
@@ -55,90 +60,111 @@ namespace SistemaBronx.Application.Controllers
                 var passwordHasher = new PasswordHasher<User>();
                 var result = passwordHasher.VerifyHashedPassword(user, user.Contrasena, model.Contrasena);
 
-                if (result == PasswordVerificationResult.Success)
+                if (result != PasswordVerificationResult.Success)
                 {
-                    var token = GenerarToken(user);
-
-                    // Guardar token en cookie HttpOnly para que el navegador lo envíe en cada request
-                    Response.Cookies.Append("JwtToken", token, new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = true,
-                        SameSite = SameSiteMode.None, // 🔥 CLAVE EN PRODUCCIÓN
-                        Expires = DateTimeOffset.UtcNow.AddHours(2)
-                    });
-
-
-                    return Ok(new
-                    {
-                        success = true,
-                        token,
-                        user = new
-                        {
-                            user.Id,
-                            user.Usuario,
-                            user.IdRol,
-                            user.Nombre,
-                            user.Apellido,
-                            user.Direccion,
-                            user.Dni,
-                            user.Telefono
-                        }
-                    });
+                    return Unauthorized(new { success = false, message = "Usuario o contraseña incorrectos." });
                 }
 
-                return Unauthorized(new { success = false, message = "Usuario o contraseña incorrectos." });
+                var token = GenerarToken(user);
+
+                // 🔥 TRAER TODO EL SISTEMA DE PERMISOS
+                var (modulos, permisosUsuario, catalogo) = await _permisosService.ObtenerFull(user.Id);
+
+                var permisosFinal = modulos
+                    .Select(modulo =>
+                    {
+                        var permisosDisponibles = catalogo
+                            .Where(p => p.IdModulo == null || p.IdModulo == modulo.Id)
+                            .ToList();
+
+                        var permisosUsuarioModulo = permisosUsuario
+                            .Where(x => x.IdModulo == modulo.Id && x.Activo == true)
+                            .ToList();
+
+                        return new
+                        {
+                            IdModulo = modulo.Id,
+                            Modulo = modulo.Nombre,
+                            CodigoModulo = modulo.Codigo,
+
+                            // 🔥 GRUPO PARA DASHBOARD
+                            Grupo = modulo.IdGrupoNavigation != null
+                                ? modulo.IdGrupoNavigation.Nombre
+                                : "General",
+
+                            // 🔥 ORDEN DEL MODULO
+                            OrdenModulo = modulo.Orden,
+
+                            Permisos = permisosDisponibles.Select(p => new
+                            {
+                                p.Id,
+                                p.Codigo,
+                                p.Nombre,
+                                p.Descripcion,
+                                Activo = permisosUsuarioModulo.Any(x => x.IdPermiso == p.Id)
+                            }).ToList()
+                        };
+                    })
+                    .ToList();
+
+                return Ok(new
+                {
+                    success = true,
+                    token,
+                    user = new
+                    {
+                        user.Id,
+                        user.Usuario,
+                        user.IdRol,
+                        user.Nombre,
+                        user.Apellido,
+                        user.Direccion,
+                        user.Dni,
+                        user.Telefono,
+
+                        // 🔥 ESTO USA TU DASHBOARD
+                        Permisos = permisosFinal
+                    }
+                });
             }
             catch (Exception)
             {
-                return StatusCode(500, new { success = false, message = "Ocurrió un error inesperado. Inténtalo nuevamente." });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Ocurrió un error inesperado. Inténtalo nuevamente."
+                });
             }
         }
-
-
         private string GenerarToken(User user)
         {
             try
             {
-                // 1. Clave secreta desde configuración
-                var secretKey = _config["JwtSettings:SecretKey"];
-                if (string.IsNullOrEmpty(secretKey))
-                    throw new InvalidOperationException("JwtSettings:SecretKey no está configurado en appsettings.json");
-
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-
-                // 2. Credenciales de firma
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JwtSettings:SecretKey"]));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-                // 3. Claims que viajan dentro del token
                 var claims = new[]
                 {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Usuario),               // Nombre de usuario
-            new Claim("Id", user.Id.ToString()),                                 // Id interno
-            new Claim("Rol", user.IdRol.ToString()),                             // Rol numérico
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())    // Id único del token
+            new Claim(JwtRegisteredClaimNames.Sub, user.Usuario),
+            new Claim("Id", user.Id.ToString()),
+            new Claim("UsuariosRol", user.IdRol.ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-                // 4. Crear el token
                 var token = new JwtSecurityToken(
-                    issuer: _config["JwtSettings:Issuer"],       // Issuer configurado
-                    audience: _config["JwtSettings:Audience"],   // Audience configurado
-                    claims: claims,
-                    expires: DateTime.UtcNow.AddHours(2),        // Expira en 2 horas
-                    signingCredentials: creds
-                );
+                    _config["JwtSettings:Issuer"],
+                    _config["JwtSettings:Audience"],
+                    claims,
+                    expires: DateTime.UtcNow.AddHours(2),
+                    signingCredentials: creds);
 
-                // 5. Retornar token como string
                 return new JwtSecurityTokenHandler().WriteToken(token);
             }
             catch (Exception ex)
             {
-                // Loguear el error si tenés un logger configurado
-                Console.WriteLine($"Error generando token: {ex.Message}");
                 return null;
             }
         }
-
 
         [AllowAnonymous]
         public IActionResult Logout()

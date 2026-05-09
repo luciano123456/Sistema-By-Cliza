@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Proveedores";
 }
 
@@ -13,7 +13,7 @@
     <link href="~/css/usuarios.css" rel="stylesheet" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
             <div class="d-flex align-items-center gap-3">
@@ -24,7 +24,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Total proveedores</div>
                     <div class="value kpi-azul" id="kpiCantProveedores">0</div>
@@ -46,13 +46,13 @@
                             <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
                         </div>
 
-                        <button class="btn btn-primary" onclick="nuevoProveedor()">
+                        <button type="button" class="btn btn-primary" data-modulo="Proveedores" data-permiso="crear" onclick="nuevoProveedor()">
                             <i class="fa fa-plus me-1"></i> Nuevo
                         </button>
                     </div>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Proveedores" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Proveedores">
                             <thead>
                                 <tr>
                                     <th></th>        <!-- Acciones -->
@@ -132,5 +132,5 @@
     <script src="~/js/site.js"></script>
 
     <!-- Lógica Proveedores -->
-    <script src="~/js/Proveedores.js?v=1.0"></script>
+    <script src="~/js/Proveedores.js?v=1.4"></script>
 }

@@ -1,4 +1,4 @@
-﻿/* ====== Tema oscuro base ====== */
+/* ====== Tema oscuro base ====== */
 :root {
     --bg: #0b1220;
     --bg2: #0f172a;
@@ -378,7 +378,16 @@ table.dataTable tbody td.dataTables_empty {
 
 
 #modalPago .modal-dialog {
-    max-width: 800px; /* o el ancho que quieras */
+    max-width: 800px;
+}
+
+/* Texto legible si DisenoPantallas fuerza color heredado raro en .modal-content */
+#modalPago .modal-content {
+    color: var(--text, #e5e7eb);
+}
+
+#modalPago .modal-body {
+    color: var(--text, #e5e7eb);
 }
 
 
@@ -420,7 +429,43 @@ table.dataTable tbody td.dataTables_empty {
         color: #198754;
     }
 
-/* Feedback debajo del Select2 */
-.select2-container + .invalid-feedback {
-    display: block;
+/* Feedback bajo Select2: no forzar visible siempre (usar is-invalid / was-validated en site.css) */
+
+/* Select2 CDN default theme (no bootstrap-5): mismo look oscuro + z-index sobre modales */
+.select2-container--default .select2-selection--single {
+    background-color: rgba(255, 255, 255, .04) !important;
+    border: 1px solid var(--border) !important;
+    min-height: 38px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: var(--text) !important;
+    line-height: 36px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
+
+.select2-container--default .select2-dropdown {
+    background: #0f172a !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background: rgba(255, 255, 255, .12) !important;
+    color: var(--text) !important;
+}
+
+.select2-container--open {
+    z-index: 10620 !important;
+}
+
+/* Atajo +: por encima del contenedor Select2 para que el click no se pierda */
+#formSueldo .pr-select-plus--flex .pr-btn-plus--flex-end,
+#formPago .pr-select-plus--flex .pr-btn-plus--flex-end {
+    position: relative;
+    z-index: 30;
+    pointer-events: auto;
 }

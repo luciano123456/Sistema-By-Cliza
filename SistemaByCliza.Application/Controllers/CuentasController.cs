@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaByCliza.Application.Models;
 using SistemaByCliza.Application.Models.ViewModels;
@@ -43,9 +43,9 @@ namespace SistemaByCliza.Application.Controllers
                 Nombre = model.Nombre,
             };
 
-            bool respuesta = await _CuentasService.Insertar(result);
+            var nuevoId = await _CuentasService.Insertar(result);
 
-            return Ok(new { valor = respuesta });
+            return Ok(new { valor = nuevoId > 0, id = nuevoId });
         }
 
         [HttpPut]

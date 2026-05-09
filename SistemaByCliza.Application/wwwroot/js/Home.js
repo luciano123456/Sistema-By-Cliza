@@ -1,4 +1,4 @@
-﻿/************************************************************
+/************************************************************
  * HOME – JS
  * - DnD secciones con guía visual (insert/swap) y ajuste de "Configuraciones"
  * - Tiles: DnD solo dentro de su tarjeta
@@ -38,7 +38,7 @@ let factoryStyleByCard = new Map();
 function captureFactory() {
     qsa('.dash-card').forEach(card => {
         const id = card.dataset.cardId;
-        const tiles = qsa('.tile, .conf-tile', card); // 👈 ahora toma ambos tipos
+        const tiles = qsa('.tile', card);
         tiles.forEach((t, ix) => t.dataset.homeIndex = String(ix));
         factoryTilesOrderByCard.set(id, tiles.map(t => t.dataset.id));
         factoryStyleByCard.set(id, card.getAttribute('data-default-style') || card.getAttribute('style') || '');
@@ -381,16 +381,16 @@ function resetCardLive(card) {
 
     // quitar colores guardados
     localStorage.removeItem(LS.COLORS_CARD(id));
-    qsa('.tile, .conf-tile', card).forEach(t => localStorage.removeItem(LS.COLORS_TILE(t.dataset.id)));
+    qsa('.tile', card).forEach(t => localStorage.removeItem(LS.COLORS_TILE(t.dataset.id)));
 
     // restaurar estilo por defecto
     const def = factoryStyleByCard.get(id) || '';
     if (def) card.setAttribute('style', def); else card.removeAttribute('style');
 
-    // restaurar orden (ahora con .tile y .conf-tile)
+    // restaurar orden
     const factory = factoryTilesOrderByCard.get(id) || [];
-    const cont = qs('.tiles, .config-grid', card);
-    const map = {}; qsa('.tile, .conf-tile', card).forEach(t => map[t.dataset.id] = t);
+    const cont = qs('.tiles', card);
+    const map = {}; qsa('.tile', card).forEach(t => map[t.dataset.id] = t);
     if (cont) {
         cont.innerHTML = '';
         factory.forEach(tid => map[tid] && cont.append(map[tid]));
@@ -492,7 +492,7 @@ function bindCardDnD() {
 /* ====================== TILES DnD (intra-sección) ====================== */
 function saveTilesOrder(card) {
     if (card.dataset.cardId === 'favoritos') return; // favoritos no se ordena manualmente
-    const ids = qsa('.tile, .conf-tile', card).map(t => t.dataset.id);
+    const ids = qsa('.tile', card).map(t => t.dataset.id);
     save(LS.ORDER_TILES(card.dataset.cardId), ids);
 }
 
@@ -500,18 +500,17 @@ function restoreTilesOrder() {
     qsa('.dash-card').forEach(card => {
         const order = load(LS.ORDER_TILES(card.dataset.cardId), null);
         if (!order) return;
-        const cont = qs('.tiles, .config-grid', card);
+        const cont = qs('.tiles', card);
         if (!cont) return;
         const map = {};
-        qsa('.tile, .conf-tile', card).forEach(t => map[t.dataset.id] = t);
+        qsa('.tile', card).forEach(t => map[t.dataset.id] = t);
         order.forEach(id => map[id] && cont.append(map[id]));
     });
 }
 
 
 function bindTileDnD() {
-    // SOLO: tiles dentro de #cols .tiles (no .tiles-favs) + conf-tile de config
-    const draggables = qsa('#cols .tiles .tile, .dash-card[data-card-id="config"] .conf-tile');
+    const draggables = qsa('#cols .tiles .tile');
 
     draggables.forEach(tile => {
         const handle = tile.querySelector('.tile-handle');
@@ -558,11 +557,11 @@ function bindTileDnD() {
             ghost.style.left = `${e.clientX - offX}px`;
             ghost.style.top = `${e.clientY - offY}px`;
 
-            const box = document.elementFromPoint(e.clientX, e.clientY)?.closest('#cols .tiles, .dash-card[data-card-id="config"] .config-grid');
+            const box = document.elementFromPoint(e.clientX, e.clientY)?.closest('#cols .tiles');
             if (!box || box.closest('.dash-card') !== originCard) { highlightBox(null); return; }
 
             highlightBox(box);
-            const nodes = qsa('.tile, .conf-tile, .placeholder-tile', box).filter(n => n !== ghost);
+            const nodes = qsa('.tile, .placeholder-tile', box).filter(n => n !== ghost);
             let inserted = false;
             for (const n of nodes) {
                 if (n === placeholder) continue;
@@ -608,15 +607,38 @@ function applySavedCardOrders() {
     restoreGridOrder();
     fixConfigState();
 }
+
+/** Oculta tiles y tarjetas sin ningún módulo con VER (alineado con NavBarLogin / Permisos). */
+function filtrarDashboardPorPermisos() {
+    Permisos.init();
+
+    function primerModuloDesdeHref(href) {
+        const path = String(href || "").split("?")[0].split("#")[0];
+        return path.split("/").filter(p => p.length > 0)[0] || "";
+    }
+
+    qsa("#cols .tiles a.tile[href]").forEach(a => {
+        const href = (a.getAttribute("href") || "").trim();
+        if (!href || href.startsWith("javascript:")) return;
+        const mod = primerModuloDesdeHref(href);
+        if (!mod || !Permisos.puede(mod, "Ver")) a.remove();
+    });
+
+    qsa("#cols .dash-card").forEach(card => {
+        const hasTile = card.querySelector(".tiles .tile");
+        if (!hasTile) card.style.display = "none";
+    });
+}
+
 function init() {
+    filtrarDashboardPorPermisos();
     captureFactory();
     applySavedColors();
     applySavedCardOrders();
     restoreTilesOrder();
 
-    ensureConfHandles();    // 👈 agrega manito a .conf-tile si falta
     bindCardDnD();
-    bindTileDnD();          // 👈 ahora soporta .tile y .conf-tile
+    bindTileDnD();
     bindFactoryReset();
 
     qsa('.dash-card').forEach(card => {
@@ -723,8 +745,10 @@ async function abrirConfiguracion(_nombreConfiguracion, _controllerConfiguracion
             return;
         }
 
-        $('#ModalEdicionConfiguraciones').modal('hide');
-        $('#modalConfiguracion').modal('show');
+        const modalEl = document.getElementById("modalConfiguracion");
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
 
         cancelarModificarConfiguracion();
 
@@ -789,8 +813,8 @@ async function llenarConfiguraciones() {
         let configuraciones = await listaConfiguracion();
 
         if (comboNombre != null) {
-            llenarComboConfiguracion();
-            document.getElementById("divConfiguracionCombo").removeAttribute("hidden", "");
+            await llenarComboConfiguracion();
+            document.getElementById("divConfiguracionCombo").removeAttribute("hidden");
         } else {
             document.getElementById("divConfiguracionCombo").setAttribute("hidden", "hidden");
         }
@@ -978,12 +1002,6 @@ function agregarConfiguracion() {
     }
 }
 
-    function abrirConfiguraciones() {
-        $('#ModalEdicionConfiguraciones').modal('show');
-        $("#btnGuardarConfiguracion").text("Aceptar");
-        $("#modalEdicionLabel").text("Configuraciones");
-}
-
 LS.CARD_SIZE = id => `ui.card.size.${id}`; // 'full' | 'normal'
 
 function getCardSizePref(card) {
@@ -1019,19 +1037,6 @@ function applyPreferredSizes() {
         const pref = load(LS.CARD_SIZE(card.dataset.cardId), null);
         if (pref) setCardSize(card, pref);
         else updateSizeToggleIcon(card);
-    });
-}
-
-
-function ensureConfHandles() {
-    qsa('.dash-card[data-card-id="config"] .conf-tile').forEach(btn => {
-        if (!btn.querySelector('.tile-handle')) {
-            const h = document.createElement('span');
-            h.className = 'tile-handle';
-            h.title = 'Arrastrar';
-            h.innerHTML = '<i class="fa fa-hand-paper-o"></i>';
-            btn.appendChild(h);
-        }
     });
 }
 

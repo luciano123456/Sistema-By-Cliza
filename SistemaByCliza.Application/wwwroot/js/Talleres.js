@@ -1,4 +1,4 @@
-﻿/* =========================
+/* =========================
    Talleres.js
    ========================= */
 
@@ -12,22 +12,12 @@ const columnConfig = [
 
 /* ========== Init ========== */
 $(document).ready(async () => {
+    Permisos.init();
+    Permisos.aplicarUI("Talleres");
     await listaTalleres();
 
     if (typeof attachLiveValidation === 'function') {
         attachLiveValidation('#modalEdicion');
-    }
-
-    // Fallback toggleAcciones
-    if (typeof window.toggleAcciones === 'undefined') {
-        window.toggleAcciones = function (id) {
-            const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-            if ($dd.is(":visible")) $dd.hide();
-            else { $('.acciones-dropdown').hide(); $dd.show(); }
-        };
-        $(document).on('click', function (e) {
-            if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-        });
     }
 });
 
@@ -83,18 +73,27 @@ async function guardarCambios() {
 
 function nuevoTaller() {
     limpiarModal('#modalEdicion', '#errorCampos');
-    $("#btnGuardar").text("Registrar");
+    $("#btnGuardar").removeClass("d-none").text("Registrar");
+    $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
     $("#modalEdicionLabel").text("Nuevo Taller");
     $('#modalEdicion').modal('show');
 }
 
-async function mostrarModal(modelo) {
+async function mostrarModal(modelo, opts = {}) {
+    const readOnly = !!opts.readOnly;
     limpiarModal('#modalEdicion', '#errorCampos');
     $("#txtId").val(modelo.Id ?? 0);
     $("#txtNombre").val(modelo.Nombre ?? '');
     $("#txtDiasEntrega").val(modelo.DiasEntrega ?? '');
-    $("#btnGuardar").text("Guardar");
-    $("#modalEdicionLabel").text("Editar Taller");
+    if (readOnly) {
+        $("#modalEdicionLabel").text("Ver Taller");
+        $("#btnGuardar").addClass("d-none");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", true);
+    } else {
+        $("#btnGuardar").removeClass("d-none").text("Guardar");
+        $("#modalEdicionLabel").text("Editar Taller");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
+    }
     $('#modalEdicion').modal('show');
 }
 
@@ -135,8 +134,35 @@ async function listaTalleres() {
     actualizarKpisTalleres();
 }
 
+async function verTaller(id) {
+    Permisos.init();
+    if (!Permisos.tiene("Talleres", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    try {
+        const r = await fetch("/Talleres/EditarInfo?id=" + id, {
+            method: "GET",
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+        if (!r.ok) throw new Error();
+        const dataJson = await r.json();
+        if (dataJson) await mostrarModal(dataJson, { readOnly: true });
+        else throw new Error();
+    } catch {
+        errorModal("Ha ocurrido un error.");
+    }
+}
+
 const editarTaller = id => {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Talleres", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
 
     fetch("/Talleres/EditarInfo?id=" + id, {
         method: 'GET',
@@ -149,12 +175,16 @@ const editarTaller = id => {
             if (!r.ok) throw new Error("Ha ocurrido un error.");
             return r.json();
         })
-        .then(dataJson => dataJson ? mostrarModal(dataJson) : (() => { throw new Error("Ha ocurrido un error."); })())
+        .then(dataJson => dataJson ? mostrarModal(dataJson, { readOnly: false }) : (() => { throw new Error("Ha ocurrido un error."); })())
         .catch(() => errorModal("Ha ocurrido un error."));
 };
 
 async function eliminarTaller(id) {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Talleres", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const confirmado = await confirmarModal("¿Desea eliminar este Taller?");
     if (!confirmado) return;
 
@@ -199,20 +229,11 @@ async function configurarDataTableTalleres(data) {
                     title: '',
                     width: "1%",
                     render: function (data) {
-                        return `
-                <div class="acciones-menu" data-id="${data}">
-                    <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${data})' title='Acciones'>
-                        <i class='fa fa-ellipsis-v fa-lg text-white' aria-hidden='true'></i>
-                    </button>
-                    <div class="acciones-dropdown" style="display: none;">
-                        <button class='btn btn-sm btneditar' type='button' onclick='editarTaller(${data})' title='Editar'>
-                            <i class='fa fa-pencil-square-o fa-lg text-success' aria-hidden='true'></i> Editar
-                        </button>
-                        <button class='btn btn-sm btneliminar' type='button' onclick='eliminarTaller(${data})' title='Eliminar'>
-                            <i class='fa fa-trash-o fa-lg text-danger' aria-hidden='true'></i> Eliminar
-                        </button>
-                    </div>
-                </div>`;
+                        return renderAccionesGrid(data, {
+                            ver: "verTaller",
+                            editar: "editarTaller",
+                            eliminar: "eliminarTaller"
+                        }, "Talleres");
                     },
                     orderable: false,
                     searchable: false,
@@ -221,7 +242,7 @@ async function configurarDataTableTalleres(data) {
                 { data: 'DiasEntrega', title: 'Dias Entrega' }, // 1
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("Talleres", [
                 {
                     extend: 'excelHtml5',
                     text: 'Exportar Excel',
@@ -245,8 +266,7 @@ async function configurarDataTableTalleres(data) {
                     exportOptions: { columns: [1] },
                     className: 'btn-exportar-print'
                 },
-                'pageLength'
-            ],
+            ]),
             orderCellsTop: true,
             fixedHeader: true,
 
@@ -277,6 +297,10 @@ async function configurarDataTableTalleres(data) {
 
                 if (typeof configurarOpcionesColumnas === 'function') {
                     configurarOpcionesColumnas('#grd_Talleres', '#configColumnasMenu', 'Talleres_Columnas');
+                }
+
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Talleres", "talleres");
                 }
 
                 setTimeout(() => gridTalleres.columns.adjust(), 10);

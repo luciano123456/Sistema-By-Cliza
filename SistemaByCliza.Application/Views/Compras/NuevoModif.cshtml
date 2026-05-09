@@ -8,22 +8,29 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
-    <!-- Reutilizo el mismo CSS que Ventas para el look & feel -->
-    <link rel="stylesheet" href="~/css/VentasNuevoModif.css" />
+    <link rel="stylesheet" href="~/css/VentasNuevoModif.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/DisenoPantallas.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ComprasNuevoModif.css" asp-append-version="true" />
 }
 
 <input type="hidden" id="txtId" value="@id" />
 
-<div class="container-fluid mt-4 venta-container-lg">
+<div class="compras-nm-bleed">
+<div class="container-fluid mt-3 venta-container-lg">
 
-    <div class="page-header rounded-3 p-4 mb-4 d-flex justify-content-between align-items-center">
+    <div class="page-header rounded-3 p-4 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div>
             <h2 class="fw-bold mb-0">Compra</h2>
             <small class="text-muted">@(string.IsNullOrEmpty(id) ? "Nueva" : "Edición")</small>
         </div>
-        <button class="btn btn-ghost" onclick="volverIndex()">
-            <i class="fa fa-arrow-left me-2"></i> Volver
-        </button>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-ghost btn-sm" href="/Compras" title="Ir al listado">
+                <i class="fa fa-list me-1"></i> Listado
+            </a>
+            <button type="button" class="btn btn-ghost" onclick="volverIndex()" title="Volver al listado de compras">
+                <i class="fa fa-arrow-left me-2"></i> Volver
+            </button>
+        </div>
     </div>
 
     <div class="row g-4">
@@ -37,8 +44,8 @@
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                     <div class="col-md-8">
-                        <label class="form-label">Proveedor</label>
-                        <select id="cmbProveedor" class="form-select" required>
+                        <label class="form-label" for="cmbProveedor">Proveedor</label>
+                        <select id="cmbProveedor" class="form-select" required title="Proveedor de la compra (usá el botón + para dar de alta rápida)">
                             <option value="">Seleccione</option>
                         </select>
                         <div class="invalid-feedback">Campo obligatorio</div>
@@ -77,8 +84,8 @@
                             <div class="value text-success" id="statTotal">$ 0,00</div>
                         </div>
                     </div>
-
-                    <!-- Pagos -->
+                </div>
+                <div class="row mt-2 g-3 kpi-solo-rol-finanzas">
                     <div class="col-6">
                         <div class="stat-card p-3 text-center">
                             <div class="label">Abonado</div>
@@ -94,10 +101,10 @@
                 </div>
 
                 <div class="d-grid mt-3">
-                    <button id="btnGuardarCompra" class="btn btn-primary btn-lg" type="button" onclick="guardarCompra()">
+                    <button id="btnGuardarCompra" class="btn btn-primary btn-lg" type="button" onclick="guardarCompra()" title="Guardar compra">
                         <i class="fa fa-check me-1"></i> Registrar
                     </button>
-                    <button type="button" class="btn btn-outline-light mt-2" id="btnExportarCompraPdf">
+                    <button type="button" class="btn btn-outline-light mt-2" id="btnExportarCompraPdf" data-modulo="Compras" data-permiso="exportar">
                         <i class="fa fa-file-pdf-o me-1"></i> Exportar PDF
                     </button>
 
@@ -113,12 +120,12 @@
             <div class="card-glass p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0"><i class="fa fa-puzzle-piece me-2 text-info"></i>Insumos</h5>
-                    <button class="btn btn-success btn-sm" type="button" onclick="abrirModalItem()">
-                        <i class="fa fa-plus"></i> Agregar Ítem
+                    <button class="btn btn-success btn-sm" type="button" id="btnAgregarItemCompra" onclick="abrirModalItem()" title="Agregar ítem">
+                        <i class="fa fa-plus"></i> Agregar ítem
                     </button>
                 </div>
                 <div class="tabla-wrap alto-productos">
-                    <table class="display nowrap compact" id="grd_Insumos" style="width:100%">
+                    <table class="w-100 display nowrap compact" id="grd_Insumos">
                         <thead>
                             <tr>
                                 <th></th>
@@ -138,12 +145,12 @@
             <div class="card-glass p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0"><i class="fa fa-wallet me-2 text-success"></i>Pagos</h5>
-                    <button class="btn btn-dark btn-sm" type="button" onclick="abrirModalPago()">
-                        <i class="fa fa-plus"></i> Registrar Pago
+                    <button class="btn btn-dark btn-sm" type="button" id="btnAgregarPagoCompra" onclick="abrirModalPago()" title="Registrar pago">
+                        <i class="fa fa-plus"></i> Registrar pago
                     </button>
                 </div>
                 <div class="tabla-wrap alto-pagos">
-                    <table class="display nowrap compact" id="grd_Pagos" style="width:100%">
+                    <table class="w-100 display nowrap compact" id="grd_Pagos">
                         <thead>
                             <tr>
                                 <th></th>
@@ -161,6 +168,7 @@
 
         </div>
     </div>
+</div>
 </div>
 
 <!-- Modal Ítem -->
@@ -185,8 +193,12 @@
                         <input type="number" id="txtItemCant" class="form-control" value="1" min="0" step="1" />
                     </div>
                     <div class="col-6 col-xl-4">
-                        <label class="form-label">Costo Unitario</label>
-                        <input type="text" id="txtItemCosto" class="form-control" />
+                        <label class="form-label">Costo unitario</label>
+                        <div class="input-group compras-nm-input-money">
+                            <span class="input-group-text">$</span>
+                            <input type="text" id="txtItemCosto" class="form-control Inputmiles" inputmode="numeric" autocomplete="off" title="Importe con separador de miles" placeholder="0" />
+                        </div>
+                        <div class="invalid-feedback">Revisá el importe</div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <label class="form-label">% Desc</label>
@@ -198,7 +210,10 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label">Subtotal calculado</label>
-                        <input type="text" id="txtItemSubtotal" class="form-control subtotal-preview" readonly />
+                        <div class="input-group compras-nm-input-money">
+                            <span class="input-group-text">$</span>
+                            <input type="text" id="txtItemSubtotal" class="form-control subtotal-preview" readonly />
+                        </div>
                     </div>
                     <div id="errorCamposItem" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
                 </form>
@@ -235,7 +250,10 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Importe</label>
-                        <input type="text" id="txtPagoImporte" class="form-control" required />
+                        <div class="input-group compras-nm-input-money">
+                            <span class="input-group-text">$</span>
+                            <input type="text" id="txtPagoImporte" class="form-control Inputmiles" inputmode="numeric" autocomplete="off" required title="Mayor a cero" placeholder="0" />
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                     <div class="col-md-12">
@@ -272,5 +290,5 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/utils/moment.js"></script>
-    <script src="~/js/ComprasNuevoModif.js?v=1.2"></script>
+    <script src="~/js/ComprasNuevoModif.js?v=1.7"></script>
 }

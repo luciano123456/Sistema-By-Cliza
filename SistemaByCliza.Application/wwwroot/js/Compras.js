@@ -1,4 +1,4 @@
-﻿// ============================== Compras.js ==============================
+// ============================== Compras.js ==============================
 let gridCompras;
 
 const columnConfigCompras = [
@@ -11,21 +11,33 @@ const columnConfigCompras = [
 ];
 
 $(document).ready(() => {
+    Permisos.init();
+    Permisos.aplicarUI("Compras");
     initFiltrosCompras();
 });
 
 /* ---------------- Navegación / Acciones ---------------- */
 function nuevaCompra() {
+    if (!Permisos.tiene("Compras", "Crear")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     window.location.href = "/Compras/NuevoModif";
 }
 
 const editarCompra = (id) => {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("Compras", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     window.location.href = "/Compras/NuevoModif?id=" + id;
 };
 
 async function eliminarCompra(id) {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("Compras", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const ok = await confirmarModal("¿Desea eliminar esta compra?");
     if (!ok) return;
 
@@ -78,20 +90,10 @@ async function configurarDataTableCompras(data) {
             columns: [
                 {
                     data: "Id", title: "", width: "1%", orderable: false, searchable: false,
-                    render: (id) => `
-                        <div class="acciones-menu" data-id="${id}">
-                            <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${id})' title='Acciones'>
-                                <i class='fa fa-ellipsis-v fa-lg text-white'></i>
-                            </button>
-                            <div class="acciones-dropdown" style="display:none;">
-                                <button class='btn btn-sm btneditar' type='button' onclick='editarCompra(${id})'>
-                                    <i class='fa fa-pencil-square-o fa-lg text-success'></i> Abrir
-                                </button>
-                                <button class='btn btn-sm btneliminar' type='button' onclick='eliminarCompra(${id})'>
-                                    <i class='fa fa-trash-o fa-lg text-danger'></i> Eliminar
-                                </button>
-                            </div>
-                        </div>`
+                    render: (id) => renderAccionesGrid(id, {
+                        editar: "editarCompra",
+                        eliminar: "eliminarCompra"
+                    }, "Compras")
                 },
                 { data: "Fecha", title: "Fecha", render: f => formatearFechaParaVista(f) },
                 { data: "Proveedor", title: "Proveedor" },
@@ -101,10 +103,11 @@ async function configurarDataTableCompras(data) {
                 { data: "ImporteTotal", title: "Total", className: "text-end", render: n => formatNumber(n) },
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("Compras", [
                 { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Compras', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-excel' },
-                'pageLength'
-            ],
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Compras', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-print' },
+            ]),
             order: [[1, "desc"], [0, "desc"]],
             orderCellsTop: true,
             fixedHeader: true,
@@ -153,6 +156,10 @@ async function configurarDataTableCompras(data) {
 
                 if (typeof configurarOpcionesColumnas === "function") {
                     configurarOpcionesColumnas('#grd_Compras', '#configColumnasMenu', 'Compras_Columnas');
+                }
+
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Compras", "compras");
                 }
 
                 setTimeout(() => gridCompras?.columns.adjust(), 10);
@@ -247,16 +254,6 @@ async function listaProveedoresFilter() {
     const d = await r.json();
     return (d || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
-
-/* ---------------- Dropdown acciones ---------------- */
-function toggleAcciones(id) {
-    const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-    if ($dd.is(":visible")) $dd.hide();
-    else { $('.acciones-dropdown').hide(); $dd.show(); }
-}
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-});
 
 /* ---------------- Util: escapeRegex ---------------- */
 function escapeRegex(text) {

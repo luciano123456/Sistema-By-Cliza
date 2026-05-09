@@ -1,4 +1,4 @@
-﻿.modal-transferencia {
+.modal-transferencia {
     max-width: 550px; /* o lo que necesites */
 }
 
@@ -145,4 +145,140 @@ input:-webkit-autofill {
 
 .saldo-anterior-row .badge.bg-success {
     font-weight: 600;
+}
+
+/* Columna de acciones estrecha (tabla movimientos) */
+#grd_TransfHist thead th.th-caja-action-col {
+    width: 42px;
+}
+
+.cajas-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.caja-mov-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    padding: 10px 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.2);
+}
+
+.caja-mov-card__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.caja-mov-card__main {
+    min-width: 280px;
+    flex: 1 1 auto;
+}
+
+.caja-mov-card__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.caja-mov-card__fecha {
+    color: #c7d2fe;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.caja-mov-card__badge {
+    font-size: .72rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 3px 8px;
+}
+
+.caja-mov-card__concepto {
+    font-weight: 700;
+    color: #e5e7eb;
+    line-height: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.caja-mov-card__chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(15, 23, 42, .4);
+    color: #cbd5e1;
+    padding: 2px 8px;
+    font-size: .72rem;
+    max-width: 190px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.caja-mov-card__nums {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.caja-mov-card__num {
+    min-width: 120px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(15, 23, 42, .5);
+    padding: 6px 8px;
+}
+
+.caja-mov-card__num small {
+    display: block;
+    color: #a5b4fc;
+    font-size: .68rem;
+    line-height: .9rem;
+}
+
+.caja-mov-card__num strong {
+    color: #fff;
+    font-size: .86rem;
+}
+
+.caja-mov-card__actions {
+    display: flex;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+}
+
+.caja-saldo-card {
+    grid-column: 1 / -1;
+    border: 1px solid rgba(59, 130, 246, .4);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(37,99,235,.25), rgba(30,64,175,.15));
+    padding: 12px 14px;
+}
+
+.caja-mov-card__badge--ingreso {
+    background: rgba(16, 185, 129, .18);
+    color: #86efac;
+    border: 1px solid rgba(16, 185, 129, .35);
+}
+
+.caja-mov-card__badge--egreso {
+    background: rgba(239, 68, 68, .18);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, .35);
+}
+
+@media (max-width: 1200px) {
+    .caja-mov-card__row {
+        flex-wrap: wrap;
+    }
 }

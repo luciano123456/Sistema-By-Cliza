@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Pagos Sueldos";
 }
 
@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" />
-    <!-- Icons -->
+    <!-- Icons (mismas clases fa que renderAccionesGrid en site.css: .rp-act) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <!-- Header estilo Gastos -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -23,7 +23,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Importe (período)</div>
                     <div class="value kpi-azul" id="kpiImporte">$0,00</div>
@@ -106,10 +106,10 @@
 
                     <!-- Tabla -->
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Sueldos" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Sueldos">
                             <thead>
                                 <tr>
-                                    <th></th>
+                                    <th class="text-center">Acciones</th>
                                     <th>Fecha</th>
                                     <th>Personal</th>
                                     <th>Concepto</th>
@@ -124,7 +124,7 @@
 
                     <!-- Botonera inferior -->
                     <div class="d-flex align-items-center justify-content-end mt-3">
-                        <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="nuevoSueldo()">
+                        <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2 text-center" data-modulo="PersonalSueldos" data-permiso="crear" onclick="nuevoSueldo()">
                             <i class="fa fa-plus-square me-2"></i> Nuevo Sueldo
                         </button>
                     </div>
@@ -139,6 +139,7 @@
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="~/js/Permisos.js?v=1.7"></script>
 
     <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -157,5 +158,5 @@
     <script src="~/js/utils/moment.js"></script>
 
     <!-- lógica Sueldos -->
-    <script src="~/js/PagosSueldos.js?v=2.1"></script>
+    <script src="~/js/PagosSueldos.js?v=2.7"></script>
 }

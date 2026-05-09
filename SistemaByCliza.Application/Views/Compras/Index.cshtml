@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Compras";
 }
 
@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="~/css/usuarios.css" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
             <div class="d-flex align-items-center gap-3">
@@ -21,7 +21,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat"><div class="label">Cantidad</div><div class="value" id="kpiCantCompras">0</div></div>
                 <div class="cc-stat"><div class="label">Subtotal</div><div class="value" id="kpiSubtotal">0,00</div></div>
                 <div class="cc-stat"><div class="label">Descuentos</div><div class="value" id="kpiDescuentos">0,00</div></div>
@@ -81,7 +81,7 @@
                     </form>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Compras" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Compras">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -100,7 +100,7 @@
                     <div class="tabla-footer d-flex align-items-center justify-content-between">
                         <div></div>
                         <div class="acciones-externas d-flex justify-content-end mt-2 gap-2">
-                            <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="nuevaCompra()">
+                            <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2 text-center" data-modulo="Compras" data-permiso="crear" onclick="nuevaCompra()">
                                 <i class="fa fa-plus-square me-2"></i> Nueva Compra
                             </button>
                         </div>
@@ -127,5 +127,5 @@
     <script src="~/js/site.js"></script>
     <script src="~/js/utils/moment.js"></script>
 
-    <script src="~/js/Compras.js?v=1.0"></script>
+    <script src="~/js/Compras.js?v=1.5"></script>
 }

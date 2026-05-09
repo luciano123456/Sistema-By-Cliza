@@ -1,0 +1,142 @@
+@* Modales de catálogos (detalle + maestro). Compartido: NavBarLogin, Dashboard, etc. *@
+
+<!-- Modal Configuraciones (detalle de un catálogo) -->
+<div class="modal fade rp-modal" id="modalConfiguracion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rp-modal-content">
+
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title" id="modalConfiguracionLabel">
+                        <i class="fa fa-cogs"></i>
+                        Configuración
+                    </div>
+                    <div class="rp-modal-subtitle">
+                        Editá los valores disponibles
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="btn-close rp-btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <label id="lblListaVacia"
+                       class="rp-empty-label"
+                       hidden>
+                </label>
+
+                <div class="rp-search-box" id="contenedorBuscadorConfiguracion">
+                    <i class="fa fa-search rp-search-icon"></i>
+                    <input type="text"
+                           id="txtBuscarConfiguracion"
+                           class="rp-input rp-search-input"
+                           placeholder="Buscar configuración...">
+                </div>
+
+                <div class="rp-list-container" id="configuracion-list">
+                </div>
+
+                <div id="contenedorNombreConfiguracion"
+                     class="rp-edit-panel"
+                     hidden>
+
+                    <label id="lblNombreConfiguracion"
+                           class="rp-label"
+                           for="txtNombreConfiguracion">
+                        Nombre
+                    </label>
+
+                    <input type="text"
+                           class="rp-input"
+                           id="txtNombreConfiguracion">
+
+                    <input type="hidden"
+                           id="txtIdConfiguracion">
+
+                    <div id="divConfiguracionCombo" class="mt-nav-config-combo" hidden>
+                        <label id="lblConfiguracionCombo"
+                               class="rp-label">
+                        </label>
+
+                        <select id="cmbConfiguracion"
+                                class="rp-input">
+                        </select>
+                    </div>
+
+                    <div class="rp-edit-actions">
+                        <button id="btnRegistrarModificarConfiguracion"
+                                class="rp-btn rp-btn-primary"
+                                onclick="guardarCambiosConfiguracion()">
+                            <i class="fa fa-check"></i>
+                            Guardar
+                        </button>
+
+                        <button class="rp-btn rp-btn-soft"
+                                onclick="cancelarModificarConfiguracion()">
+                            <i class="fa fa-times"></i>
+                            Cancelar
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="rp-add-container">
+                    <button id="agregarConfiguracion"
+                            class="rp-btn rp-btn-primary"
+                            onclick="agregarConfiguracion()">
+                        <i class="fa fa-plus"></i>
+                        Añadir nuevo
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft"
+                        data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i>
+                    Volver
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal maestro: elige qué configuración editar -->
+<div class="modal fade rp-modal" id="modalMaestroConfiguraciones" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title" id="modalMaestroConfiguracionesLabel">
+                        <i class="fa fa-cogs"></i>
+                        Configuraciones
+                    </div>
+                    <div class="rp-modal-subtitle">
+                        Elegí qué lista querés administrar
+                    </div>
+                </div>
+                <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="rp-search-box" id="contenedorBuscadorMaestroConfig">
+                    <i class="fa fa-search rp-search-icon"></i>
+                    <input type="text" id="txtBuscarMaestroConfig" class="rp-input rp-search-input" placeholder="Buscar…" />
+                </div>
+                <div class="rp-list-container" id="maestro-configuracion-list"></div>
+                <label id="lblMaestroConfigVacio" class="rp-empty-label" hidden></label>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button type="button" class="rp-btn rp-btn-soft" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i>
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

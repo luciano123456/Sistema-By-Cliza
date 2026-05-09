@@ -1,21 +1,23 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sistema de Gestion</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/SistemaByCliza.Application.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ModalsShared.css" asp-append-version="true" />
+
     @await RenderSectionAsync("Estilos", required: false)
 </head>
 <body>
 
     <partial name="~/Views/Shared/Partials/NavbarLogin.cshtml" />
 
-  
 
-    <div class="row">
+
+    <div class="row mt-5">
         <!-- Columna del logo -->
         <div class="col-lg-12 divLogo">
             <img src="/Imagenes/logo.png" class="img-fluid imageLogo" alt="Logo">
@@ -23,8 +25,6 @@
 
     </div>
 
-    <partial name="~/Views/Shared/Partials/BotonMenu.cshtml" />
-   
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
@@ -34,6 +34,7 @@
 
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)

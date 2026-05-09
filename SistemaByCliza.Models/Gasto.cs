@@ -21,9 +21,21 @@ public partial class Gasto
 
     public decimal Importe { get; set; }
 
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
+
     public virtual GastosCategoria IdCategoriaNavigation { get; set; } = null!;
 
     public virtual Cuenta IdCuentaNavigation { get; set; } = null!;
 
     public virtual Sucursal IdSucursalNavigation { get; set; } = null!;
+
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
+
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
 }

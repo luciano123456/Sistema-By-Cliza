@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Personal";
 }
 
@@ -10,11 +10,12 @@
     <!-- Icons + Select2 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link href="~/css/Productos.css" rel="stylesheet" asp-append-version="true" />
     <link href="~/css/personal.css" rel="stylesheet" />
 
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <!-- Header -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -26,7 +27,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Total personal</div>
                     <div class="value kpi-azul" id="kpiTotalPersonal">0</div>
@@ -48,13 +49,13 @@
                             </button>
                             <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
                         </div>
-                        <button class="btn btn-primary" onclick="nuevoPersonal()">
+                        <button type="button" class="btn btn-primary" data-modulo="Personal" data-permiso="crear" onclick="nuevoPersonal()">
                             <i class="fa fa-plus me-1"></i> Nuevo
                         </button>
                     </div>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Personal" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Personal">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -99,162 +100,7 @@
     </div>
 </div>
 
-<!-- MODAL: Alta/Edición Personal -->
-<div class="modal fade" id="modalEdicion" tabindex="-1" role="dialog" aria-labelledby="modalEdicionLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-edicion" role="document">
-        <div class="modal-content">
-            <div class="modal-header colorEncabezado">
-                <h5 class="modal-title fw-bold" id="modalEdicionLabel">Nuevo Personal</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-
-            <div class="modal-body">
-                <form id="formPersonal" class="row g-3">
-                    <input type="text" id="txtId" hidden>
-
-                    <div class="col-md-3">
-                        <label for="txtNombre" class="form-label">Nombre</label>
-                        <input type="text" class="form-control" id="txtNombre" required>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtTelefono" class="form-label">Teléfono</label>
-                        <input type="text" class="form-control" id="txtTelefono">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtTelefonoAlternativo" class="form-label">Teléfono Alternativo</label>
-                        <input type="text" class="form-control" id="txtTelefonoAlternativo">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtDni" class="form-label">DNI</label>
-                        <input type="text" class="form-control" id="txtDni">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtCuit" class="form-label">CUIT</label>
-                        <input type="text" class="form-control" id="txtCuit">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="cmbCondicionIva" class="form-label">Condición IVA</label>
-                        <select id="cmbCondicionIva" class="form-control" required>
-                            <option value="">Seleccione</option>
-                        </select>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtDomicilio" class="form-label">Domicilio</label>
-                        <input type="text" class="form-control" id="txtDomicilio">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="cmbProvincia" class="form-label">Provincia</label>
-                        <select id="cmbProvincia" class="form-control" required>
-                            <option value="">Seleccione</option>
-                        </select>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtLocalidad" class="form-label">Localidad</label>
-                        <input type="text" class="form-control" id="txtLocalidad">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="txtEmail">
-                        <div class="invalid-feedback">Correo inválido</div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="cmbBanco" class="form-label">Banco</label>
-                        <select id="cmbBanco" class="form-control">
-                            <option value="">Seleccione</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtBancoAlias" class="form-label">Alias</label>
-                        <input type="text" class="form-control" id="txtBancoAlias">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="txtBancoCbu" class="form-label">CBU</label>
-                        <input type="text" class="form-control" id="txtBancoCbu">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="cmbPuesto" class="form-label">Puesto</label>
-                        <select id="cmbPuesto" class="form-control" required>
-                            <option value="">Seleccione</option>
-                        </select>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="dtpFechaIngreso" class="form-label">Fecha Ingreso</label>
-                        <input type="date" class="form-control" id="dtpFechaIngreso">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="dtpFechaRetiro" class="form-label">Fecha Retiro</label>
-                        <input type="date" class="form-control" id="dtpFechaRetiro">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="numSueldoMensual" class="form-label">Sueldo Mensual</label>
-                        <input type="text" class="form-control Inputmiles" id="numSueldoMensual">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="numDiasLaborales" class="form-label">Días Laborales</label>
-                        <input type="number" class="form-control" id="numDiasLaborales">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="numValorDia" class="form-label">Valor Día</label>
-                        <input type="text" class="form-control Inputmiles" id="numValorDia">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="numHsLaborales" class="form-label">Hs Laborales</label>
-                        <input type="text" class="form-control" id="numHsLaborales">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="numValorHora" class="form-label">Valor Hora</label>
-                        <input type="text" class="form-control Inputmiles" id="numValorHora">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label for="cmbSucursal" class="form-label">Sucursal</label>
-                        <select id="cmbSucursal" class="form-control" required>
-                            <option value="">Seleccione</option>
-                        </select>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div id="errorCampos" class="alert alert-danger d-none col-12">
-                        Debes completar los campos obligatorios.
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fa fa-arrow-left"></i> Volver
-                </button>
-                <button type="button" id="btnGuardarPersonal" class="btn btn-primary" onclick="guardarCambiosPersonal()">
-                    <i class="fa fa-check"></i> Registrar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<partial name="~/Views/Shared/Partials/M_Personal.cshtml" />
 
 <partial name="~/Views/Utils/Modals.cshtml" />
 
@@ -281,6 +127,7 @@
     <script src="~/js/site.js"></script>
     <script src="~/js/utils/moment.js"></script>
 
-    <!-- lógica Personal -->
-    <script src="~/js/Personal.js?v=2.1"></script>
+    <!-- Modal Personal (reutilizable) + grilla índice -->
+    <script src="~/js/Entities/M_Personal.js?v=1.0"></script>
+    <script src="~/js/Personal.js?v=3.2"></script>
 }

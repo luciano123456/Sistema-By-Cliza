@@ -1,16 +1,80 @@
-.select-checklist {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 100%;
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: .5rem;
-    max-height: 240px;
-    overflow: auto;
-    z-index: 1055;
+/* Hover / fila seleccionada de grilla: estilos globales table.dataTable.dt-selectable (site.css) */
+/* Combo + atajo .pr-select-plus / .pr-btn-plus / checklist: ver site.css (bloque “ABM global”). */
+
+/* Precios por lista: barra superior (título + atajo) fuera del borde del recuadro */
+.pr-precios-lista-section {
+    margin-top: 0.25rem;
 }
 
-    .select-checklist .form-check {
-        margin-bottom: .25rem;
+.pr-precios-lista-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+    padding: 0.15rem 0.1rem 0 0;
+}
+
+.pr-precios-lista-toolbar .pr-precios-lista-card__title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Tarjeta precios por lista (solo cuerpo con inputs) */
+.pr-precios-lista-card {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.pr-precios-lista-card__title {
+    font-size: .9rem;
+    font-weight: 600;
+    color: rgba(232, 238, 247, 0.95);
+}
+
+.pr-precios-lista-card__body {
+    padding: .75rem;
+    margin: 0;
+}
+
+.pr-precio-fila {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: rgba(29, 38, 54, 0.6);
+}
+
+.pr-precio-fila__label {
+    display: block;
+    padding: .4rem .75rem;
+    font-size: .78rem;
+    font-weight: 500;
+    color: rgba(232, 238, 247, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.pr-precio-fila .form-control.pr-precio-input {
+    border: none;
+    border-radius: 0;
+    background: rgba(27, 36, 52, 0.85);
+    color: #e8eef7;
+    min-height: 42px;
+}
+
+    .pr-precio-fila .form-control.pr-precio-input:focus {
+        box-shadow: none;
+        background: rgba(35, 46, 66, 0.95);
     }
+
+/* Alta producto (modal OC): borde rojo en Select2 al validar */
+#modalAltaProductoOC .select2-container--default .select2-selection--single.is-invalid,
+#modalAltaProductoOC .select2-container .select2-selection.is-invalid {
+    border-color: #dc3545 !important;
+}
