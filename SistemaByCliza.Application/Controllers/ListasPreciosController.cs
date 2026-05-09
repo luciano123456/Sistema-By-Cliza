@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaByCliza.Application.Models;
 using SistemaByCliza.Application.Models.ViewModels;
@@ -44,7 +44,7 @@ namespace SistemaByCliza.Application.Controllers
 
             bool respuesta = await _ListasPreciosService.Insertar(result);
 
-            return Ok(new { valor = respuesta });
+            return Ok(new { valor = respuesta, id = result.Id });
         }
 
         [HttpPut]

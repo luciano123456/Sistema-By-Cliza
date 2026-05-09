@@ -25,5 +25,17 @@ public partial class ComprasPago
 
     public string NotaInterna { get; set; } = null!;
 
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
+
     public virtual Compra? IdCompraNavigation { get; set; }
+
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
+
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
 }

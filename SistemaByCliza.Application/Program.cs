@@ -31,7 +31,7 @@ builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 builder.Services.AddScoped<IEstadosUsuariosRepository<EstadosUsuario>, EstadosUsuariosRepository>();
 builder.Services.AddScoped<IEstadosUsuariosService, EstadosUsuariosService>();
 
-builder.Services.AddScoped<IRolesRepository<Rol>, RolesRepository>();
+builder.Services.AddScoped<IRolesRepository<UsuariosRol>, RolesRepository>();
 builder.Services.AddScoped<IRolesService, RolesService>();
 
 builder.Services.AddScoped<ILoginRepository<User>, LoginRepository>();
@@ -133,6 +133,9 @@ builder.Services.AddScoped<ITalleresRepository<Taller>, TalleresRepository>();
 
 builder.Services.AddScoped<ICuentasCorrientesTallRepository<TalleresCuentaCorriente>, CuentasCorrientesTallRepository>();
 builder.Services.AddScoped<ICuentasCorrientesTallService, CuentasCorrientesTallService>();
+
+builder.Services.AddScoped<IUsuariosPermisosRepository, UsuariosPermisosRepository>();
+builder.Services.AddScoped<IUsuariosPermisosService, UsuariosPermisosService>();
 
 
 

@@ -1,8 +1,8 @@
-﻿/******************************
+/******************************
  * CAJAS + TRANSFERENCIAS (UI)
  ******************************/
 
-let gridCaja;
+let rowsCaja = [];
 let gridTransf = null;
 
 // Estado del modal de transferencias
@@ -11,31 +11,23 @@ let gridTransf = null;
 let editingTransfer = null;
 
 /* ============================
-   Config filtros (header DT)
-   ============================ */
-
-// columnas: 1 Fecha | 2 Tipo | 3 Concepto | 4 Ingreso | 5 Egreso | 6 Sucursal | 7 Cuenta
-const columnConfig = [
-    { index: 1, filterType: "text" },
-    { index: 2, filterType: "select", fetchDataFunc: listaTiposFilter },
-    { index: 3, filterType: "text" },
-    { index: 4, filterType: "text" },
-    { index: 5, filterType: "text" },
-    { index: 6, filterType: "select", fetchDataFunc: listaSucursalesFilter },
-    { index: 7, filterType: "select", fetchDataFunc: listaCuentasFilter },
-];
-
-/* ============================
    ARRANQUE
    ============================ */
 
 $(document).ready(() => {
+    Permisos.init();
+    Permisos.aplicarUI("Cajas");
     initFiltros();               // filtros + primera carga
     attachLiveValidation("#modalEdicion"); // utilidad global
 
     ["#numImporte", "#cmbTipoMov"].forEach((sel) => {
         $(sel).on("input change", () => validarReglaMontos());
     });
+
+    const hoy = moment().format('YYYY-MM-DD');
+
+    $('#fltDesde').val(hoy);
+    $('#fltHasta').val(hoy);
 });
 
 /* ========== Validación movimiento manual ========== */
@@ -163,11 +155,9 @@ async function mostrarModalCaja(modelo) {
     $("#modalEdicion").modal("show");
 }
 
-/* ========== Lista principal (DataTable) ========== */
+/* ========== Lista principal (Cards) ========== */
 
 async function listaCaja(filtros = {}) {
-    let paginaActual = gridCaja != null ? gridCaja.page() : 0;
-
     const qs = new URLSearchParams();
     Object.entries(filtros).forEach(([k, v]) => {
         if (v !== '' && v != null) qs.append(k, v);
@@ -196,185 +186,74 @@ async function listaCaja(filtros = {}) {
         __saldoAnterior: saldoAnterior
     };
 
-    rows = [saldoRow, ...rows];
-
-    await configurarDataTableCaja(rows);
-
-    if (paginaActual > 0) gridCaja.page(paginaActual).draw('page');
+    rowsCaja = [saldoRow, ...rows];
+    renderCardsCaja(rowsCaja);
     calcularIngresos();
 }
 
-async function configurarDataTableCaja(data) {
-    if (!gridCaja) {
-        $("#grd_Caja thead tr").clone(true).addClass("filters").appendTo("#grd_Caja thead");
+function renderCardsCaja(rows) {
+    const cont = document.getElementById("cardsCaja");
+    const empty = document.getElementById("cardsCajaEmpty");
+    if (!cont) return;
 
-        gridCaja = $("#grd_Caja").DataTable({
-            data,
-            language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
-            scrollX: true,
-            scrollCollapse: true,
-            columns: [
-                {
-                    data: "Id",
-                    title: "",
-                    width: "1%",
-                    orderable: false,
-                    searchable: false,
-                    render: (data, type, row) => {
-                        if (row.__isSaldo) return "";
-                        return `
-              <div class="acciones-menu" data-id="${data}">
-                <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${data})' title='Acciones'>
-                  <i class='fa fa-ellipsis-v fa-lg text-white'></i>
-                </button>
-                <div class="acciones-dropdown" style="display:none;">
-                  <button class='btn btn-sm btneditar' type='button' onclick='verMovimiento(${data})' title='Ver movimiento'>
-                    <i class='fa fa-eye fa-lg text-info'></i> Ver movimiento
-                  </button>
-                </div>
-              </div>`;
-                    }
-                },
-                {
-                    data: "Fecha",
-                    title: "Fecha",
-                    render: function (data, type, row) {
-                        if (row.__isSaldo) {
-                            if (type === "display" || type === "filter") {
-                                const montoNum = Number(row.__saldoAnterior || 0);
-                                const badgeCls = montoNum < 0 ? "bg-danger" : "bg-success";
-                                return `
-                  <div class="saldo-anterior-chip">
-                    <span class="badge ${badgeCls} me-2">Saldo anterior</span>
-                  </div>`;
-                            }
-                            return "";
-                        }
-                        if (type === "display" || type === "filter") return formatearFechaParaVista(data) || "-";
-                        return data;
-                    }
-                },
-                { data: "TipoMov", title: "Tipo" },
-                {
-                    data: "Concepto",
-                    title: "Concepto",
-                    render: function (data, type, row) {
-                        if (!row.__isSaldo) return data ?? "";
-                        const montoNum = Number(row.__saldoAnterior || 0);
-                        const txtCls = montoNum < 0 ? "text-danger" : "text-success";
-                        const montoFmt = formatNumber(montoNum);
-                        const label = row.Concepto || "Saldo anterior";
-                        return `
-              <div class="saldo-anterior-chip">
-                <span class="ms-1 fw-bold ${txtCls}">${label}:</span>
-                <span class="ms-1 fw-bold ${txtCls}">${montoFmt}</span>
-              </div>`;
-                    }
-                },
-                {
-                    data: "Ingreso",
-                    title: "Ingreso",
-                    className: "text-center",
-                    render: (data) => {
-                        const v = parseFloat(data);
-                        return v > 0 ? `<span style="color:green;font-weight:bold;">${formatNumber(v)}</span>` : "";
-                    },
-                },
-                {
-                    data: "Egreso",
-                    title: "Egreso",
-                    className: "text-center",
-                    render: (data) => {
-                        const v = parseFloat(data);
-                        return v > 0 ? `<span style="color:red;font-weight:bold;">${formatNumber(v)}</span>` : "";
-                    },
-                },
-                { data: "Sucursal", title: "Sucursal" },
-                { data: "Cuenta", title: "Cuenta" },
-            ],
-            dom: "Bfrtip",
-            buttons: [
-                {
-                    extend: "excelHtml5",
-                    text: "Exportar Excel",
-                    filename: "Caja",
-                    title: "",
-                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] },
-                    className: "btn-exportar-excel",
-                },
-                {
-                    extend: "pdfHtml5",
-                    text: "Exportar PDF",
-                    filename: "Caja",
-                    title: "",
-                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] },
-                    className: "btn-exportar-pdf",
-                },
-                {
-                    extend: "print",
-                    text: "Imprimir",
-                    title: "",
-                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] },
-                    className: "btn-exportar-print",
-                },
-                "pageLength",
-            ],
-            orderCellsTop: true,
-            fixedHeader: true,
-            initComplete: async function () {
-                const api = this.api();
-
-                for (const config of columnConfig) {
-                    const cell = $(".filters th").eq(config.index);
-
-                    if (config.filterType === "select") {
-                        const select = $(`<select id="filter${config.index}"><option value="">Seleccionar</option></select>`)
-                            .appendTo(cell.empty())
-                            .on("change", async function () {
-                                const val = this.value;
-                                if (val === "") {
-                                    await api.column(config.index).search("").draw();
-                                    return;
-                                }
-                                const selectedText = $(this).find("option:selected").text();
-                                await api
-                                    .column(config.index)
-                                    .search("^" + escapeRegex(selectedText) + "$", true, false)
-                                    .draw();
-                            });
-
-                        const items = await config.fetchDataFunc();
-                        items.forEach((item) => select.append(`<option value="${item.Id}">${item.Nombre ?? ""}</option>`));
-                    } else if (config.filterType === "text") {
-                        $('<input type="text" placeholder="Buscar..." />')
-                            .appendTo(cell.empty())
-                            .off("keyup change")
-                            .on("keyup change", function (e) {
-                                e.stopPropagation();
-                                const regexr = "({search})";
-                                const cursorPosition = this.selectionStart;
-                                api
-                                    .column(config.index)
-                                    .search(this.value !== "" ? regexr.replace("{search}", "(((" + escapeRegex(this.value) + ")))") : "", this.value !== "", this.value === "")
-                                    .draw();
-                                $(this).focus()[0].setSelectionRange(cursorPosition, cursorPosition);
-                            });
-                    }
-                }
-
-                $(".filters th").eq(0).html("");
-
-                configurarOpcionesColumnas("#grd_Caja", "#configColumnasMenu", "Caja_Columnas");
-
-                calcularIngresos();
-                api.on("draw", () => calcularIngresos());
-
-                setTimeout(() => gridCaja.columns.adjust(), 10);
-            },
-        });
-    } else {
-        gridCaja.clear().rows.add(data).draw();
+    if (!rows || rows.length === 0) {
+        cont.innerHTML = "";
+        empty?.classList.remove("d-none");
+        return;
     }
+
+    empty?.classList.add("d-none");
+    cont.innerHTML = rows.map((r) => {
+        if (r.__isSaldo) {
+            const saldoClass = Number(r.__saldoAnterior || 0) < 0 ? "text-danger" : "text-success";
+            return `
+            <article class="caja-saldo-card">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <strong>${r.Concepto || "Saldo anterior"}</strong>
+                    <strong class="${saldoClass}">${formatNumber(r.__saldoAnterior || 0)}</strong>
+                </div>
+            </article>`;
+        }
+
+        const ingreso = Number(r.Ingreso || 0);
+        const egreso = Number(r.Egreso || 0);
+        const tipo = (r.TipoMov || "").toLowerCase() === "egreso" ? "egreso" : "ingreso";
+        const tipoLabel = tipo === "egreso" ? "Egreso" : "Ingreso";
+
+        return `
+        <article class="caja-mov-card">
+            <div class="caja-mov-card__row">
+                <div class="caja-mov-card__main">
+                    <div class="caja-mov-card__meta">
+                        <span class="caja-mov-card__fecha">${formatearFechaParaVista(r.Fecha) || "-"}</span>
+                        <span class="caja-mov-card__badge caja-mov-card__badge--${tipo}">${tipoLabel}</span>
+                        <span class="caja-mov-card__chip">${r.Sucursal || "-"}</span>
+                        <span class="caja-mov-card__chip">${r.Cuenta || "-"}</span>
+                    </div>
+                    <div class="caja-mov-card__concepto">${r.Concepto || "-"}</div>
+                </div>
+                <div class="caja-mov-card__nums">
+                    <div class="caja-mov-card__num">
+                        <small>Ingreso</small>
+                        <strong>${ingreso > 0 ? formatNumber(ingreso) : "-"}</strong>
+                    </div>
+                    <div class="caja-mov-card__num">
+                        <small>Egreso</small>
+                        <strong>${egreso > 0 ? formatNumber(egreso) : "-"}</strong>
+                    </div>
+                    <div class="caja-mov-card__num">
+                        <small>Saldo</small>
+                        <strong class="${Number(r.Saldo || 0) < 0 ? "text-danger" : "text-success"}">${formatNumber(r.Saldo || 0)}</strong>
+                    </div>
+                </div>
+                <div class="caja-mov-card__actions">
+                    <button class="btn btn-sm btn-outline-light" onclick="verMovimiento(${Number(r.Id || 0)})">
+                        <i class="fa fa-eye me-1"></i> Ver
+                    </button>
+                </div>
+            </div>
+        </article>`;
+    }).join("");
 }
 
 /* ========== Cargas para selects (con token) ========== */
@@ -431,10 +310,7 @@ function escapeRegex(text) {
 /* ========== Totales (respetan lo filtrado) ========== */
 
 async function calcularIngresos() {
-  
-
-    const rows = gridCaja.rows({ search: "applied" }).data().toArray()
-        .filter(r => !r.__isSaldo);
+    const rows = (rowsCaja || []).filter(r => !r.__isSaldo);
 
     let totalIngreso = 0, totalEgreso = 0;
     for (const r of rows) {
@@ -788,6 +664,9 @@ async function cargarHistorialTransferencias() {
             ],
             order: [[0, "desc"]],
         });
+        if (typeof bindDataTableSeleccionFila === "function") {
+            bindDataTableSeleccionFila("#grd_TransfHist", "transfHist");
+        }
     } else {
         gridTransf.clear().rows.add(data).draw();
     }
@@ -827,9 +706,13 @@ $("#formNuevaTransferencia").on("submit", (e) => e.preventDefault());
    ====================== */
 
 const verMovimiento = (id) => {
-    $(".acciones-dropdown").hide();
+    Permisos.init();
+    if (!Permisos.tiene("Cajas", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
 
-    const row = gridCaja.rows().data().toArray().find((r) => r.Id === id);
+    const row = (rowsCaja || []).find((r) => r.Id === id);
     if (row?.EsTransferencia) {
         editarTransferenciaDesdeMovimiento(id);
         return;
@@ -1001,25 +884,12 @@ document.addEventListener('DOMContentLoaded', () => {
     FiltersUI.init({
         storageKey: 'Cajas_FiltrosVisibles',
         panelSelector: '#formFiltros',
-        headerFiltersSelector: '#grd_Caja thead tr.filters',
+        headerFiltersSelector: '',
         buttonSelector: '#btnToggleFiltros',
         iconSelector: '#iconFiltros',
         defaultVisible: true
     });
 });
-
-/* ======================
-   Dropdown acciones
-   ====================== */
-function toggleAcciones(id) {
-    const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-    if ($dd.is(":visible")) $dd.hide();
-    else { $('.acciones-dropdown').hide(); $dd.show(); }
-}
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-});
-
 
 // Crea / actualiza el botón "Eliminar transferencia" en el footer del modal
 function ensureDeleteBtn(show, idTransf) {

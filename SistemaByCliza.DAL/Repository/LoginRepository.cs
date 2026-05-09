@@ -1,5 +1,4 @@
-﻿using SistemaByCliza.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -7,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using SistemaByCliza.DAL.DataContext;
+using SistemaByCliza.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace SistemaByCliza.DAL.Repository
 {
@@ -21,16 +22,12 @@ namespace SistemaByCliza.DAL.Repository
         }
 
         public async Task<User> Login(string username, string password)
-        { 
-            User user = _dbcontext.Usuarios.Where(x => x.Usuario == username).FirstOrDefault();
+        {
+            var user = await _dbcontext.Usuarios
+                .Include(x => x.IdRolNavigation) // 🔥 TRAE EL UsuariosRol
+                .FirstOrDefaultAsync(x => x.Usuario == username);
 
-            if (user != null)
-            {
-                return user;
-            } else
-            {
-                return null;
-            }
+            return user;
         }
 
         public async Task<bool> Logout()

@@ -1,4 +1,4 @@
-﻿let gridSueldos;
+let gridSueldos;
 
 const columnConfig = [
     { index: 1, filterType: 'text' },                 // Fecha
@@ -10,20 +10,42 @@ const columnConfig = [
 ];
 
 $(document).ready(() => {
+    Permisos.init();
+    Permisos.aplicarUI("PersonalSueldos");
     initFiltros();
 });
 
 function nuevoSueldo() {
+    if (!Permisos.tiene("PersonalSueldos", "Crear")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     window.location.href = "/PersonalSueldos/NuevoModif";
 }
 
+/** Igual que Insumos/Productos: botón Ver en `renderAccionesGrid` (permiso Ver). */
+function verSueldo(id) {
+    Permisos.init();
+    if (!Permisos.tiene("PersonalSueldos", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    window.location.href = "/PersonalSueldos/NuevoModif?id=" + id + "&ver=1";
+}
+
 const editarSueldo = id => {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("PersonalSueldos", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     window.location.href = "/PersonalSueldos/NuevoModif?id=" + id;
 };
 
 async function eliminarSueldo(id) {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("PersonalSueldos", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const confirmado = await confirmarModal("¿Desea eliminar este sueldo?");
     if (!confirmado) return;
 
@@ -81,27 +103,26 @@ async function configurarDataTableSueldos(data) {
                 lengthMenu: "Anzeigen von _MENU_ Einträgen",
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
-            scrollX: "100px",
+            scrollX: true,
             scrollCollapse: true,
             columns: [
-                {   // acciones
+                {   // acciones (Id desde fila: compatible con JSON PascalCase/camelCase y type display/filter de DataTables)
                     data: "Id",
-                    title: '',
+                    title: "Acciones",
+                    className: "text-nowrap text-center",
                     width: "1%",
-                    render: data => `
-                        <div class="acciones-menu" data-id="${data}">
-                            <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${data})' title='Acciones'>
-                                <i class='fa fa-ellipsis-v fa-lg text-white' aria-hidden='true'></i>
-                            </button>
-                            <div class="acciones-dropdown" style="display: none;">
-                                <button class='btn btn-sm btneditar' type='button' onclick='editarSueldo(${data})' title='Editar'>
-                                    <i class='fa fa-pencil-square-o fa-lg text-success' aria-hidden='true'></i> Abrir
-                                </button>
-                                <button class='btn btn-sm btneliminar' type='button' onclick='eliminarSueldo(${data})' title='Eliminar'>
-                                    <i class='fa fa-trash-o fa-lg text-danger' aria-hidden='true'></i> Eliminar
-                                </button>
-                            </div>
-                        </div>`,
+                    render: function (data, type, row) {
+                        const idVal = row && (row.Id != null ? row.Id : row.id);
+                        const id = idVal != null ? idVal : data;
+                        if (type && type !== "display") {
+                            return id != null && id !== "" ? id : "";
+                        }
+                        return renderAccionesGrid(id, {
+                            ver: "verSueldo",
+                            editar: "editarSueldo",
+                            eliminar: "eliminarSueldo"
+                        }, "PersonalSueldos");
+                    },
                     orderable: false,
                     searchable: false,
                 },
@@ -113,12 +134,11 @@ async function configurarDataTableSueldos(data) {
                 { data: "Saldo", render: n => formatNumber(n) },
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("PersonalSueldos", [
                 { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Sueldos', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-excel' },
                 { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Sueldos', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-pdf' },
                 { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-print' },
-                'pageLength'
-            ],
+            ]),
             orderCellsTop: true,
             fixedHeader: true,
             initComplete: async function () {
@@ -168,6 +188,9 @@ async function configurarDataTableSueldos(data) {
                 $('.filters th').eq(0).html('');
 
                 configurarOpcionesColumnas('#grd_Sueldos', '#configColumnasMenu', 'Sueldos_Columnas');
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Sueldos", "sueldos");
+                }
                 setTimeout(() => gridSueldos.columns.adjust(), 10);
             },
         });
@@ -272,11 +295,3 @@ async function listaPersonalFilter() {
     return data.map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
 
-/* ------ Dropdown acciones ------ */
-function toggleAcciones(id) {
-    const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-    if ($dd.is(":visible")) $dd.hide(); else { $('.acciones-dropdown').hide(); $dd.show(); }
-}
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-});

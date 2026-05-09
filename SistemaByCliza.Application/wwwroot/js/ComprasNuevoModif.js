@@ -1,4 +1,4 @@
-﻿// ===================== ComprasNuevoModif.js (COMPLETO) =====================
+// ===================== ComprasNuevoModif.js (COMPLETO) =====================
 // Requiere: jQuery, Bootstrap 5, DataTables, Select2, moment.js y *site.js*
 // Usa: token, confirmarModal, exitoModal, errorModal, advertenciaModal,
 // formatearMiles, formatearSinMiles, etc. (definidas en site.js)
@@ -25,6 +25,14 @@ let gridPagos = null;
 let isSaving = false;
 let wasSubmitCompra = false; // feedback sólo después de intentar guardar
 let wasSubmitPago = false;   // feedback en modal pago después de intentar registrar
+let wasSubmitItem = false;   // modal ítem: insumo / cantidad / costo
+
+function getAuthToken() {
+    return (typeof window !== "undefined" && window.token)
+        || (typeof token !== "undefined" ? token : null)
+        || (typeof localStorage !== "undefined" ? localStorage.getItem("JwtToken") : null)
+        || "";
+}
 
 const State = {
     idCompra: parseInt((document.getElementById("txtId")?.value || "0"), 10) || 0,
@@ -103,6 +111,14 @@ function setValid(selector) {
     const fb = getFeedbackAnchor(el)?.nextElementSibling; if (fb && fb.classList?.contains("invalid-feedback")) fb.style.display = "none";
     return true;
 }
+function destroySelect2IfAny(sel) {
+    if (!window.jQuery || !$.fn.select2) return;
+    const $el = $(sel);
+    if ($el.length && $el.hasClass("select2-hidden-accessible")) {
+        try { $el.select2("destroy"); } catch (_) { /* noop */ }
+    }
+}
+
 function clearValidation(selector) {
     const el = typeof selector === "string" ? document.querySelector(selector) : selector;
     if (!el) return;
@@ -157,20 +173,26 @@ async function hideInitialRequiredHintsCompra(root = document) {
 // Habilitar si hay Proveedor
 function updateGates() {
     const ok = !!State.proveedorId;
-    const btnItem = document.querySelector('button[onclick="abrirModalItem()"]') || document.getElementById("btnAgregarItem");
-    const btnPago = document.querySelector('button[onclick="abrirModalPago()"]') || document.getElementById("btnAgregarPago");
+    const btnItem = document.getElementById("btnAgregarItemCompra") || document.querySelector('button[onclick="abrirModalItem()"]');
+    const btnPago = document.getElementById("btnAgregarPagoCompra") || document.querySelector('button[onclick="abrirModalPago()"]');
     [btnItem, btnPago].forEach(b => { if (!b) return; b.disabled = !ok; b.classList.toggle("disabled", !ok); b.style.opacity = ok ? 1 : .6; b.style.pointerEvents = ok ? "auto" : "none"; });
 }
 
 // ---------------- Carga inicial ----------------
 document.addEventListener("DOMContentLoaded", async () => {
+    Permisos.init();
+    Permisos.aplicarUINuevoModif("Compras");
     try {
         const dtp = document.getElementById("dtpFecha");
         if (dtp && !dtp.value) dtp.value = hoyISO();
 
-        // Select2
+        // Select2 + botón "+" (modal maestro) vía site.js → initAbmSelectShortcuts
         initSelect2Base("#cmbProveedor");
         removeEmptyOptionOnSelect("#cmbProveedor");
+
+        if (typeof initAbmSelectShortcuts === "function") {
+            initAbmSelectShortcuts(document);
+        }
 
         // Listeners
         document.getElementById("dtpFecha")?.addEventListener("change", () => {
@@ -190,6 +212,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Cargar datos de combos/maestros
         await Promise.all([cargarProveedores(), cargarInsumos(), cargarCuentas()]);
+        if (typeof initAbmSelectShortcuts === "function") {
+            initAbmSelectShortcuts(document);
+        }
 
         // Grillas
         configurarTablaInsumos();
@@ -218,7 +243,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // ---------------- Fetch combos ----------------
 async function cargarProveedores() {
-    const r = await fetch("/Proveedores/Lista", { headers: { Authorization: "Bearer " + (token || "") } });
+    const r = await fetch("/Proveedores/Lista", { headers: { Authorization: "Bearer " + getAuthToken() } });
     const d = r.ok ? await r.json() : []; State.proveedores = d || [];
     const cmb = document.getElementById("cmbProveedor"); if (!cmb) return;
     cmb.innerHTML = `<option value="">Seleccione</option>` + State.proveedores.map(p => `<option value="${p.Id}">${p.Nombre || ("Proveedor " + p.Id)}</option>`).join("");
@@ -226,17 +251,17 @@ async function cargarProveedores() {
     syncStateFromUI();
 }
 async function cargarInsumos() {
-    const r = await fetch("/Insumos/Lista", { headers: { Authorization: "Bearer " + (token || "") } });
+    const r = await fetch("/Insumos/Lista", { headers: { Authorization: "Bearer " + getAuthToken() } });
     const d = r.ok ? await r.json() : []; State.insumosCat = d || [];
 }
 async function cargarCuentas() {
-    const r = await fetch("/Cuentas/Lista", { headers: { Authorization: "Bearer " + (token || "") } });
+    const r = await fetch("/Cuentas/Lista", { headers: { Authorization: "Bearer " + getAuthToken() } });
     const d = r.ok ? await r.json() : []; State.cuentas = d || [];
 }
 
 // ---------------- Cargar Compra existente ----------------
 async function cargarCompraExistente(id) {
-    const r = await fetch(`/Compras/EditarInfo?id=${id}`, { headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json" } });
+    const r = await fetch(`/Compras/EditarInfo?id=${id}`, { headers: { Authorization: "Bearer " + getAuthToken(), "Content-Type": "application/json" } });
     if (!r.ok) { errorModal?.("No se pudo cargar la compra."); return; }
     const v = await r.json();
 
@@ -310,6 +335,9 @@ function configurarTablaInsumos() {
         ],
         order: [[1, "asc"]], dom: "t", pageLength: 1000
     });
+    if (typeof bindDataTableSeleccionFila === "function") {
+        bindDataTableSeleccionFila("#grd_Insumos", "cmpItems");
+    }
 }
 function refrescarItems() { if (!gridItems) return; gridItems.clear().rows.add(State.insumos).draw(); }
 
@@ -333,20 +361,26 @@ function configurarTablaPagos() {
         ],
         order: [[1, "desc"]], dom: "t", pageLength: 1000
     });
+    if (typeof bindDataTableSeleccionFila === "function") {
+        bindDataTableSeleccionFila("#grd_Pagos", "cmpPagos");
+    }
 }
 function refrescarPagos() { if (!gridPagos) return; gridPagos.clear().rows.add(State.pagos).draw(); }
 
 // ---------------- Modal Item (Insumo) ----------------
 window.abrirModalItem = async function () {
     if (!(State.proveedorId)) {
-        advertenciaModal?.("Seleccioná un Proveedor antes de agregar ítems."); return;
+        advertenciaModal?.("Seleccioná un proveedor antes de agregar ítems."); return;
     }
+    await cargarInsumos();
     State.editItemIndex = -1;
+    wasSubmitItem = false;
 
     // Botón verde → Registrar
     const btn = document.querySelector("#modalItem .modal-footer .btn.btn-success");
     if (btn) btn.innerHTML = `<i class="fa fa-check me-1"></i> Registrar`;
 
+    destroySelect2IfAny("#cmbItemInsumo");
     // Combo de Insumo (filtrado por proveedor si coincide)
     const lista = (State.insumosCat || []).filter(x => !x.IdProveedor || !State.proveedorId || x.IdProveedor === State.proveedorId);
     const cmb = document.getElementById("cmbItemInsumo");
@@ -358,11 +392,19 @@ window.abrirModalItem = async function () {
     document.getElementById("txtItemCosto").value = "";
     document.getElementById("txtItemDesc").value = "0";
     document.getElementById("txtItemIva").value = "21";
-    document.getElementById("txtItemSubtotal").value = "$ 0,00";
+    document.getElementById("txtItemSubtotal").value = _fmtNumber(0);
     setItemInputsEnabled(true);
 
+    ["#cmbItemInsumo", "#txtItemCant", "#txtItemCosto", "#txtItemDesc", "#txtItemIva"].forEach(clearValidation);
     attachItemEvents();
     document.getElementById("errorCamposItem")?.classList.add("d-none");
+
+    if (typeof bindInputMilesElement === "function") {
+        bindInputMilesElement(document.getElementById("txtItemCosto"));
+    }
+    if (typeof initAbmSelectShortcuts === "function") {
+        initAbmSelectShortcuts(document.getElementById("modalItem") || document);
+    }
 
     new bootstrap.Modal(document.getElementById("modalItem")).show();
 };
@@ -376,14 +418,28 @@ function attachItemEvents() {
     const cmb = document.getElementById("cmbItemInsumo");
     const changeInsumo = async () => {
         const idIns = parseInt(cmb.value || 0, 10);
-        if (!idIns) { document.getElementById("txtItemCosto").value = ""; document.getElementById("txtItemSubtotal").value = "$ 0,00"; return; }
+        if (!idIns) { document.getElementById("txtItemCosto").value = ""; document.getElementById("txtItemSubtotal").value = _fmtNumber(0); return; }
         const opt = cmb.selectedOptions[0];
         const sugerido = parseFloat(opt?.dataset?.costo || 0);
         document.getElementById("txtItemCosto").value = _toMiles(sugerido || 0);
         recalcularSubtotalModal();
+        if (wasSubmitItem) {
+            idIns ? setValid("#cmbItemInsumo") : setInvalid("#cmbItemInsumo");
+        }
     };
     cmb.onchange = changeInsumo;
-    ["txtItemCant", "txtItemCosto", "txtItemDesc", "txtItemIva"].forEach(id => { const el = document.getElementById(id); if (el) el.oninput = recalcularSubtotalModal; });
+    ["txtItemCant", "txtItemCosto", "txtItemDesc", "txtItemIva"].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.oninput = () => {
+            recalcularSubtotalModal();
+            if (!wasSubmitItem) return;
+            const cant = _toNumber(document.getElementById("txtItemCant").value);
+            const costo = _toNumber(document.getElementById("txtItemCosto").value);
+            if (id === "txtItemCant") cant > 0 ? setValid("#txtItemCant") : setInvalid("#txtItemCant");
+            if (id === "txtItemCosto") costo >= 0 ? setValid("#txtItemCosto") : setInvalid("#txtItemCosto");
+        };
+    });
 }
 function recalcularSubtotalModal() {
     const qty = _toNumber(document.getElementById("txtItemCant").value);
@@ -396,17 +452,26 @@ function recalcularSubtotalModal() {
     const baseCd = base - descImporte;
     const ivaImporte = baseCd * (iva / 100);
     const subtotal = baseCd + ivaImporte;
-    document.getElementById("txtItemSubtotal").value = `$ ${_fmtNumber(subtotal)}`;
+    document.getElementById("txtItemSubtotal").value = _fmtNumber(subtotal);
 }
 window.guardarItem = function () {
+    wasSubmitItem = true;
     const idIns = parseInt(document.getElementById("cmbItemInsumo").value || 0, 10);
     const cant = _toNumber(document.getElementById("txtItemCant").value);
     const costo = _toNumber(document.getElementById("txtItemCosto").value);
     const desc = _toNumber(document.getElementById("txtItemDesc").value);
     const iva = _toNumber(document.getElementById("txtItemIva").value);
 
-    const okCampos = costo >= 0 && cant > 0; // si querés volver obligatorio seleccionar insumo: && idIns
-    if (!okCampos) { setInvalid("#cmbItemInsumo"); document.getElementById("errorCamposItem")?.classList.remove("d-none"); return; }
+    let ok = true;
+    if (!idIns) { setInvalid("#cmbItemInsumo"); ok = false; } else setValid("#cmbItemInsumo");
+    if (!(cant > 0)) { setInvalid("#txtItemCant"); ok = false; } else setValid("#txtItemCant");
+    if (costo < 0) { setInvalid("#txtItemCosto"); ok = false; }
+    else if (idIns && costo <= 0) { setInvalid("#txtItemCosto"); ok = false; }
+    else setValid("#txtItemCosto");
+    if (!ok) {
+        document.getElementById("errorCamposItem")?.classList.remove("d-none");
+        return;
+    }
     document.getElementById("errorCamposItem")?.classList.add("d-none");
 
     const nombre = document.getElementById("cmbItemInsumo").selectedOptions[0]?.textContent?.trim() || "";
@@ -437,12 +502,15 @@ window.guardarItem = function () {
 };
 window.editarItem = async function (idx) {
     const it = State.insumos[idx]; if (!it) return;
+    await cargarInsumos();
     State.editItemIndex = idx;
+    wasSubmitItem = false;
 
     // Botón verde → Guardar
     const btn = document.querySelector("#modalItem .modal-footer .btn.btn-success");
     if (btn) btn.innerHTML = `<i class="fa fa-check me-1"></i> Guardar`;
 
+    destroySelect2IfAny("#cmbItemInsumo");
     const lista = (State.insumosCat || []).filter(x => !x.IdProveedor || !State.proveedorId || x.IdProveedor === State.proveedorId);
     const cmb = document.getElementById("cmbItemInsumo");
     cmb.innerHTML = `<option value="">Seleccione</option>` + lista.map(p => `<option value="${p.Id}" data-costo="${p.CostoUnitario || 0}">${p.Descripcion}</option>`).join("");
@@ -456,7 +524,7 @@ window.editarItem = async function (idx) {
     }
     if ($.fn.select2) $("#cmbItemInsumo").trigger("change.select2");
 
-    document.getElementById("txtItemCant").value = _toMiles(it.cantidad);
+    document.getElementById("txtItemCant").value = String(parseFloat(it.cantidad) || 0);
     document.getElementById("txtItemCosto").value = _toMiles(it.costoUnitario);
     document.getElementById("txtItemDesc").value = _toMiles(it.porcDesc);
     document.getElementById("txtItemIva").value = _toMiles(it.porcIva);
@@ -465,6 +533,12 @@ window.editarItem = async function (idx) {
     recalcularSubtotalModal();
 
     document.getElementById("errorCamposItem")?.classList.add("d-none");
+    if (typeof bindInputMilesElement === "function") {
+        bindInputMilesElement(document.getElementById("txtItemCosto"));
+    }
+    if (typeof initAbmSelectShortcuts === "function") {
+        initAbmSelectShortcuts(document.getElementById("modalItem") || document);
+    }
     new bootstrap.Modal(document.getElementById("modalItem")).show();
 };
 window.eliminarItem = async function (idx) {
@@ -497,22 +571,35 @@ function attachPagoLiveValidation() {
         const el = document.getElementById(id); if (!el) return;
         ["input", "change"].forEach(evt => { el.addEventListener(evt, apply); });
     });
+    if (window.jQuery && $.fn.select2) {
+        $("#cmbCuenta").off("select2:select.nmCmpPago select2:clear.nmCmpPago").on("select2:select.nmCmpPago select2:clear.nmCmpPago", apply);
+    }
 }
 window.abrirModalPago = function () {
-    if (!State.proveedorId) { advertenciaModal?.("Seleccioná Proveedor antes de registrar pagos."); return; }
+    if (!State.proveedorId) { advertenciaModal?.("Seleccioná proveedor antes de registrar pagos."); return; }
     State.editPagoIndex = -1; wasSubmitPago = false; resetPagoValidation();
 
     // Título → Registrar Pago
     const title = document.querySelector("#modalPago .modal-title");
-    if (title) title.innerHTML = `<i class="fa fa-plus-circle me-2 text-success"></i>Registrar Pago`;
+    if (title) title.innerHTML = `<i class="fa fa-plus-circle me-2 text-success"></i>Registrar pago`;
 
     document.getElementById("dtpPagoFecha").value = hoyISO();
+    destroySelect2IfAny("#cmbCuenta");
     const cmb = document.getElementById("cmbCuenta");
     cmb.innerHTML = `<option value="">Seleccione</option>` + State.cuentas.map(c => `<option value="${c.Id}">${c.Nombre || c.Descripcion || ("Cuenta " + c.Id)}</option>`).join("");
+    initSelect2Base("#cmbCuenta", { dropdownParent: $("#modalPago") });
+    removeEmptyOptionOnSelect("#cmbCuenta");
 
     document.getElementById("txtPagoImporte").value = "";
     document.getElementById("txtPagoNota").value = "";
     document.getElementById("txtPagoConcepto").value = "PAGO COMPRA";
+
+    if (typeof bindInputMilesElement === "function") {
+        bindInputMilesElement(document.getElementById("txtPagoImporte"));
+    }
+    if (typeof initAbmSelectShortcuts === "function") {
+        initAbmSelectShortcuts(document.getElementById("modalPago") || document);
+    }
 
     attachPagoLiveValidation();
     new bootstrap.Modal(document.getElementById("modalPago")).show();
@@ -545,15 +632,26 @@ window.editarPago = function (idx) {
 
     // Título → Editar Pago
     const title = document.querySelector("#modalPago .modal-title");
-    if (title) title.innerHTML = `<i class="fa fa-pen-to-square me-2 text-success"></i>Editar Pago`;
+    if (title) title.innerHTML = `<i class="fa fa-pencil-square-o me-2 text-success"></i>Editar pago`;
 
     document.getElementById("dtpPagoFecha").value = dateToInputValue(p.fecha) || hoyISO();
+    destroySelect2IfAny("#cmbCuenta");
     const cmb = document.getElementById("cmbCuenta");
     cmb.innerHTML = `<option value="">Seleccione</option>` + State.cuentas.map(c => `<option value="${c.Id}">${c.Nombre || c.Descripcion || ("Cuenta " + c.Id)}</option>`).join("");
+    initSelect2Base("#cmbCuenta", { dropdownParent: $("#modalPago") });
+    removeEmptyOptionOnSelect("#cmbCuenta");
     document.getElementById("cmbCuenta").value = p.idCuenta;
+    if ($.fn.select2) $("#cmbCuenta").trigger("change.select2");
     document.getElementById("txtPagoConcepto").value = p.concepto || "PAGO COMPRA";
     document.getElementById("txtPagoImporte").value = _toMiles(p.importe);
     document.getElementById("txtPagoNota").value = p.nota || "";
+
+    if (typeof bindInputMilesElement === "function") {
+        bindInputMilesElement(document.getElementById("txtPagoImporte"));
+    }
+    if (typeof initAbmSelectShortcuts === "function") {
+        initAbmSelectShortcuts(document.getElementById("modalPago") || document);
+    }
 
     attachPagoLiveValidation();
     new bootstrap.Modal(document.getElementById("modalPago")).show();
@@ -652,7 +750,7 @@ window.guardarCompra = async function () {
     try {
         isSaving = true;
         const res = await fetch(url, {
-            method, headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json;charset=utf-8" },
+            method, headers: { Authorization: "Bearer " + getAuthToken(), "Content-Type": "application/json;charset=utf-8" },
             body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error(res.statusText);
@@ -668,7 +766,7 @@ window.eliminarCompra = async function () {
     if (!State.idCompra) return;
     const ok = await confirmarModal("¿Eliminar esta compra?"); if (!ok) return;
     try {
-        const r = await fetch(`/Compras/Eliminar?id=${State.idCompra}`, { method: "DELETE", headers: { Authorization: "Bearer " + (token || "") } });
+        const r = await fetch(`/Compras/Eliminar?id=${State.idCompra}`, { method: "DELETE", headers: { Authorization: "Bearer " + getAuthToken() } });
         const j = await r.json();
         if (!r.ok || !j?.valor) throw new Error(j?.mensaje || "No se pudo eliminar.");
         exitoModal("Eliminado correctamente"); volverIndex();

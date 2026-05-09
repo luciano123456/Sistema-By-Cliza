@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Insumos";
 }
 
@@ -11,9 +11,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <!-- Estilos base del proyecto -->
     <link href="~/css/usuarios.css" rel="stylesheet" />
+    <link href="~/css/Productos.css" rel="stylesheet" asp-append-version="true" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
             <div class="d-flex align-items-center gap-3">
@@ -24,7 +25,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Total insumos</div>
                     <div class="value kpi-azul" id="kpiCantInsumos">0</div>
@@ -46,13 +47,13 @@
                             <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
                         </div>
 
-                        <button class="btn btn-primary" onclick="nuevoInsumo()">
+                        <button type="button" class="btn btn-primary" data-modulo="Insumos" data-permiso="crear" onclick="nuevoInsumo()">
                             <i class="fa fa-plus me-1"></i> Nuevo
                         </button>
                     </div>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Insumos" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Insumos">
                             <thead>
                                 <tr>
                                     <th></th>                <!-- Acciones -->
@@ -97,7 +98,7 @@
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label for="txtDescripcion" class="form-label">Descripción</label>
                         <input type="text" class="form-control" id="txtDescripcion" required>
                         <div class="invalid-feedback">Campo obligatorio</div>
@@ -105,23 +106,37 @@
 
                     <div class="col-md-2">
                         <label for="cmbCategoria" class="form-label">Categoría</label>
-                        <select id="cmbCategoria" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbCategoria" class="form-select select2" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusCategoria" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva categoría">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label for="cmbProveedor" class="form-label">Proveedor</label>
-                        <select id="cmbProveedor" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbProveedor" class="form-select select2" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusProveedor" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo proveedor">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
                     <div class="col-md-3">
                         <label for="txtCosto" class="form-label">Costo Unitario</label>
-                        <input type="number" step="0.01" min="0" class="form-control" id="txtCosto" required>
+                        <input type="text" inputmode="decimal" class="form-control ins-costo-input" id="txtCosto" required autocomplete="off">
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
@@ -135,7 +150,10 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fa fa-arrow-left"></i> Volver
                 </button>
-                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCambios()">
+                    <button type="button"
+                            id="btnGuardar"
+                            class="btn btn-primary"
+                            onclick="guardarCambios(event)">
                     <i class="fa fa-check"></i> Registrar
                 </button>
             </div>
@@ -146,8 +164,6 @@
 <partial name="~/Views/Utils/Modals.cshtml" />
 
 @section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-
     <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
@@ -160,9 +176,6 @@
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
 
-    <!-- Utils del proyecto -->
-    <script src="~/js/site.js"></script>
-
     <!-- Lógica Insumos -->
-    <script src="~/js/Insumos.js?v=1.0"></script>
+    <script src="~/js/Insumos.js?v=1.9"></script>
 }

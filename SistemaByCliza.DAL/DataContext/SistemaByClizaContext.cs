@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +16,7 @@ public partial class SistemaByClizaContext : DbContext
         : base(options)
     {
     }
+
 
     private readonly IConfiguration _configuration;
 
@@ -62,6 +63,10 @@ public partial class SistemaByClizaContext : DbContext
     public virtual DbSet<Insumo> Insumos { get; set; }
 
     public virtual DbSet<InsumosCategoria> InsumosCategorias { get; set; }
+
+    public virtual DbSet<InsumosInventario> InsumosInventarios { get; set; }
+
+    public virtual DbSet<InsumosInventarioMovimiento> InsumosInventarioMovimientos { get; set; }
 
     public virtual DbSet<Inventario> Inventarios { get; set; }
 
@@ -123,8 +128,6 @@ public partial class SistemaByClizaContext : DbContext
 
     public virtual DbSet<Provincia> Provincias { get; set; }
 
-    public virtual DbSet<Rol> Roles { get; set; }
-
     public virtual DbSet<Sucursal> Sucursales { get; set; }
 
     public virtual DbSet<Taller> Talleres { get; set; }
@@ -135,6 +138,18 @@ public partial class SistemaByClizaContext : DbContext
 
     public virtual DbSet<User> Usuarios { get; set; }
 
+    public virtual DbSet<UsuariosModulo> UsuariosModulos { get; set; }
+
+    public virtual DbSet<UsuariosModulosGrupo> UsuariosModulosGrupos { get; set; }
+
+    public virtual DbSet<UsuariosPermiso> UsuariosPermisos { get; set; }
+
+    public virtual DbSet<UsuariosPermisosUsuario> UsuariosPermisosUsuarios { get; set; }
+
+    public virtual DbSet<UsuariosRol> UsuariosRoles { get; set; }
+
+    public virtual DbSet<UsuariosRolesPermiso> UsuariosRolesPermisos { get; set; }
+
     public virtual DbSet<UsuariosSucursal> UsuariosSucursales { get; set; }
 
     public virtual DbSet<Venta> Ventas { get; set; }
@@ -143,7 +158,7 @@ public partial class SistemaByClizaContext : DbContext
 
     public virtual DbSet<VentasProductosVariante> VentasProductosVariantes { get; set; }
 
-
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Banco>(entity =>
@@ -160,6 +175,8 @@ public partial class SistemaByClizaContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Egreso).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Ingreso).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TipoMov)
                 .HasMaxLength(70)
@@ -173,12 +190,22 @@ public partial class SistemaByClizaContext : DbContext
             entity.HasOne(d => d.IdSucursalNavigation).WithMany(p => p.Cajas)
                 .HasForeignKey(d => d.IdSucursal)
                 .HasConstraintName("FK_Cajas_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.CajaIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Cajas_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.CajaIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Cajas_Usuarios_Registra");
         });
 
         modelBuilder.Entity<CajasTransfEntreCuenta>(entity =>
         {
             entity.ToTable("Cajas_Transf_EntreCuentas");
 
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.ImporteDestino).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImporteOrigen).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaInterna)
@@ -194,6 +221,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdCuentaOrigen)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Cajas_Transf_EntreCuentas_Cuentas");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.CajasTransfEntreCuentaIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Cajas_Transf_EntreCuentas_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.CajasTransfEntreCuentaIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Cajas_Transf_EntreCuentas_Usuarios_Registra");
         });
 
         modelBuilder.Entity<Cliente>(entity =>
@@ -213,6 +248,8 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.Email)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.IdCondicionIva).HasColumnName("IdCondicionIVA");
             entity.Property(e => e.Localidad)
                 .HasMaxLength(80)
@@ -239,6 +276,14 @@ public partial class SistemaByClizaContext : DbContext
             entity.HasOne(d => d.IdProvinciaNavigation).WithMany(p => p.Clientes)
                 .HasForeignKey(d => d.IdProvincia)
                 .HasConstraintName("FK_Clientes_Provincias");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ClienteIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Clientes_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ClienteIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Clientes_Usuarios_Registra");
         });
 
         modelBuilder.Entity<ClientesCobro>(entity =>
@@ -249,6 +294,8 @@ public partial class SistemaByClizaContext : DbContext
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Importe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaInterna)
                 .HasMaxLength(200)
@@ -268,6 +315,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSucursal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Clientes_Cobros_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ClientesCobroIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Clientes_Cobros_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ClientesCobroIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Clientes_Cobros_Usuarios_Registra");
         });
 
         modelBuilder.Entity<ClientesCuentaCorriente>(entity =>
@@ -279,6 +334,8 @@ public partial class SistemaByClizaContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Debe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Haber).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TipoMov)
                 .HasMaxLength(50)
@@ -293,6 +350,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSucursal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Clientes_CuentaCorriente_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ClientesCuentaCorrienteIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Clientes_CuentaCorriente_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ClientesCuentaCorrienteIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Clientes_CuentaCorriente_Usuarios_Registra");
         });
 
         modelBuilder.Entity<Color>(entity =>
@@ -306,6 +371,8 @@ public partial class SistemaByClizaContext : DbContext
         {
             entity.Property(e => e.Descuentos).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.ImporteTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaInterna)
                 .HasMaxLength(200)
@@ -319,6 +386,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdProveedor)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Compras_Proveedores");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.CompraIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Compras_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.CompraIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Compras_Usuarios_Registra");
         });
 
         modelBuilder.Entity<ComprasInsumo>(entity =>
@@ -331,6 +406,8 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.CostoUnitario).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.DescuentoTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.DescuentoUnit).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.IvaTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.IvaUnit).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.PorcDescuento).HasColumnType("decimal(18, 2)");
@@ -341,6 +418,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdCompra)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Compras_Insumos_Compras");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ComprasInsumoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Compras_Insumos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ComprasInsumoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Compras_Insumos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<ComprasPago>(entity =>
@@ -349,6 +434,8 @@ public partial class SistemaByClizaContext : DbContext
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Importe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaInterna)
                 .HasMaxLength(200)
@@ -357,6 +444,14 @@ public partial class SistemaByClizaContext : DbContext
             entity.HasOne(d => d.IdCompraNavigation).WithMany(p => p.ComprasPagos)
                 .HasForeignKey(d => d.IdCompra)
                 .HasConstraintName("FK_ComprasPagos_Compras");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ComprasPagoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_ComprasPagos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ComprasPagoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_ComprasPagos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<CondicionesIva>(entity =>
@@ -388,6 +483,8 @@ public partial class SistemaByClizaContext : DbContext
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Importe).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.IdCategoriaNavigation).WithMany(p => p.Gastos)
@@ -404,6 +501,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSucursal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Gastos_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.GastoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Gastos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.GastoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Gastos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<GastosCategoria>(entity =>
@@ -424,6 +529,8 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.Descripcion)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
 
             entity.HasOne(d => d.IdCategoriaNavigation).WithMany(p => p.Insumos)
                 .HasForeignKey(d => d.IdCategoria)
@@ -434,6 +541,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdProveedor)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Insumos_Proveedores");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.InsumoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Insumos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.InsumoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Insumos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<InsumosCategoria>(entity =>
@@ -443,6 +558,41 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.Nombre)
                 .HasMaxLength(70)
                 .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<InsumosInventario>(entity =>
+        {
+            entity.ToTable("Insumos_Inventario");
+
+            entity.Property(e => e.Cantidad).HasColumnType("decimal(18, 2)");
+        });
+
+        modelBuilder.Entity<InsumosInventarioMovimiento>(entity =>
+        {
+            entity.ToTable("Insumos_Inventario_Movimientos");
+
+            entity.Property(e => e.Concepto)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
+            entity.Property(e => e.TipoMov)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.IdInventarioNavigation).WithMany(p => p.InsumosInventarioMovimientos)
+                .HasForeignKey(d => d.IdInventario)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Insumos_Inventario_Movimientos_Insumos_Inventario");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.InsumosInventarioMovimientoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Insumos_Inventario_Movimientos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.InsumosInventarioMovimientoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Insumos_Inventario_Movimientos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<Inventario>(entity =>
@@ -473,6 +623,8 @@ public partial class SistemaByClizaContext : DbContext
 
             entity.Property(e => e.CantidadTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.NotaInterna)
                 .HasMaxLength(200)
                 .IsUnicode(false);
@@ -486,6 +638,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSucursal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Inventario_Ingresos_OrdenesCorte_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.InventarioIngresosOrdenesCorteIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Inventario_Ingresos_OrdenesCorte_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.InventarioIngresosOrdenesCorteIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Inventario_Ingresos_OrdenesCorte_Usuarios_Registra");
         });
 
         modelBuilder.Entity<InventarioIngresosOrdenesCorteProducto>(entity =>
@@ -529,6 +689,8 @@ public partial class SistemaByClizaContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Entrada).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Salida).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TipoMov)
                 .HasMaxLength(50)
@@ -543,6 +705,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSucursal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Inventario_Movimientos_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.InventarioMovimientoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Inventario_Movimientos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.InventarioMovimientoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Inventario_Movimientos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<InventarioTransfSucursal>(entity =>
@@ -550,19 +720,29 @@ public partial class SistemaByClizaContext : DbContext
             entity.ToTable("Inventario_TransfSucursales");
 
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Notas)
                 .HasMaxLength(200)
                 .IsUnicode(false);
 
-            entity.HasOne(d => d.IdSucursalDestinoNavigation).WithMany(p => p.InventarioTransfSucursalIdSucursalDestinoNavigations)
+            entity.HasOne(d => d.IdSucursalDestinoNavigation).WithMany(p => p.InventarioTransfSucursaleIdSucursalDestinoNavigations)
                 .HasForeignKey(d => d.IdSucursalDestino)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Inventario_TransfSucursales_Sucursales1");
 
-            entity.HasOne(d => d.IdSucursalOrigenNavigation).WithMany(p => p.InventarioTransfSucursalIdSucursalOrigenNavigations)
+            entity.HasOne(d => d.IdSucursalOrigenNavigation).WithMany(p => p.InventarioTransfSucursaleIdSucursalOrigenNavigations)
                 .HasForeignKey(d => d.IdSucursalOrigen)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Inventario_TransfSucursales_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.InventarioTransfSucursaleIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Inventario_TransfSucursales_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.InventarioTransfSucursaleIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Inventario_TransfSucursales_Usuarios_Registra");
         });
 
         modelBuilder.Entity<InventarioTransfSucursalesProducto>(entity =>
@@ -648,6 +828,8 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.DiferenciaFinalReal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.FechaFinalizacion).HasColumnType("date");
             entity.Property(e => e.FechaInicio).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.HoraFinCorte).HasColumnType("datetime");
             entity.Property(e => e.HoraInicioCorte).HasColumnType("datetime");
             entity.Property(e => e.LargoTizada).HasColumnType("decimal(18, 2)");
@@ -656,6 +838,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdEstado)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ordenes_Corte_Ordenes_Corte_Estados");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.OrdenesCorteIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Ordenes_Corte_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.OrdenesCorteIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Ordenes_Corte_Usuarios_Registra");
         });
 
         modelBuilder.Entity<OrdenesCorteEstado>(entity =>
@@ -711,6 +901,9 @@ public partial class SistemaByClizaContext : DbContext
         {
             entity.ToTable("Ordenes_Corte_Insumos");
 
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
+
             entity.HasOne(d => d.IdCorteNavigation).WithMany(p => p.OrdenesCorteInsumos)
                 .HasForeignKey(d => d.IdCorte)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -720,16 +913,35 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdInsumo)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ordenes_Corte_Insumos_Insumos");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.OrdenesCorteInsumoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Ordenes_Corte_Insumos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.OrdenesCorteInsumoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Ordenes_Corte_Insumos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<OrdenesCorteProducto>(entity =>
         {
             entity.ToTable("Ordenes_Corte_Productos");
 
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
+
             entity.HasOne(d => d.IdOrdenCorteNavigation).WithMany(p => p.OrdenesCorteProductos)
                 .HasForeignKey(d => d.IdOrdenCorte)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ordenes_Corte_Productos_Ordenes_Corte");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.OrdenesCorteProductoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Ordenes_Corte_Productos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.OrdenesCorteProductoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Ordenes_Corte_Productos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<Personal>(entity =>
@@ -756,6 +968,8 @@ public partial class SistemaByClizaContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
             entity.Property(e => e.FechaIngreso).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.FechaRetiro).HasColumnType("date");
             entity.Property(e => e.HsLaborales).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.IdCondicionIva).HasColumnName("IdCondicionIVA");
@@ -775,7 +989,7 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.ValorDia).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ValorHora).HasColumnType("decimal(18, 2)");
 
-            entity.HasOne(d => d.IdBancoNavigation).WithMany(p => p.Personals)
+            entity.HasOne(d => d.IdBancoNavigation).WithMany(p => p.Personal)
                 .HasForeignKey(d => d.IdBanco)
                 .HasConstraintName("FK_Personal_Bancos");
 
@@ -795,6 +1009,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSucursal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Personal_Sucursales");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.PersonalIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Personal_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.PersonalIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Personal_Usuarios_Registra");
         });
 
         modelBuilder.Entity<PersonalPuesto>(entity =>
@@ -814,6 +1036,8 @@ public partial class SistemaByClizaContext : DbContext
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Importe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImporteAbonado).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaInterna)
@@ -825,6 +1049,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdPersonal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Personal_Sueldos_Personal");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.PersonalSueldoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Personal_Sueldos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.PersonalSueldoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Personal_Sueldos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<PersonalSueldosPago>(entity =>
@@ -832,6 +1064,8 @@ public partial class SistemaByClizaContext : DbContext
             entity.ToTable("Personal_Sueldos_Pagos");
 
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Importe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaInterna)
                 .HasMaxLength(200)
@@ -846,6 +1080,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSueldo)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Personal_Sueldos_Pagos_Personal_Sueldos");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.PersonalSueldosPagoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Personal_Sueldos_Pagos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.PersonalSueldosPagoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Personal_Sueldos_Pagos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<Producto>(entity =>
@@ -853,12 +1095,22 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.Descripcion)
                 .HasMaxLength(200)
                 .IsUnicode(false);
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.IdCategoriaNavigation).WithMany(p => p.Productos)
                 .HasForeignKey(d => d.IdCategoria)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Productos_PCategorias");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ProductoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Productos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ProductoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Productos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<ProductosCategoria>(entity =>
@@ -949,9 +1201,19 @@ public partial class SistemaByClizaContext : DbContext
 
         modelBuilder.Entity<Proveedor>(entity =>
         {
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ProveedoreIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Proveedores_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ProveedoreIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Proveedores_Usuarios_Registra");
         });
 
         modelBuilder.Entity<ProveedoresCuentaCorriente>(entity =>
@@ -963,6 +1225,8 @@ public partial class SistemaByClizaContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Debe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Haber).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TipoMov)
                 .HasMaxLength(50)
@@ -972,19 +1236,20 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdProveedor)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Proveedores_CuentaCorriente_Proveedores");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ProveedoresCuentaCorrienteIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Proveedores_CuentaCorriente_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ProveedoresCuentaCorrienteIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Proveedores_CuentaCorriente_Usuarios_Registra");
         });
 
         modelBuilder.Entity<Provincia>(entity =>
         {
             entity.Property(e => e.Nombre)
                 .HasMaxLength(60)
-                .IsUnicode(false);
-        });
-
-        modelBuilder.Entity<Rol>(entity =>
-        {
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(100)
                 .IsUnicode(false);
         });
 
@@ -997,9 +1262,19 @@ public partial class SistemaByClizaContext : DbContext
 
         modelBuilder.Entity<Taller>(entity =>
         {
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(200)
                 .IsUnicode(false);
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.TallereIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Talleres_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.TallereIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Talleres_Usuarios_Registra");
         });
 
         modelBuilder.Entity<TalleresCuentaCorriente>(entity =>
@@ -1011,6 +1286,8 @@ public partial class SistemaByClizaContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Debe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Haber).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TipoMov)
                 .HasMaxLength(50)
@@ -1020,6 +1297,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdTaller)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Talleres_CuentaCorriente_Talleres");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.TalleresCuentaCorrienteIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Talleres_CuentaCorriente_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.TalleresCuentaCorrienteIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Talleres_CuentaCorriente_Usuarios_Registra");
         });
 
         modelBuilder.Entity<TalleresPago>(entity =>
@@ -1030,6 +1315,8 @@ public partial class SistemaByClizaContext : DbContext
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.Importe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaInterna)
                 .HasMaxLength(200)
@@ -1044,6 +1331,14 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdTaller)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Talleres_Pagos_Talleres");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.TalleresPagoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Talleres_Pagos_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.TalleresPagoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Talleres_Pagos_Usuarios_Registra");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -1087,6 +1382,139 @@ public partial class SistemaByClizaContext : DbContext
                 .HasConstraintName("FK_Usuarios_Roles");
         });
 
+        modelBuilder.Entity<UsuariosModulo>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Usuarios__3214EC07B701C248");
+
+            entity.ToTable("Usuarios_Modulos");
+
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
+            entity.Property(e => e.Codigo)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.IdGrupoNavigation).WithMany(p => p.UsuariosModulos)
+                .HasForeignKey(d => d.IdGrupo)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Usuarios_Modulos_Usuarios_Modulos_Grupos");
+        });
+
+        modelBuilder.Entity<UsuariosModulosGrupo>(entity =>
+        {
+            entity.ToTable("Usuarios_Modulos_Grupos");
+
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(250)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<UsuariosPermiso>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Usuarios__3214EC078441CAF3");
+
+            entity.ToTable("Usuarios_Permisos");
+
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
+            entity.Property(e => e.Codigo)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(250)
+                .IsUnicode(false);
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.IdModuloNavigation).WithMany(p => p.UsuariosPermisos)
+                .HasForeignKey(d => d.IdModulo)
+                .HasConstraintName("FK_UsuariosPermiso_Modulo");
+        });
+
+        modelBuilder.Entity<UsuariosPermisosUsuario>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Usuarios__3214EC07B3F7BDF7");
+
+            entity.ToTable("Usuarios_PermisosUsuario");
+
+            entity.HasIndex(e => new { e.IdUsuario, e.IdModulo, e.IdPermiso }, "UQ_UPU").IsUnique();
+
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
+            entity.Property(e => e.FechaModifica).HasColumnType("datetime");
+            entity.Property(e => e.FechaRegistra)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.IdModuloNavigation).WithMany(p => p.UsuariosPermisosUsuarios)
+                .HasForeignKey(d => d.IdModulo)
+                .HasConstraintName("FK_UPU_Modulo");
+
+            entity.HasOne(d => d.IdPermisoNavigation).WithMany(p => p.UsuariosPermisosUsuarios)
+                .HasForeignKey(d => d.IdPermiso)
+                .HasConstraintName("FK_UPU_Permiso");
+
+            entity.HasOne(d => d.IdUsuarioNavigation).WithMany(p => p.UsuariosPermisosUsuarioIdUsuarioNavigations)
+                .HasForeignKey(d => d.IdUsuario)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Usuarios_PermisosUsuario_Usuarios2");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.UsuariosPermisosUsuarioIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Usuarios_PermisosUsuario_Usuarios");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.UsuariosPermisosUsuarioIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Usuarios_PermisosUsuario_Usuarios1");
+        });
+
+        modelBuilder.Entity<UsuariosRol>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_Roles");
+
+            entity.ToTable("Usuarios_Roles");
+
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<UsuariosRolesPermiso>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Usuarios__3214EC0746EDC1A8");
+
+            entity.ToTable("Usuarios_RolesPermisos");
+
+            entity.HasIndex(e => new { e.IdRol, e.IdModulo, e.IdPermiso }, "UQ_URP").IsUnique();
+
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
+            entity.Property(e => e.FechaModifica).HasColumnType("datetime");
+            entity.Property(e => e.FechaRegistra)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.IdModuloNavigation).WithMany(p => p.UsuariosRolesPermisos)
+                .HasForeignKey(d => d.IdModulo)
+                .HasConstraintName("FK_URP_Modulo");
+
+            entity.HasOne(d => d.IdPermisoNavigation).WithMany(p => p.UsuariosRolesPermisos)
+                .HasForeignKey(d => d.IdPermiso)
+                .HasConstraintName("FK_URP_Permiso");
+
+            entity.HasOne(d => d.IdRolNavigation).WithMany(p => p.UsuariosRolesPermisos)
+                .HasForeignKey(d => d.IdRol)
+                .HasConstraintName("FK_URP_Rol");
+        });
+
         modelBuilder.Entity<UsuariosSucursal>(entity =>
         {
             entity.ToTable("Usuarios_Sucursales");
@@ -1103,7 +1531,12 @@ public partial class SistemaByClizaContext : DbContext
         modelBuilder.Entity<Venta>(entity =>
         {
             entity.Property(e => e.Descuentos).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Estado)
+                .HasMaxLength(100)
+                .IsUnicode(false);
             entity.Property(e => e.Fecha).HasColumnType("date");
+            entity.Property(e => e.FechaModifica).HasColumnType("date");
+            entity.Property(e => e.FechaRegistra).HasColumnType("date");
             entity.Property(e => e.ImporteTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.NotaCliente)
                 .HasMaxLength(200)
@@ -1131,10 +1564,13 @@ public partial class SistemaByClizaContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ventas_Sucursales");
 
-            entity.HasOne(d => d.IdVendedorNavigation).WithMany(p => p.Venta)
-                .HasForeignKey(d => d.IdVendedor)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Ventas_Personal");
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.VentaIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Ventas_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.VentaIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .HasConstraintName("FK_Ventas_Usuarios_Registra");
         });
 
         modelBuilder.Entity<VentasProducto>(entity =>

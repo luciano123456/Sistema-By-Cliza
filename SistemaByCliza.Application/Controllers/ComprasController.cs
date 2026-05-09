@@ -16,6 +16,7 @@ namespace SistemaByCliza.Application.Controllers
         [AllowAnonymous]
         public IActionResult Index() => View();
 
+        [AllowAnonymous]
         public IActionResult NuevoModif(int? id)
         {
             if (id.HasValue) ViewBag.Data = id.Value;

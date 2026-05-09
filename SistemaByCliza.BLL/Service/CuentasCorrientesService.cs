@@ -16,11 +16,12 @@ namespace SistemaByCliza.BLL.Service
             _repo.ListarClientes(texto);
 
         public Task<(List<ClientesCuentaCorriente> Lista, decimal SaldoAnterior)> ListarConSaldoAnterior(
-            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto) =>
-            _repo.ListarConSaldoAnterior(idCliente, desde, hasta, idSucursal, texto);
+            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto,
+            IReadOnlyList<int>? idsSucursalesPermitidas = null) =>
+            _repo.ListarConSaldoAnterior(idCliente, desde, hasta, idSucursal, texto, idsSucursalesPermitidas);
 
-        public Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal) =>
-            _repo.ObtenerSaldo(idCliente, idSucursal);
+        public Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal, IReadOnlyList<int>? idsSucursalesPermitidas = null) =>
+            _repo.ObtenerSaldo(idCliente, idSucursal, idsSucursalesPermitidas);
 
         public Task<ClientesCuentaCorriente?> Obtener(int id) =>
             _repo.Obtener(id);

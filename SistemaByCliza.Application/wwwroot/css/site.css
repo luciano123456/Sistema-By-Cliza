@@ -1,4 +1,4 @@
-﻿html {
+html {
     font-size: 14px;
 }
 
@@ -104,7 +104,6 @@ tbody tr:nth-child(odd) {
 
 .imageLogo {
     height: 80%;
-    margin-top: 20px;
 }
 
 tbody tr {
@@ -536,6 +535,66 @@ table.dataTable.row-border tbody th, table.dataTable.row-border tbody td, table.
             background-color: #f0f0f0;
         }
 
+/* Acciones ABM en fila (sin menú kebab) */
+.abm-row-acciones .abm-row-icon {
+    line-height: 1;
+    text-decoration: none;
+    min-width: 1.75rem;
+}
+
+.abm-row-acciones .abm-row-icon:hover {
+    opacity: 0.85;
+}
+
+.abm-sin-acciones {
+    user-select: none;
+}
+
+/* Acciones grid (mismo patrón que Sistema Levels — renderAccionesGrid) */
+.rp-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rp-act {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+    .rp-act i {
+        font-size: 14px;
+    }
+
+    .rp-act:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+.rp-act-edit i {
+    color: #34d399;
+}
+
+.rp-act-del i {
+    color: #ef4444;
+}
+
+.rp-act-view i {
+    color: #60a5fa;
+}
+
 
 select option:disabled {
     color: red; /* Cambiar el color de la letra a rojo */
@@ -685,7 +744,7 @@ input:disabled {
     --dt-text-dim: #a6b0c3;
     --dt-accent: #4ea0ff; /* foco */
     --dt-hover: #18223a; /* hover row */
-    --dt-select: #233455; /* fila seleccionada */
+    --dt-select: rgba(18, 36, 72, 0.72); /* fila seleccionada (DataTables API .selected) */
     --dt-border: #1d2a3f;
     --chip-in: #18c37e; /* verde entradas */
     --chip-out: #ff7a66; /* rojo/naranja salidas */
@@ -742,12 +801,59 @@ table.dataTable tbody td, table.dataTable thead th {
     border-bottom: 1px solid var(--dt-border) !important;
 }
 
+/* Sin líneas verticales entre columnas (DataTables “display” / cell-border del CDN) */
+table.dataTable tbody td,
+table.dataTable tbody th,
+table.dataTable thead th,
+table.dataTable thead td {
+    border-left: none !important;
+    border-right: none !important;
+}
+
 table.dataTable tbody tr:hover {
     background: var(--dt-hover) !important;
 }
 
 table.dataTable tbody tr.selected {
     background: var(--dt-select) !important;
+}
+
+/* Selección por clic (.seleccionada) — bindDataTableSeleccionFila en site.js; tono azul oscuro */
+table.dataTable.dt-selectable tbody tr {
+    cursor: pointer;
+}
+
+table.dataTable.dt-selectable tbody tr:hover > td {
+    background-color: rgba(35, 58, 102, 0.35) !important;
+}
+
+table.dataTable.dt-selectable tbody tr.seleccionada > td {
+    background-color: rgba(18, 36, 72, 0.58) !important;
+    box-shadow: none;
+    border-left: none !important;
+}
+
+table.dataTable.dt-selectable tbody tr.seleccionada > td:first-child {
+    border-left: 3px solid rgba(59, 130, 246, 0.78) !important;
+}
+
+table.dataTable.dt-selectable tbody tr.seleccionada:hover > td {
+    background-color: rgba(18, 36, 72, 0.72) !important;
+}
+
+/* Misma apariencia si el JS usa .selected (p. ej. panel CC izquierdo) */
+table.dataTable.dt-selectable tbody tr.selected > td {
+    background-color: rgba(18, 36, 72, 0.58) !important;
+    box-shadow: none;
+    border-left: none !important;
+}
+
+table.dataTable.dt-selectable tbody tr.selected > td:first-child {
+    border-left: 3px solid rgba(59, 130, 246, 0.78) !important;
+}
+
+table.dataTable.dt-selectable tbody tr.selected:hover > td {
+    background-color: rgba(18, 36, 72, 0.72) !important;
 }
 
 /* Quitar backgrounds claros heredados en elementos dentro de la tabla */
@@ -887,6 +993,8 @@ table.dataTable.fixedHeader-floating thead th {
     background: var(--dt-head) !important;
     color: var(--dt-text) !important;
     border-color: var(--dt-head-b) !important;
+    border-left: none !important;
+    border-right: none !important;
 }
 
 
@@ -1014,7 +1122,11 @@ body{
 .dt-dark.display tbody tr:nth-child(2n),
 .dt-dark.stripe  tbody tr:nth-child(2n){ background:var(--dt-row-zebra)!important; }
 .dt-dark tbody tr:nth-child(2n+1){ background:var(--dt-row-zebra2)!important; }
-.dt-dark tbody td, .dt-dark thead th{ border-bottom:1px solid var(--dt-border, #243244)!important; }
+.dt-dark tbody td, .dt-dark thead th{
+  border-bottom:1px solid var(--dt-border, #243244)!important;
+  border-left:none!important;
+  border-right:none!important;
+}
 .dt-dark tbody tr:hover{ background:var(--dt-row-hover)!important; }
 
 /* filtros en thead (si algún módulo los usa) */
@@ -1384,11 +1496,8 @@ select.is-invalid + .select2 .select2-selection .form-field-icon::before {
         color: #198754;
     }
 
-/* Feedback debajo del Select2 */
-.select2-container + .invalid-feedback {
-    display: block;
-}
-
+/* Feedback bajo Select2: NO forzar display (rompe modales con data-validacion-ui=0).
+   Se muestra con select.is-invalid ~ .invalid-feedback / .was-validated … más arriba. */
 
 /* ---------------------------
    Inputs y selects nativos
@@ -1496,4 +1605,606 @@ select.is-invalid + .select2 .select2-selection .form-field-icon::before {
 .form-select.is-valid,
 .form-select.is-invalid {
     padding-right: 2.6rem;
+}
+
+
+
+.vn-select-plus {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+    /* SELECT2 FULL WIDTH */
+    .vn-select-plus .select2-container {
+        width: 100% !important;
+    }
+
+    /* SELECT2 ESTILO */
+    .vn-select-plus .select2-selection {
+        height: 42px !important;
+        border-radius: 10px !important;
+        padding-right: 42px !important; /* espacio para el + */
+        background: #0f172a !important; /* dark */
+        border: 1px solid #1e293b !important;
+        color: #fff !important;
+    }
+
+    /* TEXTO */
+    .vn-select-plus .select2-selection__rendered {
+        line-height: 42px !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* FLECHA */
+    .vn-select-plus .select2-selection__arrow {
+        right: 38px !important; /* mover flecha */
+    }
+
+/* BOTÓN + */
+.vn-btn-plus {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+    /* HOVER */
+    .vn-btn-plus:hover {
+        transform: scale(1.05);
+        background: linear-gradient(135deg, #4ade80, #22c55e);
+    }
+
+    /* ACTIVE */
+    .vn-btn-plus:active {
+        transform: scale(0.95);
+    }
+
+    /* ICON */
+    .vn-btn-plus i {
+        font-size: 13px;
+    }
+
+/* FOCUS SELECT */
+.vn-select-plus .select2-container--focus .select2-selection {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+}
+
+.vn-cards-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+
+
+
+/* =========================
+   NO ACCESS (GLOBAL)
+========================= */
+
+.no-access-wrapper {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f172a, #020617);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.no-access-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 50px 40px;
+    text-align: center;
+    color: #fff;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    animation: noAccessFadeIn 0.3s ease;
+}
+
+.no-access-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    color: #60a5fa;
+}
+
+.no-access-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.no-access-text {
+    font-size: 14px;
+    opacity: 0.75;
+    margin-bottom: 30px;
+}
+
+.no-access-btn {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border: none;
+    color: white;
+    padding: 12px 22px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .no-access-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 25px rgba(59,130,246,0.4);
+    }
+
+@keyframes noAccessFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+
+/* =========================
+   BADGE PERMISOS
+========================= */
+
+.rp-mod-item-count {
+    background: rgba(255,255,255,0.08);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+    /* 🔥 SI TIENE PERMISOS */
+    .rp-mod-item-count.activo {
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(34,197,94,0.4);
+    }
+
+    /* 🔥 SI ES 0 */
+    .rp-mod-item-count.inactivo {
+        background: rgba(255,255,255,0.05);
+        color: rgba(255,255,255,0.5);
+    }
+
+/* =========================
+   SELECCIÓN (IMPORTANTE)
+========================= */
+
+.rp-mod-item.active {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    color: #fff;
+    box-shadow: 0 8px 25px rgba(37,99,235,0.4);
+}
+
+/* HOVER */
+.rp-mod-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+/* ========== Menú global "Config. columnas" (DataTables / ABMs) ========== */
+.dropdown-menu.column-config-dropdown {
+    min-width: 16rem;
+    max-width: min(22rem, 92vw);
+    padding: 0 !important;
+    background: linear-gradient(180deg, #1a2336 0%, #121a2b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    box-shadow: 0 14px 44px rgba(0, 0, 0, 0.5);
+    max-height: min(70vh, 420px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index: 1085;
+}
+
+.column-config-dropdown .column-config-dd-search {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(180deg, #1e2a42 0%, #151d2e 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.column-config-dropdown .column-config-dd-search-inner {
+    padding: 0.5rem 0.65rem 0.6rem;
+}
+
+.column-config-dropdown .column-config-dd-filter {
+    background: #0f1625 !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    color: #f0f6ff !important;
+    border-radius: 10px;
+    font-size: 0.875rem;
+}
+
+.column-config-dropdown .column-config-dd-filter::placeholder {
+    color: rgba(240, 246, 255, 0.45);
+}
+
+.column-config-dropdown .column-config-dd-filter:focus {
+    border-color: rgba(100, 160, 255, 0.55) !important;
+    box-shadow: 0 0 0 2px rgba(100, 160, 255, 0.22);
+    color: #fff !important;
+    outline: none;
+}
+
+.column-config-dropdown .column-config-dd-row {
+    list-style: none;
+    margin: 0;
+}
+
+.column-config-dropdown .column-config-dd-label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 !important;
+    padding: 0.5rem 0.75rem !important;
+    cursor: pointer;
+    color: #f5f9ff !important;
+    font-weight: 500;
+    border-radius: 0;
+    white-space: normal;
+}
+
+.column-config-dropdown .column-config-dd-label:hover,
+.column-config-dropdown .column-config-dd-label:focus-within {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+
+.column-config-dropdown .column-config-dd-text {
+    flex: 1;
+    color: inherit !important;
+    line-height: 1.35;
+    font-size: 0.9rem;
+}
+
+.column-config-dropdown .toggle-column {
+    width: 1.05rem;
+    height: 1.05rem;
+    margin-top: 0.1rem;
+    accent-color: #5b7cfa;
+    cursor: pointer;
+}
+
+/* Atajos globales para selects ABM (estilo tipo Productos) */
+.abm-select-plus {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+}
+
+.abm-select-plus > .abm-select-grow {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Mismo tamaño / ícono que .pr-btn-plus--flex-end (Productos.css / modal Cliente) */
+.abm-select-plus .abm-btn-plus {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid rgba(16, 185, 129, .45);
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 6px 14px rgba(22, 163, 74, .25);
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 7px;
+}
+
+.abm-select-plus .abm-btn-plus:hover {
+    filter: brightness(1.06);
+}
+
+.abm-select-plus .abm-btn-plus i {
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* =============================================================================
+   ABM global: combo + botón “+” (.pr-select-plus / .pr-btn-plus)
+   Un solo lugar para tamaños, color y alineación en todas las pantallas.
+   (Antes duplicado en Productos.css.)
+   ============================================================================= */
+
+#modalEdicion .select-checklist,
+#modalAltaProductoOC .select-checklist,
+.pr-field-with-plus .select-checklist {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    z-index: 10050;
+    background: #1e293b;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 10px;
+    max-height: 260px;
+    overflow: auto;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    color: #e8eef7;
+}
+
+#modalEdicion .select-checklist .form-check,
+#modalAltaProductoOC .select-checklist .form-check,
+.pr-field-with-plus .select-checklist .form-check {
+    margin-bottom: 0.35rem;
+}
+
+#modalEdicion .select-checklist .form-check-label,
+#modalAltaProductoOC .select-checklist .form-check-label,
+.pr-field-with-plus .select-checklist .form-check-label {
+    color: #e8eef7;
+    font-size: 0.9rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+#modalEdicion .select-checklist .form-check-input,
+#modalAltaProductoOC .select-checklist .form-check-input,
+.pr-field-with-plus .select-checklist .form-check-input {
+    border-color: rgba(148, 163, 184, 0.55);
+    background-color: rgba(15, 23, 42, 0.6);
+}
+
+#modalEdicion .select-checklist .form-check-input:checked,
+#modalAltaProductoOC .select-checklist .form-check-input:checked,
+.pr-field-with-plus .select-checklist .form-check-input:checked {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+#modalEdicion .select-checklist hr,
+#modalAltaProductoOC .select-checklist hr,
+.pr-field-with-plus .select-checklist hr {
+    border-color: rgba(148, 163, 184, 0.2);
+    opacity: 1;
+}
+
+.pr-select-plus--flex {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.pr-select-plus__grow {
+    flex: 1;
+    min-width: 0;
+}
+
+.pr-select-plus--flex .select2-container {
+    width: 100% !important;
+}
+
+.pr-select-plus--flex .select2-container .select2-selection--single {
+    padding-right: 2.25rem !important;
+}
+
+.pr-select-plus--infield .pr-select-plus__grow--infield {
+    position: relative;
+}
+
+.pr-select-plus--infield .select2-container {
+    width: 100% !important;
+}
+
+.pr-select-plus--infield .select2-container .select2-selection--single {
+    padding-right: 3.1rem !important;
+}
+
+.pr-select-plus--infield .pr-btn-plus-infield {
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 8;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+}
+
+.pr-select-plus--infield .pr-btn-plus-infield:hover {
+    transform: translateY(-50%) scale(1.04);
+}
+
+.pr-select-plus--infield .pr-btn-plus-infield:active {
+    transform: translateY(-50%) scale(0.96);
+}
+
+#modalEdicion .select2-dropdown,
+#modalAltaProductoOC .select2-dropdown,
+.modal.show .select2-dropdown {
+    z-index: 10060 !important;
+}
+
+#modalAltaProductoOC .modal-content,
+#modalAltaProductoOC .modal-body {
+    overflow: visible;
+}
+
+.pr-btn-plus--flex-end {
+    position: static;
+    transform: none;
+    flex-shrink: 0;
+    align-self: flex-start;
+    width: 34px;
+    height: 34px;
+    margin-top: 7px;
+    z-index: 6;
+}
+
+.pr-btn-plus--flex-end:hover {
+    transform: scale(1.04);
+}
+
+.pr-btn-plus--flex-end:active {
+    transform: scale(0.96);
+}
+
+.pr-select-plus {
+    position: relative;
+}
+
+.pr-select-plus .select2-container {
+    width: 100% !important;
+}
+
+.pr-select-plus--flex > .pr-btn-plus {
+    position: static;
+    top: auto;
+    right: auto;
+    transform: none;
+}
+
+.pr-btn-plus {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    z-index: 6;
+}
+
+.pr-btn-plus:hover {
+    filter: brightness(1.08);
+    transform: translateY(-50%) scale(1.04);
+}
+
+.pr-btn-plus:active {
+    transform: translateY(-50%) scale(0.96);
+}
+
+.pr-select-plus--flex .pr-btn-plus:hover {
+    transform: scale(1.04);
+}
+
+.pr-select-plus--flex .pr-btn-plus:active {
+    transform: scale(0.96);
+}
+
+.pr-btn-plus i {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.pr-btn-plus:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.pr-field-with-plus {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.pr-fake-select {
+    cursor: pointer;
+}
+
+.pr-field-with-plus__main .pr-fake-select {
+    padding-right: 0.75rem;
+    width: 100%;
+}
+
+.pr-btn-plus--inside {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    flex: none;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    z-index: 6;
+}
+
+.pr-btn-plus--inside:hover {
+    transform: translateY(-50%) scale(1.04);
+}
+
+.pr-btn-plus--inside:active {
+    transform: translateY(-50%) scale(0.96);
+}
+
+.pr-btn-plus--toolbar {
+    position: static;
+    transform: none;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+}
+
+.pr-btn-plus--toolbar:hover {
+    transform: scale(1.04);
+}
+
+.pr-btn-plus--toolbar:active {
+    transform: scale(0.96);
+}
+
+body.venta-solo-lectura .venta-container-lg .form-control:disabled,
+body.venta-solo-lectura .venta-container-lg .form-select:disabled {
+    opacity: 0.92;
+}
+
+/* Utilidades de layout (vistas sin DisenoPantallas.css) */
+.mt-layout-100 {
+    margin-top: 100px;
+}
+
+.mt-layout-40 {
+    margin-top: 40px;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Totales/KPI monetarios o de gestión: visibles solo con IdRol === 1 (ver Permisos.init). */
+html[data-rol-finanzas-visible="0"] .kpi-solo-rol-finanzas {
+    display: none !important;
 }

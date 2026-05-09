@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Orden de Corte";
     var id = Context.Request.Query["id"].ToString();
 }
@@ -9,58 +9,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="~/css/VentasNuevoModif.css" />
-    <style>
-        /* --- Anchos de modales (como ventas) --- */
-        #modalProducto .modal-dialog {
-            max-width: 1000px;
-        }
-
-        #modalInsumo .modal-dialog {
-            max-width: 800px;
-        }
-
-        #modalEtapa .modal-dialog {
-            max-width: 960px;
-        }
-
-        /* Editables vs Auto-calculados */
-        .auto-field {
-            background: rgba(255,255,255,.06) !important;
-            color: #b7c0cd !important;
-            pointer-events: none;
-        }
-
-        .editable-field {
-            background: rgba(0,123,255,.08) !important;
-        }
-
-        .bg-disabled {
-            background: rgba(255,255,255, .03) !important;
-        }
-
-        .var-row {
-            display: grid;
-            grid-template-columns: 1fr 120px;
-            gap: .75rem;
-            align-items: center;
-            padding: .35rem 0;
-            border-bottom: 1px solid rgba(255,255,255,.05)
-        }
-
-            .var-row:last-child {
-                border-bottom: none
-            }
-
-        .stat-card .label {
-            font-size: .85rem;
-            opacity: .7
-        }
-
-        .stat-card .value {
-            font-weight: 700;
-            font-size: 1.15rem
-        }
-    </style>
+    <link href="~/css/Productos.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/DisenoPantallas.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/personal.css" rel="stylesheet" />
+    <link href="~/css/OrdenesCorteNuevoModif.css" rel="stylesheet" asp-append-version="true" />
 }
 
 <input type="hidden" id="txtId" value="@id" />
@@ -87,19 +39,33 @@
                         <input type="date" id="dtpFechaInicio" class="form-control editable-field" required />
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
+                   
+
                     <div class="col-md-6">
                         <label class="form-label">Estado</label>
-                        <select id="cmbEstado" class="form-select editable-field" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbEstado" class="form-select vn-input"></select>
+                            </div>
+                            <button type="button" id="btnCrearEstadoOC" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo estado">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
                     <div class="col-md-8">
-                        <label class="form-label">Personal responsable</label>
-                        <select id="cmbPersonal" class="form-select editable-field" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <label class="form-label" for="cmbPersonal">Personal responsable</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbPersonal" class="form-select select2 editable-field" required data-s2-parent="body">
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusPersonalOC" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo personal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                     <div class="col-md-4">
@@ -154,7 +120,7 @@
                     <div id="errorCamposOC" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
                 </form>
 
-                <div class="row mt-2 g-3">
+                <div class="row mt-2 g-3 kpi-solo-rol-finanzas">
                     <div class="col-6">
                         <div class="stat-card p-3 text-center">
                             <div class="label">A producir</div>
@@ -185,7 +151,7 @@
                     <button id="btnGuardarOC" class="btn btn-primary btn-lg" type="button" onclick="guardarOC()">
                         <i class="fa fa-check me-1"></i> Registrar
                     </button>
-                    <button type="button" class="btn btn-outline-light mt-2" onclick="exportarOCPdf()">
+                    <button type="button" class="btn btn-outline-light mt-2" data-modulo="OrdenesCorte" data-permiso="exportar" onclick="exportarOCPdf()">
                         <i class="fa fa-file-pdf-o me-1"></i> Exportar PDF
                     </button>
                     <button type="button" id="btnEliminarOC" class="btn btn-danger mt-2 d-none" onclick="eliminarOC()">
@@ -207,7 +173,7 @@
                     </button>
                 </div>
                 <div class="tabla-wrap">
-                    <table class="display nowrap compact" id="grd_Productos" style="width:100%">
+                    <table class="display nowrap compact w-100" id="grd_Productos">
                         <thead>
                             <tr>
                                 <th></th>
@@ -230,7 +196,7 @@
                     </button>
                 </div>
                 <div class="tabla-wrap alto-insumos">
-                    <table class="display nowrap compact" id="grd_Insumos" style="width:100%">
+                    <table class="display nowrap compact w-100" id="grd_Insumos">
                         <thead>
                             <tr>
                                 <th></th>
@@ -252,7 +218,7 @@
                     </button>
                 </div>
                 <div class="tabla-wrap alto-etapas">
-                    <table class="display nowrap compact" id="grd_Etapas" style="width:100%">
+                    <table class="display nowrap compact w-100" id="grd_Etapas">
                         <thead>
                             <tr>
                                 <th></th>
@@ -278,30 +244,37 @@
 </div>
 
 <!-- Modal Producto -->
-<div class="modal fade modal-dark" id="modalProducto" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalProducto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content card-glass">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="fa fa-cubes me-2 text-info"></i>Producto</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header colorEncabezado border-0">
+                <h5 class="modal-title fw-bold"><i class="fa fa-cubes me-2"></i>Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form class="row g-3">
-                    <div class="col-8">
-                        <label class="form-label">Producto</label>
-                        <select id="cmbProdModal" class="form-select editable-field">
-                            <option value="">Seleccione</option>
-                        </select>
+                    <div class="col-md-8">
+                        <label class="form-label" for="cmbProdModal">Producto</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbProdModal" class="form-select editable-field">
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusProductoOC" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo producto">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-md-4">
                         <label class="form-label">Cantidad</label>
                         <input type="text" id="txtProdCantModal" class="form-control Inputmiles editable-field" value="1" />
                         <small id="qtyLockHint" class="text-info d-block mt-1" hidden></small>
                     </div>
 
-                    <div id="variantesContainer" class="col-12" style="display:none;">
-                        <label class="form-label d-flex align-items-center gap-2"><i class="fa fa-tags text-info"></i> Variantes</label>
+                    <div id="variantesContainer" class="col-12 d-none">
+                        <label class="form-label d-flex align-items-center gap-2"><i class="fa fa-tags"></i> Variantes</label>
                         <div id="variantesWrap" class="variantes-wrap"></div>
                         <div id="variantesEmpty" class="alert alert-secondary py-2 mt-2" hidden>Este producto no tiene variantes definidas.</div>
                     </div>
@@ -318,23 +291,30 @@
 </div>
 
 <!-- Modal Insumo -->
-<div class="modal fade modal-dark" id="modalInsumo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-glass">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="fa fa-wrench me-2 text-success"></i>Insumo</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="modalInsumo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header colorEncabezado border-0">
+                <h5 class="modal-title fw-bold"><i class="fa fa-wrench me-2"></i>Insumo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label">Insumo</label>
-                        <select id="cmbInsumo" class="form-select editable-field" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                    <div class="col-12 col-md-9">
+                        <label class="form-label" for="cmbInsumo">Insumo</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbInsumo" class="form-select editable-field" required data-s2-parent="#modalInsumo">
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" id="btnNuevoInsumoABM" title="Crear insumo">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-3">
                         <label class="form-label">Cantidad</label>
                         <input type="text" id="txtInsumoCant" class="form-control Inputmiles editable-field" />
                         <div class="invalid-feedback">Campo obligatorio</div>
@@ -351,12 +331,12 @@
 </div>
 
 <!-- Modal Etapa -->
-<div class="modal fade modal-dark" id="modalEtapa" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalEtapa" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content card-glass">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="fa fa-tasks me-2 text-warning"></i>Etapa</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header colorEncabezado border-0">
+                <h5 class="modal-title fw-bold"><i class="fa fa-tasks me-2"></i>Etapa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form class="row g-3">
@@ -390,15 +370,15 @@
                     </div>
 
                     <div class="col-md-2">
-                        <label class="form-label">A prod.</label>
+                        <label class="form-label">Enviadas</label>
                         <input type="text" id="txtEtAP" class="form-control Inputmiles editable-field" value="0" />
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Prod.</label>
+                        <label class="form-label">Entregadas</label>
                         <input type="text" id="txtEtP" class="form-control Inputmiles editable-field" value="0" />
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Δ</label>
+                        <label class="form-label">Perdidas</label>
                         <!-- AUTO: A prod. - Prod. -->
                         <input type="text" id="txtEtDif" class="form-control auto-field" value="0" readonly />
                     </div>
@@ -409,10 +389,17 @@
                     </div>
 
                     <div class="col-md-2">
-                        <label class="form-label">Estado</label>
-                        <select id="cmbEtEstado" class="form-select editable-field">
-                            <option value="">Seleccione</option>
-                        </select>
+                        <label class="form-label" for="cmbEtEstado">Estado</label>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbEtEstado" class="form-select editable-field">
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusEtapaEstadoOC" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo estado de etapa">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
@@ -431,15 +418,20 @@
     </div>
 </div>
 
+<partial name="~/Views/Shared/Partials/M_Producto.cshtml" />
+<partial name="~/Views/Shared/Partials/M_Insumos.cshtml" />
+<partial name="~/Views/Shared/Partials/M_Personal.cshtml" />
+
 <partial name="~/Views/Utils/Modals.cshtml" />
 
 @section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
     <script src="~/js/utils/moment.js"></script>
-    <script src="~/js/OrdenesCorteNuevoModif.js?v=3.1"></script>
+    <script src="~/js/Entities/M_Personal.js?v=1.0"></script>
+    <script src="~/js/Entities/M_Insumos.js?v=1.0"></script>
+    <script src="~/js/Entities/M_Producto.js?v=1.2"></script>
+    <script src="~/js/OrdenesCorteNuevoModif.js?v=4.1"></script>
 }

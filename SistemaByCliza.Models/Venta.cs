@@ -9,9 +9,9 @@ public partial class Venta
 
     public int IdSucursal { get; set; }
 
-    public int IdVendedor { get; set; }
-
     public int IdListaPrecio { get; set; }
+
+    public int? IdEstado { get; set; }
 
     public int IdCliente { get; set; }
 
@@ -28,8 +28,17 @@ public partial class Venta
     public decimal ImporteTotal { get; set; }
 
     public string? NotaInterna { get; set; }
+    public string? Estado { get; set; }
 
     public string? NotaCliente { get; set; }
+
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
 
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
 
@@ -37,7 +46,9 @@ public partial class Venta
 
     public virtual Sucursal IdSucursalNavigation { get; set; } = null!;
 
-    public virtual Personal IdVendedorNavigation { get; set; } = null!;
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
+
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
 
     public virtual ICollection<VentasProducto> VentasProductos { get; set; } = new List<VentasProducto>();
 }

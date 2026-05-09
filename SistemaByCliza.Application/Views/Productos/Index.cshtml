@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Productos";
 }
 
@@ -11,9 +11,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <!-- Estilos base del proyecto -->
     <link href="~/css/usuarios.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link href="~/css/Productos.css" rel="stylesheet" asp-append-version="true" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <!-- Header -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -25,7 +27,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Total productos</div>
                     <div class="value kpi-azul" id="kpiCantProductos">0</div>
@@ -48,13 +50,13 @@
                             <ul class="dropdown-menu" id="configColumnasMenu" aria-labelledby="btnConfigCols"></ul>
                         </div>
 
-                        <button class="btn btn-primary" onclick="nuevoProducto()">
+                        <button type="button" class="btn btn-primary" data-modulo="Productos" data-permiso="crear" onclick="nuevoProducto()">
                             <i class="fa fa-plus me-1"></i> Nuevo
                         </button>
                     </div>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_Productos" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_Productos">
                             <thead>
                                 <tr>
                                     <th></th>                <!-- Acciones -->
@@ -101,44 +103,78 @@
 
                     <div class="col-md-3">
                         <label for="cmbCategoria" class="form-label">Categoría</label>
-                        <select id="cmbCategoria" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbCategoria" class="form-select select2" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusCategoria" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva categoría">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
                     <div class="col-md-3">
                         <label for="txtPrecio" class="form-label">Precio Unitario</label>
-                        <input type="number" step="0.01" class="form-control" id="txtPrecio" required>
+                        <input type="text" inputmode="decimal" class="form-control pr-precio-input" id="txtPrecio" required autocomplete="off">
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
                     <!-- TALLES (checklist tipo “select”) -->
                     <div class="col-md-6 position-relative">
                         <label class="form-label">Talles</label>
-                        <div id="btnTalles" class="form-select text-truncate" style="cursor:pointer" tabindex="0"
-                             onclick="toggleChecklist('btnTalles','listaTalles')">
-                            Seleccionar talles
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <div class="pr-field-with-plus__main position-relative">
+                                    <div id="btnTalles" class="form-select text-truncate pr-fake-select" tabindex="0"
+                                         onclick="toggleChecklist('btnTalles','listaTalles')">
+                                        Seleccionar talles
+                                    </div>
+                                    <div id="listaTalles" class="select-checklist shadow p-2 d-none"></div>
+                                </div>
+                            </div>
+                            <button type="button" id="btnPlusTalles" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo talle (según categoría)">
+                                <i class="fa fa-plus"></i>
+                            </button>
                         </div>
-                        <div id="listaTalles" class="select-checklist shadow p-2 d-none"></div>
-                        <small class="text-muted">Podés seleccionar múltiples talles</small>
+                        <small id="hintTalles" class="text-muted">Podés seleccionar múltiples talles</small>
                     </div>
 
                     <!-- COLORES (checklist tipo “select”) -->
                     <div class="col-md-6 position-relative">
                         <label class="form-label">Colores</label>
-                        <div id="btnColores" class="form-select text-truncate" style="cursor:pointer" tabindex="0"
-                             onclick="toggleChecklist('btnColores','listaColores')">
-                            Seleccionar colores
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <div class="pr-field-with-plus__main position-relative">
+                                    <div id="btnColores" class="form-select text-truncate pr-fake-select" tabindex="0"
+                                         onclick="toggleChecklist('btnColores','listaColores')">
+                                        Seleccionar colores
+                                    </div>
+                                    <div id="listaColores" class="select-checklist shadow p-2 d-none"></div>
+                                </div>
+                            </div>
+                            <button type="button" id="btnPlusColores" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo color">
+                                <i class="fa fa-plus"></i>
+                            </button>
                         </div>
-                        <div id="listaColores" class="select-checklist shadow p-2 d-none"></div>
-                        <small class="text-muted">Podés seleccionar múltiples colores</small>
+                        <small id="hintColores" class="text-muted">Podés seleccionar múltiples colores</small>
                     </div>
 
-                    <!-- Precios por lista -->
+                    <!-- Precios por lista: título y + fuera del recuadro (solo la grilla va dentro del borde) -->
                     <div class="col-12">
-                        <label class="form-label">Precios por lista</label>
-                        <div id="wrapPreciosListas" class="row g-2"></div>
+                        <div class="pr-precios-lista-section">
+                            <div class="pr-precios-lista-toolbar">
+                                <span class="pr-precios-lista-card__title">Precios por lista</span>
+                                <button type="button" id="btnPlusListaPrecios" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva lista de precios">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="pr-precios-lista-card">
+                                <div id="wrapPreciosListas" class="pr-precios-lista-card__body row g-2"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Generar variantes (oculto por ahora) -->
@@ -186,8 +222,9 @@
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
 
     <!-- Utils del proyecto -->
-    <script src="~/js/site.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <!-- Lógica Productos -->
-    <script src="~/js/Productos.js?v=2.2"></script>
+    <script src="~/js/Productos.js?v=3.4"></script>
 }

@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Sistema de Gestion";
     Layout = null;
 }
@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/ModalsShared.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/home.css?v=7.1" />
 </head>
 <body class="app-body @(ambienteTest==1 ? "fondo-test" : "")">
@@ -36,8 +37,7 @@
 
         <!-- FAVORITOS (full width) -->
         <section class="dash-card fullwidth" data-card-id="favoritos"
-                 data-default-style="--hdr-from:#e08700;--hdr-to:#ef990a;"
-                 style="--hdr-from:#e08700;--hdr-to:#ef990a;">
+                 data-default-style="--hdr-from:#e08700;--hdr-to:#ef990a;">
             <header class="dash-card__header">
                 <div class="header-left">
                     <button class="btn-header card-handle" title="Mover sección"><i class="fa fa-hand-paper-o"></i></button>
@@ -204,7 +204,7 @@
                     </div>
                 </header>
                 <div class="tiles">
-                    <a class="tile" data-id="fin-ccusuarios" data-title="CC. de Talleres" href="@Url.Action("Index","Usuarios")">
+                    <a class="tile" data-id="fin-ccusuarios" data-title="Usuarios" href="@Url.Action("Index","Usuarios")">
                         <i class="fa fa-user"></i><span>Usuarios</span><button class="tile-handle"><i class="fa fa-hand-paper-o"></i></button>
                     </a>
                     <a class="tile" data-id="ext-analisis" data-title="Análisis de datos" href="javascript:void(0)" onclick="errorModal('Análisis de datos aún no disponible');">
@@ -214,164 +214,11 @@
                 </div>
             </section>
 
-            <!-- CONFIGURACIONES (fullwidth por defecto, al mover se vuelve normal) -->
-            <section class="dash-card fullwidth" data-card-id="config"
-                     data-default-style="--hdr-from:#5b6b7c;--hdr-to:#6e7f93;">
-                <header class="dash-card__header">
-                    <div class="header-left">
-                        <button class="btn-header card-handle" title="Mover sección"><i class="fa fa-hand-paper-o"></i></button>
-                        <i class="fa fa-cogs"></i><span> Configuraciones</span>
-                    </div>
-                    <div class="header-actions">
-                        <button class="btn-header size-toggle" title="Achicar/Expandir"><i class="fa fa-compress"></i></button>
-                        <button class="btn-header color-open" title="Colores"><i class="fa fa-paint-brush"></i></button>
-                        <button class="btn-header reset-card" title="Restablecer"><i class="fa fa-undo"></i></button>
-                    </div>
-                </header>
-
-                <div id="config-all" class="config-grid scroll-clip">
-                    <button class="conf-tile" data-id="conf-usuarios" onclick="abrirConfiguracion('Usuarios','Usuarios')">
-                        <i class="fa fa-user"></i><span>Usuarios</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-listas" onclick="abrirConfiguracion('Lista de Precios','ListasPrecios')">
-                        <i class="fa fa-tags"></i><span>Listas de Precios</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-roles" onclick="abrirConfiguracion('Rol','Roles')">
-                        <i class="fa fa-shield"></i><span>Roles</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-suc" onclick="abrirConfiguracion('Sucursal','Sucursales')">
-                        <i class="fa fa-building"></i><span>Sucursales</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-cuentas" onclick="abrirConfiguracion('Cuenta','Cuentas')">
-                        <i class="fa fa-university"></i><span>Cuentas</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-bancos" onclick="abrirConfiguracion('Banco','Bancos')">
-                        <i class="fa fa-bank"></i><span>Bancos</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-colores" onclick="abrirConfiguracion('Color','Colores')">
-                        <i class="fa fa-eyedropper"></i><span>Colores</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-puestos" onclick="abrirConfiguracion('Personal Puesto','PersonalPuestos')">
-                        <i class="fa fa-users"></i><span>Personal Puestos</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-gcats" onclick="abrirConfiguracion('Gastos Categorias','GastosCategorias')">
-                        <i class="fa fa-folder-open"></i><span>Gastos Categorías</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-pcats" onclick="abrirConfiguracion('Productos Categorias','ProductosCategoria')">
-                        <i class="fa fa-archive"></i><span>Productos Categorías</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-icats" onclick="abrirConfiguracion('Insumos Categorias','InsumosCategoria')">
-                        <i class="fa fa-cog"></i><span>Insumos Categorías</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-ptalles" onclick="abrirConfiguracion('Productos Categorias Talles','ProductosCategoriasTalle','Productos Categoria','ProductosCategoria','Categoria')">
-                        <i class="fa fa-th"></i><span>Productos Categorías Talles</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-oc-est" onclick="abrirConfiguracion('Estados Ordenes de Corte','OrdenesCorteEstados')">
-                        <i class="fa fa-flag"></i><span>Estados Órdenes de Corte</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-
-                    <button class="conf-tile" data-id="conf-oc-et" onclick="abrirConfiguracion('Etapas Estados Ordenes de Corte','OrdenesCorteEtapasEstados')">
-                        <i class="fa fa-step-forward"></i><span>Etapas Estados Órdenes de Corte</span>
-                        <span class="tile-handle" title="Arrastrar"><i class="fa fa-hand-paper-o"></i></span>
-                    </button>
-                </div>
-            </section>
-
-
         </div><!-- /#cols -->
     </div><!-- /.container -->
     <!-- BOTÓN FIJO RESET GLOBAL -->
     <div class="global-actions">
         <button id="btn-factory" class="btn btn-danger"><i class="fa fa-history"></i> Restablecer todo</button>
-    </div>
-
-    <!-- Modal Configuraciones -->
-    <div class="modal fade" id="modalConfiguracion" tabindex="-1" aria-labelledby="modalConfiguracionLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0 rounded-3">
-
-                <!-- Encabezado -->
-                <div class="modal-header bg-primary text-white rounded-top">
-                    <h5 class="modal-title fw-bold" id="modalConfiguracionLabel">
-                        <i class="fa fa-cogs me-2"></i>Configuración
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <!-- Lista -->
-                <div class="modal-body">
-                    <div id="lblListaVacia" class="alert alert-warning text-center py-2 mb-3" hidden></div>
-
-                    <div class="list-container border rounded p-2" style="max-height: 250px; overflow-y: auto;">
-                        <div id="configuracion-list">
-                            <!-- Lista dinámica -->
-                        </div>
-                    </div>
-
-                    <!-- Formulario de edición -->
-                    <div id="contenedorNombreConfiguracion" class="mt-4" hidden>
-
-
-                        <label for="txtNombreConfiguracion" class="form-label fw-bold">Nombre</label>
-                        <input type="text" class="form-control" id="txtNombreConfiguracion" required>
-                        <input type="hidden" id="txtIdConfiguracion">
-
-                        <div id="divConfiguracionCombo" class="mt-2" hidden>
-                            <label id="lblConfiguracionCombo" for="cmbConfiguracion" class="form-label fw-bold"></label>
-                            <select class="form-select" id="cmbConfiguracion" required>
-                                <option value="">Seleccione...</option>
-                            </select>
-                        </div>
-
-                        <div class="d-flex gap-2 mt-3">
-                            <button id="btnRegistrarModificarConfiguracion" class="btn btn-success flex-fill" onclick="guardarCambiosConfiguracion()">
-                                <i class="fa fa-save me-1"></i> Guardar cambios
-                            </button>
-                            <button class="btn btn-outline-secondary flex-fill" onclick="cancelarModificarConfiguracion()">
-                                <i class="fa fa-times me-1"></i> Cancelar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pie -->
-                <div class="modal-footer d-flex justify-content-between">
-                    <button id="agregarConfiguracion" class="btn btn-primary" onclick="agregarConfiguracion()">
-                        <i class="fa fa-plus me-1"></i> Añadir
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" onclick="abrirConfiguraciones()">
-                        <i class="fa fa-times me-1"></i> Cerrar
-                    </button>
-
-
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- MODAL COLORES -->
@@ -473,7 +320,7 @@
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <partial name="~/Views/Utils/Modals.cshtml" />
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/home.js?v=1.0"></script>
+    <script src="~/js/home.js?v=1.6"></script>
     <script src="~/js/site.js"></script>
 </body>
 </html>

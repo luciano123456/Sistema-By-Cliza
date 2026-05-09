@@ -1,0 +1,60 @@
+/* Órdenes de corte — Nuevo/Editar (solo carga esta vista) */
+
+/* --- Anchos de modales --- */
+#modalProducto .modal-dialog {
+    max-width: 1000px;
+}
+
+#modalInsumo .modal-dialog {
+    max-width: 920px;
+}
+
+#modalEtapa .modal-dialog {
+    max-width: 960px;
+}
+
+/* + cabecera OC: mismo tamaño visual que otros atajos */
+#formOC .pr-select-plus--flex > .pr-btn-plus.pr-btn-plus--flex-end {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    margin-top: 1px;
+}
+
+#formOC .pr-select-plus--flex > .pr-btn-plus.pr-btn-plus--flex-end i {
+    font-size: 15px;
+}
+
+/* Línea insumo: combo a ancho completo */
+#modalInsumo .pr-select-plus--flex .select2-container {
+    width: 100% !important;
+}
+
+/* Select2 en esta pantalla (archivo solo en OC NuevoModif) */
+.select2-dropdown {
+    z-index: 10070 !important;
+}
+
+.select2-results__options {
+    max-height: min(50vh, 320px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Editables vs auto-calculados */
+.auto-field {
+    background: rgba(255, 255, 255, .06) !important;
+    color: #b7c0cd !important;
+    pointer-events: none;
+}
+
+.editable-field {
+    background: rgba(0, 123, 255, .08) !important;
+}
+
+.bg-disabled {
+    background: rgba(255, 255, 255, .03) !important;
+}
+
+/* .var-row / .stat-card: ya en VentasNuevoModif.css (misma vista carga ambos) */

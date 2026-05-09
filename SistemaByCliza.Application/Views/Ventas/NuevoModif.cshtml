@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Venta";
     var id = Context.Request.Query["id"].ToString();
 }
@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="~/css/VentasNuevoModif.css" />
+    <link href="~/css/DisenoPantallas.css" rel="stylesheet" asp-append-version="true" />
 }
 
 <input type="hidden" id="txtId" value="@id" />
@@ -37,44 +38,52 @@
                     </div>
                     <div class="col-md-8">
                         <label class="form-label">Cliente</label>
-
-                        <div class="d-flex align-items-stretch gap-2">
-                            <select id="cmbCliente" class="form-select flex-grow-1" required>
-                                <option value="">Seleccione</option>
-                            </select>
-
-                            <button type="button"
-                                    class="btn btn-success btn-plus"
-                                    title="Nuevo cliente"
-                                    onclick="abrirModalNuevoClienteVenta()">
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbCliente" class="form-select" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusClienteVenta" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nuevo cliente">
                                 <i class="fa fa-plus"></i>
                             </button>
                         </div>
-
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">Vendedor</label>
-                        <select id="cmbVendedor" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
                     <div class="col-md-6">
                         <label class="form-label">Lista de Precios</label>
-                        <select id="cmbListaPrecio" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="pr-select-plus pr-select-plus--flex">
+                            <div class="pr-select-plus__grow">
+                                <select id="cmbListaPrecio" class="form-select" required>
+                                    <option value="">Seleccione</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnPlusListaPrecioVenta" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva lista de precios">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label class="form-label">Sucursal</label>
-                        <select id="cmbSucursal" class="form-select" required>
+                        <select id="cmbSucursal" class="form-select" required title="Solo sucursales asignadas a tu usuario">
                             <option value="">Seleccione</option>
                         </select>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
+
+
+                    <div class="col-md-12">
+                        <label class="form-label">Estado</label>
+                        <select id="cmbEstado" class="form-select" required title="Valores ya usados en ventas (tabla Ventas) + PENDIENTE/FINALIZADA">
+                            <option value="PENDIENTE">PENDIENTE</option>
+                            <option value="FINALIZADA">FINALIZADA</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+
                     <div class="col-12">
                         <label class="form-label">Nota interna</label>
                         <textarea id="txtNota" class="form-control" rows="2"></textarea>
@@ -86,7 +95,7 @@
                     <div id="errorCamposVenta" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
                 </form>
 
-                <div class="row mt-2 g-3">
+                <div class="row mt-2 g-3 ">
                     <div class="col-6">
                         <div class="stat-card p-3 text-center">
                             <div class="label">Subtotal</div>
@@ -127,12 +136,11 @@
                     </div>
                 </div>
 
-
                 <div class="d-grid mt-3">
                     <button id="btnGuardarVenta" class="btn btn-primary btn-lg" type="button" onclick="guardarVenta()">
                         <i class="fa fa-check me-1"></i> Registrar
                     </button>
-                    <button type="button" class="btn btn-outline-light mt-2" onclick="exportarVentaPdf()">
+                    <button type="button" class="btn btn-outline-light mt-2" data-modulo="Ventas" data-permiso="exportar" onclick="exportarVentaPdf()">
                         <i class="fa fa-file-pdf-o me-1"></i> Exportar PDF
                     </button>
 
@@ -148,12 +156,12 @@
             <div class="card-glass p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0"><i class="fa fa-box me-2 text-info"></i>Productos</h5>
-                    <button class="btn btn-success btn-sm" type="button" onclick="abrirModalItem()">
+                    <button class="btn btn-dark btn-sm" type="button" onclick="abrirModalItem()">
                         <i class="fa fa-plus"></i> Agregar Ítem
                     </button>
                 </div>
                 <div class="tabla-wrap alto-productos">
-                    <table class="display nowrap compact" id="grd_Items" style="width:100%">
+                    <table class="w-100 display nowrap compact" id="grd_Items">
                         <thead>
                             <tr>
                                 <th></th>
@@ -179,7 +187,7 @@
                     </button>
                 </div>
                 <div class="tabla-wrap alto-pagos">
-                    <table class="display nowrap compact" id="grd_Pagos" style="width:100%">
+                    <table class="w-100 display nowrap compact" id="grd_Pagos">
                         <thead>
                             <tr>
                                 <th></th>
@@ -200,18 +208,26 @@
 <!-- Modal Producto -->
 <div class="modal fade" id="modalItem" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content card-glass">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="fa fa-cubes me-2 text-info"></i>Producto</h5>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header colorEncabezado border-0">
+                <h5 class="modal-title fw-bold"><i class="fa fa-cubes me-2"></i>Producto</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="formItem" class="row g-3">
                     <div class="col-xl-6">
                         <label class="form-label">Producto</label>
-                        <select id="cmbItemProducto" class="form-select" required>
-                            <option value="">Seleccione</option>
-                        </select>
+                        <div class="d-flex align-items-stretch gap-2">
+                            <select id="cmbItemProducto" class="form-select flex-grow-1" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                            <button type="button"
+                                    class="btn btn-success pr-atajo-catalogo flex-shrink-0"
+                                    title="Nuevo producto"
+                                    onclick="abrirAltaProductoDesdeVenta()">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                     <div class="col-6 col-xl-2">
@@ -229,13 +245,13 @@
                     </div>
                     <div class="col-6 col-xl-3">
                         <label class="form-label">% IVA</label>
-                        <input type="text" id="txtItemIva" class="form-control Inputmiles" value="21" />
+                        <input type="text" id="txtItemIva" class="form-control Inputmiles" value="0" />
                     </div>
                     <div class="col-12">
                         <label class="form-label">Subtotal calculado</label>
                         <input type="text" id="txtItemSubtotal" class="form-control subtotal-preview" readonly />
                     </div>
-                    <div class="col-12" id="variantesContainer" style="display:none;">
+                    <div class="col-12 d-none" id="variantesContainer">
                         <div class="d-flex align-items-center mb-2">
                             <h6 class="mb-0"><i class="fa fa-tags me-2 text-info"></i>Variantes disponibles</h6>
                             <small class="text-muted ms-2">(Si cargás cantidades por variante, se usará la <strong>suma</strong> como cantidad del ítem)</small>
@@ -258,10 +274,10 @@
 <!-- Modal: Cliente Rápido -->
 <div class="modal fade" id="modalClienteRapido" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content card-glass">
-      <div class="modal-header border-0">
-        <h5 class="modal-title">
-          <i class="fa fa-user-plus me-2 text-info"></i>Nuevo cliente
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header colorEncabezado border-0">
+        <h5 class="modal-title fw-bold">
+          <i class="fa fa-user-plus me-2"></i>Nuevo cliente
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
@@ -296,17 +312,31 @@
 
           <div class="col-md-4">
             <label class="form-label">Condición IVA</label>
-            <select id="cr_CondIva" class="form-select" required>
-              <option value="">Seleccione</option>
-            </select>
+            <div class="pr-select-plus pr-select-plus--flex">
+              <div class="pr-select-plus__grow">
+                <select id="cr_CondIva" class="form-select" required>
+                  <option value="">Seleccione</option>
+                </select>
+              </div>
+              <button type="button" id="btnPlusCrCondIva" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva condición IVA">
+                <i class="fa fa-plus"></i>
+              </button>
+            </div>
             <div class="invalid-feedback">Campo obligatorio</div>
           </div>
 
           <div class="col-md-6">
             <label class="form-label">Lista de Precios</label>
-            <select id="cr_ListaPrecio" class="form-select" required>
-              <option value="">Seleccione</option>
-            </select>
+            <div class="pr-select-plus pr-select-plus--flex">
+              <div class="pr-select-plus__grow">
+                <select id="cr_ListaPrecio" class="form-select" required>
+                  <option value="">Seleccione</option>
+                </select>
+              </div>
+              <button type="button" id="btnPlusCrListaPrecio" class="pr-btn-plus pr-btn-plus--flex-end pr-atajo-catalogo" title="Nueva lista de precios">
+                <i class="fa fa-plus"></i>
+              </button>
+            </div>
             <div class="invalid-feedback">Campo obligatorio</div>
           </div>
 
@@ -337,9 +367,9 @@
 <!-- Modal Pago -->
 <div class="modal fade" id="modalPago" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content card-glass">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="fa fa-plus-circle me-2 text-success"></i>Registrar Pago</h5>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header colorEncabezado border-0">
+                <h5 class="modal-title fw-bold"><i class="fa fa-plus-circle me-2"></i>Registrar Pago</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -358,7 +388,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Importe</label>
-                        <input type="text" id="txtPagoImporte" class="form-control Inputmiles" required />
+                        <input type="text" id="txtPagoImporte" class="form-control vta-pago-importe-input" inputmode="decimal" autocomplete="off" required />
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                     <div class="col-md-12">
@@ -383,6 +413,7 @@
 </div>
 
 
+<partial name="~/Views/Shared/Partials/M_Producto.cshtml" />
 <partial name="~/Views/Utils/Modals.cshtml" />
 
 @section Scripts {
@@ -393,5 +424,6 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/utils/moment.js"></script>
-    <script src="~/js/VentasNuevoModif.js?v=1.2"></script>
+    <script src="~/js/Entities/M_Producto.js?v=1.2"></script>
+    <script src="~/js/VentasNuevoModif.js?v=1.9"></script>
 }

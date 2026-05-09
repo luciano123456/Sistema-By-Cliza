@@ -47,19 +47,41 @@ namespace SistemaByCliza.DAL.Repository
 
         public async Task<bool> Eliminar(int id)
         {
+            await using var tx = await _dbcontext.Database.BeginTransactionAsync();
             try
             {
-                var model = _dbcontext.Usuarios.First(c => c.Id == id);
+                var model = await _dbcontext.Usuarios.FirstOrDefaultAsync(c => c.Id == id);
+                if (model == null)
+                {
+                    await tx.RollbackAsync();
+                    return false;
+                }
 
-                // ✔️ borrar enlaces de Sucursales
+                // Auditoría en permisos de otros usuarios que apuntaba a este registro
+                var auditRegistra = await _dbcontext.UsuariosPermisosUsuarios
+                    .Where(x => x.IdUsuarioRegistra == id).ToListAsync();
+                foreach (var r in auditRegistra) r.IdUsuarioRegistra = null;
+
+                var auditModifica = await _dbcontext.UsuariosPermisosUsuarios
+                    .Where(x => x.IdUsuarioModifica == id).ToListAsync();
+                foreach (var r in auditModifica) r.IdUsuarioModifica = null;
+
+                var permisos = _dbcontext.UsuariosPermisosUsuarios.Where(x => x.IdUsuario == id);
+                _dbcontext.UsuariosPermisosUsuarios.RemoveRange(permisos);
+
                 var links = _dbcontext.UsuariosSucursales.Where(x => x.IdUsuario == id);
                 _dbcontext.UsuariosSucursales.RemoveRange(links);
 
                 _dbcontext.Usuarios.Remove(model);
                 await _dbcontext.SaveChangesAsync();
+                await tx.CommitAsync();
                 return true;
             }
-            catch { return false; }
+            catch
+            {
+                await tx.RollbackAsync();
+                return false;
+            }
         }
 
         public async Task<bool> Insertar(User model)

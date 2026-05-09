@@ -1,4 +1,4 @@
-﻿/* =========================
+/* =========================
    Proveedores.js
    ========================= */
 
@@ -11,22 +11,12 @@ const columnConfig = [
 
 /* ========== Init ========== */
 $(document).ready(async () => {
+    Permisos.init();
+    Permisos.aplicarUI("Proveedores");
     await listaProveedores();
 
     if (typeof attachLiveValidation === 'function') {
         attachLiveValidation('#modalEdicion');
-    }
-
-    // Fallback toggleAcciones
-    if (typeof window.toggleAcciones === 'undefined') {
-        window.toggleAcciones = function (id) {
-            const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-            if ($dd.is(":visible")) $dd.hide();
-            else { $('.acciones-dropdown').hide(); $dd.show(); }
-        };
-        $(document).on('click', function (e) {
-            if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-        });
     }
 });
 
@@ -79,17 +69,26 @@ async function guardarCambios() {
 
 function nuevoProveedor() {
     limpiarModal('#modalEdicion', '#errorCampos');
-    $("#btnGuardar").text("Registrar");
+    $("#btnGuardar").removeClass("d-none").text("Registrar");
+    $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
     $("#modalEdicionLabel").text("Nuevo Proveedor");
     $('#modalEdicion').modal('show');
 }
 
-async function mostrarModal(modelo) {
+async function mostrarModal(modelo, opts = {}) {
+    const readOnly = !!opts.readOnly;
     limpiarModal('#modalEdicion', '#errorCampos');
     $("#txtId").val(modelo.Id ?? 0);
     $("#txtNombre").val(modelo.Nombre ?? '');
-    $("#btnGuardar").text("Guardar");
-    $("#modalEdicionLabel").text("Editar Proveedor");
+    if (readOnly) {
+        $("#modalEdicionLabel").text("Ver Proveedor");
+        $("#btnGuardar").addClass("d-none");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", true);
+    } else {
+        $("#btnGuardar").removeClass("d-none").text("Guardar");
+        $("#modalEdicionLabel").text("Editar Proveedor");
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
+    }
     $('#modalEdicion').modal('show');
 }
 
@@ -128,8 +127,35 @@ async function listaProveedores() {
     actualizarKpisProveedores();
 }
 
+async function verProveedor(id) {
+    Permisos.init();
+    if (!Permisos.tiene("Proveedores", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    try {
+        const r = await fetch("/Proveedores/EditarInfo?id=" + id, {
+            method: "GET",
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+        if (!r.ok) throw new Error();
+        const dataJson = await r.json();
+        if (dataJson) await mostrarModal(dataJson, { readOnly: true });
+        else throw new Error();
+    } catch {
+        errorModal("Ha ocurrido un error.");
+    }
+}
+
 const editarProveedor = id => {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Proveedores", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
 
     fetch("/Proveedores/EditarInfo?id=" + id, {
         method: 'GET',
@@ -142,12 +168,16 @@ const editarProveedor = id => {
             if (!r.ok) throw new Error("Ha ocurrido un error.");
             return r.json();
         })
-        .then(dataJson => dataJson ? mostrarModal(dataJson) : (() => { throw new Error("Ha ocurrido un error."); })())
+        .then(dataJson => dataJson ? mostrarModal(dataJson, { readOnly: false }) : (() => { throw new Error("Ha ocurrido un error."); })())
         .catch(() => errorModal("Ha ocurrido un error."));
 };
 
 async function eliminarProveedor(id) {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Proveedores", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const confirmado = await confirmarModal("¿Desea eliminar este Proveedor?");
     if (!confirmado) return;
 
@@ -192,20 +222,11 @@ async function configurarDataTableProveedores(data) {
                     title: '',
                     width: "1%",
                     render: function (data) {
-                        return `
-                <div class="acciones-menu" data-id="${data}">
-                    <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${data})' title='Acciones'>
-                        <i class='fa fa-ellipsis-v fa-lg text-white' aria-hidden='true'></i>
-                    </button>
-                    <div class="acciones-dropdown" style="display: none;">
-                        <button class='btn btn-sm btneditar' type='button' onclick='editarProveedor(${data})' title='Editar'>
-                            <i class='fa fa-pencil-square-o fa-lg text-success' aria-hidden='true'></i> Editar
-                        </button>
-                        <button class='btn btn-sm btneliminar' type='button' onclick='eliminarProveedor(${data})' title='Eliminar'>
-                            <i class='fa fa-trash-o fa-lg text-danger' aria-hidden='true'></i> Eliminar
-                        </button>
-                    </div>
-                </div>`;
+                        return renderAccionesGrid(data, {
+                            ver: "verProveedor",
+                            editar: "editarProveedor",
+                            eliminar: "eliminarProveedor"
+                        }, "Proveedores");
                     },
                     orderable: false,
                     searchable: false,
@@ -213,7 +234,7 @@ async function configurarDataTableProveedores(data) {
                 { data: 'Nombre', title: 'Nombre' } // 1
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("Proveedores", [
                 {
                     extend: 'excelHtml5',
                     text: 'Exportar Excel',
@@ -237,8 +258,7 @@ async function configurarDataTableProveedores(data) {
                     exportOptions: { columns: [1] },
                     className: 'btn-exportar-print'
                 },
-                'pageLength'
-            ],
+            ]),
             orderCellsTop: true,
             fixedHeader: true,
 
@@ -269,6 +289,10 @@ async function configurarDataTableProveedores(data) {
 
                 if (typeof configurarOpcionesColumnas === 'function') {
                     configurarOpcionesColumnas('#grd_Proveedores', '#configColumnasMenu', 'Proveedores_Columnas');
+                }
+
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Proveedores", "proveedores");
                 }
 
                 setTimeout(() => gridProveedores.columns.adjust(), 10);

@@ -1,0 +1,36 @@
+/* Compras NuevoModif — layout fuera del .container del layout */
+
+.compras-nm-bleed {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    padding-left: clamp(10px, 2.5vw, 28px);
+    padding-right: clamp(10px, 2.5vw, 28px);
+    box-sizing: border-box;
+}
+
+.compras-nm-input-money .input-group-text {
+    font-weight: 600;
+    min-width: 2.25rem;
+    justify-content: center;
+}
+
+#modalItem .abm-select-plus,
+#modalPago .abm-select-plus {
+    width: 100%;
+}
+
+/* Select2 dentro de modales glass */
+#modalItem .select2-container,
+#modalPago .select2-container {
+    z-index: 1060;
+}
+
+#modalItem .abm-select-plus .select2-container .select2-selection--single,
+#modalItem .pr-select-plus--flex .select2-container .select2-selection--single,
+#modalPago .select2-container .select2-selection--single {
+    min-height: 38px;
+}

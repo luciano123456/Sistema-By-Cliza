@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Órdenes de Corte";
 }
 
@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="~/css/usuarios.css" />
 }
 
-<div class="container page-99" style="margin-top: 100px">
+<div class="container page-99 mt-layout-100">
     <!-- Header KPI (igual que Ventas) -->
     <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
         <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -27,7 +27,7 @@
                 </div>
             </div>
 
-            <div class="ms-auto d-flex gap-3 flex-wrap">
+            <div class="ms-auto d-flex gap-3 flex-wrap kpi-solo-rol-finanzas">
                 <div class="cc-stat">
                     <div class="label">Cantidad</div>
                     <div class="value" id="kpiCantOC">0</div>
@@ -104,10 +104,10 @@
                     </form>
 
                     <div class="dt-dark-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_OC" style="width:100%">
+                        <table class="w-100 dt-dark display nowrap compact" id="grd_OC">
                             <thead>
                                 <tr>
-                                    <th></th>
+                                    <th class="text-center">Acciones</th>
                                     <th>Fecha</th>
                                     <th>Estado</th>
                                     <th class="text-center">A producir</th>
@@ -127,7 +127,7 @@
                     <div class="tabla-footer d-flex align-items-center justify-content-between">
                         <div></div>
                         <div class="acciones-externas d-flex justify-content-end mt-2 gap-2">
-                            <button class="btn btn-success d-flex align-items-center px-3 py-2 text-center" onclick="nuevaOC()">
+                            <button type="button" class="btn btn-success d-flex align-items-center px-3 py-2 text-center" data-modulo="OrdenesCorte" data-permiso="crear" onclick="nuevaOC()">
                                 <i class="fa fa-plus-square me-2"></i> Nueva Orden
                             </button>
                         </div>
@@ -159,5 +159,5 @@
     <script src="~/js/utils/moment.js"></script>
 
     <!-- Lógica de la vista -->
-    <script src="~/js/OrdenesCorte.js?v=1.0"></script>
+    <script src="~/js/OrdenesCorte.js?v=1.7"></script>
 }

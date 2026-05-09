@@ -1,4 +1,8 @@
-﻿// ============================== OrdenesCorte.Index.js ==============================
+// ============================== OrdenesCorte.Index.js ==============================
+function _ocJwt() {
+    if (typeof token !== "undefined" && token) return token;
+    return localStorage.getItem("JwtToken") || "";
+}
 let gridOC;
 
 const columnConfigOC = [
@@ -15,26 +19,49 @@ const columnConfigOC = [
 ];
 
 $(document).ready(() => {
+    Permisos.init();
+    Permisos.aplicarUI("OrdenesCorte");
     initFiltrosOC();
 });
 
 /* ---------------- Navegación / Acciones ---------------- */
-function nuevaOC() { window.location.href = "/OrdenesCorte/NuevoModif"; }
+function nuevaOC() {
+    if (!Permisos.tiene("OrdenesCorte", "Crear")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    window.location.href = "/OrdenesCorte/NuevoModif";
+}
+
+const verOrdenCorte = (id) => {
+    if (!Permisos.tiene("OrdenesCorte", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    /* Misma pantalla que edición; el servidor puede restringir si solo tiene Ver */
+    window.location.href = "/OrdenesCorte/NuevoModif?id=" + id;
+};
 
 const editarOC = (id) => {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("OrdenesCorte", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     window.location.href = "/OrdenesCorte/NuevoModif?id=" + id;
 };
 
 async function eliminarOC(id) {
-    $('.acciones-dropdown').hide();
+    if (!Permisos.tiene("OrdenesCorte", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const ok = await confirmarModal("¿Desea eliminar esta orden de corte?");
     if (!ok) return;
 
     try {
         const r = await fetch("/OrdenesCorte/Eliminar?id=" + id, {
             method: "DELETE",
-            headers: { 'Authorization': 'Bearer ' + (token || ''), 'Content-Type': 'application/json' }
+            headers: { 'Authorization': 'Bearer ' + _ocJwt(), 'Content-Type': 'application/json' }
         });
         if (!r.ok) throw new Error("Error al eliminar");
 
@@ -57,7 +84,7 @@ async function listarOC(params = {}) {
     const paginaActual = gridOC ? gridOC.page() : 0;
 
     const r = await fetch("/OrdenesCorte/Lista" + (qs ? ("?" + qs) : ""), {
-        headers: { 'Authorization': 'Bearer ' + (token || ''), 'Content-Type': 'application/json' }
+        headers: { 'Authorization': 'Bearer ' + _ocJwt(), 'Content-Type': 'application/json' }
     });
     if (!r.ok) throw new Error("Error cargando órdenes de corte");
     const data = await r.json();
@@ -80,21 +107,17 @@ async function configurarDataTableOC(data) {
             scrollCollapse: true,
             columns: [
                 {
-                    data: "Id", title: "", width: "1%", orderable: false, searchable: false,
-                    render: (id) => `
-                        <div class="acciones-menu" data-id="${id}">
-                            <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${id})' title='Acciones'>
-                                <i class='fa fa-ellipsis-v fa-lg text-white'></i>
-                            </button>
-                            <div class="acciones-dropdown" style="display:none;">
-                                <button class='btn btn-sm btneditar' type='button' onclick='editarOC(${id})'>
-                                    <i class='fa fa-pencil-square-o fa-lg text-success'></i> Abrir
-                                </button>
-                                <button class='btn btn-sm btneliminar' type='button' onclick='eliminarOC(${id})'>
-                                    <i class='fa fa-trash-o fa-lg text-danger'></i> Eliminar
-                                </button>
-                            </div>
-                        </div>`
+                    data: "Id",
+                    title: "Acciones",
+                    width: "1%",
+                    orderable: false,
+                    searchable: false,
+                    className: "text-center dt-col-acciones",
+                    render: (id) => renderAccionesGrid(id, {
+                        ver: "verOrdenCorte",
+                        editar: "editarOC",
+                        eliminar: "eliminarOC"
+                    }, "OrdenesCorte")
                 },
                 { data: "FechaInicio", title: "Fecha", render: f => formatearFechaParaVista(f) },
                 { data: "Estado", title: "Estado" }, // <- string que arma el Controller (Estado = OrdenesCorteEstado.Nombre)
@@ -108,10 +131,11 @@ async function configurarDataTableOC(data) {
                 { data: "HoraFinCorte", title: "Fin Corte", render: f => f ? hView(f) : "" },
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("OrdenesCorte", [
                 { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Ordenes de Corte', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-excel' },
-                'pageLength'
-            ],
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Ordenes de Corte', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-print' },
+            ]),
             order: [[1, "desc"], [0, "desc"]],
             orderCellsTop: true,
             fixedHeader: true,
@@ -164,6 +188,10 @@ async function configurarDataTableOC(data) {
                     configurarOpcionesColumnas('#grd_OC', '#configColumnasMenuOC', 'OC_Columnas');
                 }
 
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_OC", "ordenesCorte");
+                }
+
                 setTimeout(() => gridOC?.columns.adjust(), 10);
                 $('#grd_OC').on('draw.dt', calcularTotalesOC);
             }
@@ -199,7 +227,7 @@ async function initFiltrosOC() {
     // cargar Estados para el combo del panel
     try {
         const estados = await fetch('/OrdenesCorteEstados/Lista', {
-            headers: { 'Authorization': 'Bearer ' + (token || '') }
+            headers: { 'Authorization': 'Bearer ' + _ocJwt() }
         }).then(r => r.json());
 
         if ($('#fltEstado').length) {
@@ -218,8 +246,8 @@ async function initFiltrosOC() {
             keepDefaultsOnClear: true
         },
         fields: {
-            desde: { el: '#fltDesde', param: 'desde', parse: v => v || null, default: Filters.FilterManager.firstOfMonthISO },
-            hasta: { el: '#fltHasta', param: 'hasta', parse: v => v || null, default: Filters.FilterManager.todayISO },
+            desde: { el: '#fltDesde', param: 'fechaDesde', parse: v => v || null, default: Filters.FilterManager.firstOfMonthISO },
+            hasta: { el: '#fltHasta', param: 'fechaHasta', parse: v => v || null, default: Filters.FilterManager.todayISO },
             estado: { el: '#fltEstado', param: 'idEstado', parse: v => v ? Number(v) : null },
             texto: { el: '#fltTexto', param: 'texto', parse: v => (v || '').trim() || null }
         },
@@ -248,26 +276,16 @@ async function initFiltrosOC() {
 /* ---------------- Helpers para filtros por columna ---------------- */
 async function listaEstadosFilter() {
     const r = await fetch('/OrdenesCorteEstados/Lista', {
-        headers: { 'Authorization': 'Bearer ' + (token || ''), 'Content-Type': 'application/json' }
+        headers: { 'Authorization': 'Bearer ' + _ocJwt(), 'Content-Type': 'application/json' }
     });
     const d = await r.json();
     return (d || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
 
-/* ---------------- Dropdown acciones (igual Ventas) ---------------- */
-function toggleAcciones(id) {
-    const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-    if ($dd.is(":visible")) $dd.hide();
-    else { $('.acciones-dropdown').hide(); $dd.show(); }
-}
-$(document).on('click', function (e) {
-    if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-});
-
 /* ---------------- Util: escapeRegex (fallback) ---------------- */
 function escapeRegex(text) {
     if ($.fn?.dataTable?.util?.escapeRegex) return $.fn.dataTable.util.escapeRegex(text);
-    return String(text).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+    return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 // =================================================================
 

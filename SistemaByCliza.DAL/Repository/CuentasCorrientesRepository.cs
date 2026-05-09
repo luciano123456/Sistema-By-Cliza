@@ -29,12 +29,21 @@ namespace SistemaByCliza.DAL.Repository
         }
 
         public async Task<(List<ClientesCuentaCorriente> Lista, decimal SaldoAnterior)> ListarConSaldoAnterior(
-            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto)
+            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto,
+            IReadOnlyList<int>? idsSucursalesPermitidas = null)
         {
             var baseQ = _db.ClientesCuentaCorrientes
                 .Include(m => m.IdSucursalNavigation)
                 .AsNoTracking()
                 .AsQueryable();
+
+            if (idsSucursalesPermitidas != null)
+            {
+                if (idsSucursalesPermitidas.Count == 0)
+                    baseQ = baseQ.Where(_ => false);
+                else
+                    baseQ = baseQ.Where(m => idsSucursalesPermitidas.Contains(m.IdSucursal));
+            }
 
             if (idCliente != -1) baseQ = baseQ.Where(m => m.IdCliente == idCliente);
             if (idSucursal.HasValue && idSucursal > 0) baseQ = baseQ.Where(m => m.IdSucursal == idSucursal.Value);
@@ -70,9 +79,17 @@ namespace SistemaByCliza.DAL.Repository
             return (lista, saldoAnterior);
         }
 
-        public async Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal)
+        public async Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal, IReadOnlyList<int>? idsSucursalesPermitidas = null)
         {
             var q = _db.ClientesCuentaCorrientes.Where(m => m.IdCliente == idCliente);
+
+            if (idsSucursalesPermitidas != null)
+            {
+                if (idsSucursalesPermitidas.Count == 0)
+                    return 0m;
+                q = q.Where(m => idsSucursalesPermitidas.Contains(m.IdSucursal));
+            }
+
             if (idSucursal.HasValue && idSucursal > 0) q = q.Where(m => m.IdSucursal == idSucursal.Value);
             var debe = await q.SumAsync(m => (decimal?)m.Debe) ?? 0m;
             var haber = await q.SumAsync(m => (decimal?)m.Haber) ?? 0m;

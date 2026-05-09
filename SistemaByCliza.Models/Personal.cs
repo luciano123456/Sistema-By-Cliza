@@ -51,6 +51,14 @@ public partial class Personal
 
     public int IdSucursal { get; set; }
 
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
+
     public virtual Banco? IdBancoNavigation { get; set; }
 
     public virtual CondicionesIva? IdCondicionIvaNavigation { get; set; }
@@ -61,7 +69,9 @@ public partial class Personal
 
     public virtual Sucursal IdSucursalNavigation { get; set; } = null!;
 
-    public virtual ICollection<PersonalSueldo> PersonalSueldos { get; set; } = new List<PersonalSueldo>();
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
 
-    public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
+
+    public virtual ICollection<PersonalSueldo> PersonalSueldos { get; set; } = new List<PersonalSueldo>();
 }

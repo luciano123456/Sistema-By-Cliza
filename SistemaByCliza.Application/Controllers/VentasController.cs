@@ -1,7 +1,9 @@
-﻿// SistemaByCliza.Application/Controllers/VentasController.cs
+// SistemaByCliza.Application/Controllers/VentasController.cs
+using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SistemaByCliza.Application.Extensions;
 using SistemaByCliza.Application.Models.ViewModels;
 using SistemaByCliza.BLL.Service;
 using SistemaByCliza.Models;
@@ -11,8 +13,70 @@ namespace SistemaByCliza.Application.Controllers
     [Authorize]
     public class VentasController : Controller
     {
+        private const int RolAdministrador = 1;
+
         private readonly IVentasService _srv;
-        public VentasController(IVentasService srv) { _srv = srv; }
+        private readonly IUsuariosService _usuariosService;
+        private readonly ISucursalesService _sucursalesService;
+
+        public VentasController(IVentasService srv, IUsuariosService usuariosService, ISucursalesService sucursalesService)
+        {
+            _srv = srv;
+            _usuariosService = usuariosService;
+            _sucursalesService = sucursalesService;
+        }
+
+        private bool EsAdministradorTotal() => User.GetRolId() == RolAdministrador;
+
+        private async Task<(int? restriccionUsuarioRegistra, List<int>? idsSucursalesPermitidas)> ResolverRestriccionesVentasAsync()
+        {
+            if (EsAdministradorTotal())
+                return (null, null);
+            var uid = User.GetUserId();
+            if (!uid.HasValue)
+                return (0, new List<int>());
+            var u = await _usuariosService.ObtenerConSucursales(uid.Value);
+            var ids = u?.UsuariosSucursales?.Select(s => s.IdSucursal).Distinct().ToList() ?? new List<int>();
+            return (uid.Value, ids);
+        }
+
+        private async Task<bool> UsuarioPuedeAccederVentaConEntidad(Venta? v)
+        {
+            if (v is null) return false;
+            if (EsAdministradorTotal()) return true;
+            var uid = User.GetUserId();
+            if (!uid.HasValue) return false;
+            if (v.IdUsuarioRegistra != uid) return false;
+            var u = await _usuariosService.ObtenerConSucursales(uid.Value);
+            var set = u?.UsuariosSucursales?.Select(s => s.IdSucursal).ToHashSet() ?? new HashSet<int>();
+            return set.Contains(v.IdSucursal);
+        }
+
+        private async Task<bool> UsuarioPuedeAccederVentaAsync(int idVenta)
+        {
+            var v = await _srv.Obtener(idVenta);
+            return await UsuarioPuedeAccederVentaConEntidad(v);
+        }
+
+        private async Task<bool> UsuarioPuedeUsarSucursalVentaAsync(int idSucursal)
+        {
+            if (idSucursal <= 0) return false;
+            if (EsAdministradorTotal()) return true;
+            var uid = User.GetUserId();
+            if (!uid.HasValue) return false;
+            var u = await _usuariosService.ObtenerConSucursales(uid.Value);
+            var set = u?.UsuariosSucursales?.Select(s => s.IdSucursal).ToHashSet() ?? new HashSet<int>();
+            return set.Contains(idSucursal);
+        }
+
+        private static string NombreVendedorVenta(Venta v)
+        {
+            var nav = v.IdUsuarioRegistraNavigation;
+            if (nav is null) return "";
+            var nom = $"{nav.Nombre} {nav.Apellido}".Trim();
+            if (!string.IsNullOrEmpty(nom)) return nom;
+            return nav.Usuario ?? "";
+        }
 
         [AllowAnonymous]
         public IActionResult Index() => View();
@@ -25,34 +89,75 @@ namespace SistemaByCliza.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lista(DateTime? fechaDesde, DateTime? fechaHasta, int? idCliente, int? idVendedor, string? estado, string? texto)
+        public async Task<IActionResult> Lista(DateTime? fechaDesde, DateTime? fechaHasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto)
         {
-            var data = await _srv.Listar(fechaDesde, fechaHasta, idCliente, idVendedor, estado, texto);
+            if (!EsAdministradorTotal() && User.GetUserId() is null)
+                return Forbid();
+
+            var (restrUser, idsSuc) = await ResolverRestriccionesVentasAsync();
+            var filtroVendedor = EsAdministradorTotal() ? idVendedor : null;
+
+            var data = await _srv.Listar(fechaDesde, fechaHasta, idCliente, filtroVendedor, idSucursal, estado, texto, restrUser, idsSuc);
             var vm = data.Select(v => new VMVenta
             {
                 Id = v.Id,
                 IdSucursal = v.IdSucursal,
                 IdCliente = v.IdCliente,
-                IdVendedor = v.IdVendedor,
                 IdListaPrecio = v.IdListaPrecio,
                 IdCuentaCorriente = v.IdCuentaCorriente,
+                IdVendedor = v.IdUsuarioRegistra ?? 0,
                 Fecha = v.Fecha,
                 Subtotal = v.Subtotal,
                 Descuentos = v.Descuentos,
                 TotalIva = v.TotalIva,
                 ImporteTotal = v.ImporteTotal,
                 Cliente = v.IdClienteNavigation?.Nombre ?? "",
-                Vendedor = v.IdVendedorNavigation?.Nombre ?? "",
-                Sucursal = v.IdSucursalNavigation?.Nombre ?? ""
+                Sucursal = v.IdSucursalNavigation?.Nombre ?? "",
+                Vendedor = NombreVendedorVenta(v)
             }).ToList();
             return Ok(vm);
+        }
+
+        /// <summary>Sucursales disponibles para filtros y ventas (todas si rol admin; asignadas al usuario si no).</summary>
+        [HttpGet]
+        public async Task<IActionResult> SucursalesOpciones()
+        {
+            if (EsAdministradorTotal())
+            {
+                var q = await _sucursalesService.ObtenerTodos();
+                var lista = await q.OrderBy(s => s.Nombre).Select(s => new { s.Id, Nombre = s.Nombre }).ToListAsync();
+                return Ok(lista);
+            }
+
+            var uid = User.GetUserId();
+            if (!uid.HasValue) return Ok(Array.Empty<object>());
+
+            var u = await _usuariosService.ObtenerConSucursales(uid.Value);
+            if (u?.UsuariosSucursales is null || u.UsuariosSucursales.Count == 0)
+                return Ok(Array.Empty<object>());
+            var list = u.UsuariosSucursales
+                .Where(s => s.IdSucursalNavigation != null)
+                .GroupBy(s => s.IdSucursal)
+                .Select(g => new { Id = g.Key, Nombre = g.First().IdSucursalNavigation!.Nombre })
+                .OrderBy(x => x.Nombre)
+                .ToList();
+            return Ok(list);
+        }
+
+        /// <summary>Opciones de estado del combo de venta: valores ya usados en <c>Ventas.Estado</c> (sin catálogo aparte).</summary>
+        [HttpGet]
+        public async Task<IActionResult> EstadosDesdeVentas()
+        {
+            var lista = await _srv.ListarEstadosDistintos();
+            return Ok(lista.Select(e => new { Nombre = e }).ToList());
         }
 
         [HttpGet]
         public async Task<IActionResult> EditarInfo(int id)
         {
             var v = await _srv.Obtener(id);
-            if (v is null) return NotFound();
+            if (!await UsuarioPuedeAccederVentaConEntidad(v))
+                return NotFound();
 
             var items = await _srv.ObtenerItemsPorVenta(id);
             var pagos = await _srv.ObtenerPagosPorVenta(id);
@@ -61,7 +166,6 @@ namespace SistemaByCliza.Application.Controllers
             {
                 Id = v.Id,
                 IdSucursal = v.IdSucursal,
-                IdVendedor = v.IdVendedor,
                 IdListaPrecio = v.IdListaPrecio,
                 IdCliente = v.IdCliente,
                 IdCuentaCorriente = v.IdCuentaCorriente,
@@ -72,8 +176,10 @@ namespace SistemaByCliza.Application.Controllers
                 ImporteTotal = v.ImporteTotal,
                 NotaInterna = v.NotaInterna,
                 NotaCliente = v.NotaCliente,
+                Estado = v.Estado,
                 Cliente = v.IdClienteNavigation?.Nombre ?? "",
-                Vendedor = v.IdVendedorNavigation?.Nombre ?? "",
+                Sucursal = v.IdSucursalNavigation?.Nombre ?? "",
+                Vendedor = NombreVendedorVenta(v),
                 Productos = items.Select(i => new VMVentaProducto
                 {
                     Id = i.Id,
@@ -117,8 +223,18 @@ namespace SistemaByCliza.Application.Controllers
         [HttpPost]
         public async Task<IActionResult> Insertar([FromBody] VMVenta vm)
         {
-          
+            if (!await UsuarioPuedeUsarSucursalVentaAsync(vm.IdSucursal))
+                return Forbid();
+
             var venta = MapVenta(vm);
+
+            var userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Forbid();
+
+            venta.FechaRegistra = DateTime.Now;
+            venta.IdUsuarioRegistra = userId;
+
             var (items, variantes) = MapItems(vm);
             var pagos = MapPagos(vm, venta);
             var ok = await _srv.InsertarConDetallesYPagos(venta, items, variantes, pagos);
@@ -128,8 +244,19 @@ namespace SistemaByCliza.Application.Controllers
         [HttpPut]
         public async Task<IActionResult> Actualizar([FromBody] VMVenta vm)
         {
-         
+            if (!await UsuarioPuedeAccederVentaAsync(vm.Id))
+                return NotFound();
+            if (!await UsuarioPuedeUsarSucursalVentaAsync(vm.IdSucursal))
+                return Forbid();
+
             var venta = MapVenta(vm);
+
+            var userId = User.GetUserId();
+            if (!userId.HasValue)
+                return Forbid();
+
+            venta.FechaModifica = DateTime.Now;
+            venta.IdUsuarioModifica = userId;
             var (items, variantes) = MapItems(vm);
             var pagos = MapPagos(vm, venta, keepIds: true);
             var ok = await _srv.ActualizarConDetallesYPagos(venta, items, variantes, pagos);
@@ -139,6 +266,8 @@ namespace SistemaByCliza.Application.Controllers
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
         {
+            if (!await UsuarioPuedeAccederVentaAsync(id))
+                return NotFound();
             var ok = await _srv.Eliminar(id);
             return Ok(new { valor = ok });
         }
@@ -236,7 +365,6 @@ namespace SistemaByCliza.Application.Controllers
         {
             Id = vm.Id,
             IdSucursal = vm.IdSucursal,
-            IdVendedor = vm.IdVendedor,
             IdListaPrecio = vm.IdListaPrecio,
             IdCliente = vm.IdCliente,
             IdCuentaCorriente = vm.IdCuentaCorriente,
@@ -246,7 +374,8 @@ namespace SistemaByCliza.Application.Controllers
             TotalIva = vm.TotalIva,
             ImporteTotal = vm.ImporteTotal,
             NotaInterna = vm.NotaInterna,
-            NotaCliente = vm.NotaCliente
+            NotaCliente = vm.NotaCliente,
+            Estado = vm.Estado,
         };
 
         private static (List<VentasProducto> items, List<VentasProductosVariante> vars) MapItems(VMVenta vm)

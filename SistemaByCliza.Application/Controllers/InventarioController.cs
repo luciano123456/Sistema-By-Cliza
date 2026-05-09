@@ -13,11 +13,11 @@ namespace SistemaByCliza.Application.Controllers
 		private readonly IInventarioService _srv;
 		public InventarioController(IInventarioService srv) => _srv = srv;
 
-        [AllowAnonymous]
-        public IActionResult Index() => View();
+		[AllowAnonymous]
+		public IActionResult Index() => View();
 
-        // ======================= Existencias =======================
-        [HttpGet]
+		// ======================= Existencias =======================
+		[HttpGet]
 		public async Task<IActionResult> Existencias(int? idSucursal, int? idProducto, int? idVariante, string? texto)
 		{
 			var data = await _srv.ListarExistencias(idSucursal, idProducto, idVariante, texto);
@@ -430,6 +430,66 @@ namespace SistemaByCliza.Application.Controllers
 
             return Ok(res);
         }
+
+        // ======================= NUEVO: TransferirMulti (varios productos) =======================
+        // POST /Inventario/TransferirMulti
+        [HttpPost]
+        [Route("Inventario/TransferirMulti")]
+        public async Task<IActionResult> TransferirMulti([FromBody] VMTransferFrontMulti vm)
+        {
+            if (vm is null ||
+                vm.IdSucursalOrigen <= 0 ||
+                vm.IdSucursalDestino <= 0 ||
+                vm.IdSucursalDestino == vm.IdSucursalOrigen ||
+                vm.Productos is null || vm.Productos.Count == 0)
+                return BadRequest(new { ok = false, mensaje = "Parámetros inválidos." });
+
+            // Debe haber al menos una variante con cantidad > 0
+            var tieneLineas = vm.Productos.Any(p =>
+                p.IdProducto > 0 &&
+                p.Variantes != null &&
+                p.Variantes.Any(v => v.IdProductoVariante > 0 && v.Cantidad > 0));
+
+            if (!tieneLineas)
+                return BadRequest(new { ok = false, mensaje = "Debes informar productos con variantes y cantidades." });
+
+            var cab = new InventarioTransfSucursal
+            {
+                Id = 0,
+                IdSucursalOrigen = vm.IdSucursalOrigen,
+                IdSucursalDestino = vm.IdSucursalDestino,
+                Fecha = vm.Fecha,
+                Notas = vm.Nota
+            };
+
+            // Productos (una fila por producto)
+            var prods = vm.Productos
+                .Where(p => p.IdProducto > 0 && p.Variantes != null && p.Variantes.Any(v => v.Cantidad > 0))
+                .Select(p => new InventarioTransfSucursalesProducto
+                {
+                    Id = 0,
+                    IdProducto = p.IdProducto
+                })
+                .ToList();
+
+            // Variantes (todas en una lista; tu repo las vincula al producto/cabecera)
+            var vars = vm.Productos
+                .Where(p => p.IdProducto > 0 && p.Variantes != null)
+                .SelectMany(p => p.Variantes
+                    .Where(v => v.IdProductoVariante > 0 && v.Cantidad > 0)
+                    .Select(v => new InventarioTransfSucursalesProductosVariante
+                    {
+                        Id = 0,
+                        IdProducto = p.IdProducto,
+                        IdProductoVariante = v.IdProductoVariante,
+                        Cantidad = v.Cantidad
+                    }))
+                .ToList();
+
+            var ok = await _srv.CrearTransferencia(cab, prods, vars);
+            return Ok(new { valor = ok });
+        }
+
 
 
 

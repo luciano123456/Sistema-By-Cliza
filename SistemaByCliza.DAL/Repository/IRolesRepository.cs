@@ -11,9 +11,9 @@ namespace SistemaByCliza.DAL.Repository
     public interface IRolesRepository<TEntityModel> where TEntityModel : class
     {
         Task<bool> Eliminar(int id);
-        Task<bool> Actualizar(Rol model);
-        Task<bool> Insertar(Rol model);
-        Task<Rol> Obtener(int id);
-        Task<IQueryable<Rol>> ObtenerTodos();
+        Task<bool> Actualizar(UsuariosRol model);
+        Task<bool> Insertar(UsuariosRol model);
+        Task<UsuariosRol> Obtener(int id);
+        Task<IQueryable<UsuariosRol>> ObtenerTodos();
     }
 }

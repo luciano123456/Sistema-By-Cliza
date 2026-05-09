@@ -1,4 +1,4 @@
-﻿// --------------------------- Estado ---------------------------
+// --------------------------- Estado ---------------------------
 let gridPagos = null;
 let isSaving = false; // lock anti-doble click
 
@@ -7,7 +7,282 @@ const State = {
     editIndex: -1,
     cuentas: [],
     personales: [],
+    /** true si ?ver=1 (consulta; solo permiso Ver, sin Editar). */
+    soloVer: false,
 };
+
+// --------------------------- Auth (token viene de site.js, no window.token) ---------------------------
+function getAuthToken() {
+    try {
+        if (typeof token !== "undefined" && token) return token;
+    } catch (_) { /* noop */ }
+    return localStorage.getItem("JwtToken") || "";
+}
+
+function destruirSelect2SiHay($sel) {
+    if (!$sel || !$sel.length || !window.jQuery || !$.fn.select2) return;
+    if ($sel.hasClass("select2-hidden-accessible")) {
+        $sel.select2("destroy");
+    }
+}
+
+/** Inicializa Select2 tras repoblar opciones (evita romper el DOM como initSelect2 global + innerHTML). */
+function initSelect2ComboSueldo($sel) {
+    if (!$sel || !$sel.length || !window.jQuery || !$.fn.select2) return;
+    destruirSelect2SiHay($sel);
+    const parentSel = $sel.attr("data-s2-parent");
+    const $parent = !parentSel || parentSel === "body" ? $(document.body) : $(parentSel);
+    $sel.removeClass("no-select2");
+    $sel.select2({
+        width: "100%",
+        dropdownParent: $parent.length ? $parent : $(document.body)
+    });
+}
+
+/** Igual que Productos/Insumos: delegado en document para que el click llegue aunque el DOM o Select2 cambien. */
+function wireCatalogPlusButtonsPersonalSueldosNuevoModif() {
+    if (!window.jQuery) return;
+    const $ = window.jQuery;
+    $(document)
+        .off("click.psSueldoNm", "#btnPlusPersonalSueldo")
+        .on("click.psSueldoNm", "#btnPlusPersonalSueldo", async function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof nuevoPersonal !== "function") {
+                if (typeof errorModal === "function") await errorModal("No se pudo abrir el alta de personal.");
+                return;
+            }
+            window.__personalByClizaAltaCallback = async function (nuevoId) {
+                try {
+                    await cargarPersonales();
+                    const nid = Number(nuevoId);
+                    if (Number.isFinite(nid) && nid > 0) {
+                        $("#cmbPersonal").val(String(nid)).trigger("change");
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            nuevoPersonal();
+        });
+    $(document)
+        .off("click.psSueldoNm", "#btnPlusCuentaSueldo")
+        .on("click.psSueldoNm", "#btnPlusCuentaSueldo", async function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof window.abrirConfiguracion !== "function") return;
+            try {
+                await window.abrirConfiguracion("Cuenta", "Cuentas", null, null, null, true);
+            } catch (err) {
+                console.error(err);
+            }
+        });
+}
+
+function wireConfiguracionActualizadaPersonalSueldosNuevoModif() {
+    if (document.documentElement.dataset.psNuevoModifConfigListener) return;
+    document.documentElement.dataset.psNuevoModifConfigListener = "1";
+    document.addEventListener("configuracionActualizada", async (e) => {
+        if (!/\/PersonalSueldos\/NuevoModif/i.test(location.pathname || "")) return;
+        const d = e.detail || {};
+        if (d.accion !== "insertar") return;
+        const raw = d.nuevoId ?? d.NuevoId ?? d.nuevoID;
+        const nid = raw != null && raw !== "" ? Number(raw) : NaN;
+        try {
+            if (d.tipo === "Personal" && Number.isFinite(nid) && nid > 0) {
+                await cargarPersonales();
+                $("#cmbPersonal").val(String(nid)).trigger("change");
+            }
+            if (d.tipo === "Cuentas") {
+                await cargarCuentas();
+                if (Number.isFinite(nid) && nid > 0) {
+                    $("#cmbCuenta").val(String(nid)).trigger("change");
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+}
+
+/** Una sola instancia de Bootstrap Modal (evita backdrops duplicados y pantalla “pegada”). */
+function getBsModalPago() {
+    const el = document.getElementById("modalPago");
+    if (!el || typeof bootstrap === "undefined" || !bootstrap.Modal) return null;
+    return bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, keyboard: true });
+}
+
+/* ---------- Importes con $ (misma UX que Productos: pr-precio-input) ---------- */
+function psNm_formatPrecioFinal(n) {
+    if (typeof n !== "number" || isNaN(n)) return "";
+    if (typeof formatNumber === "function") return formatNumber(n);
+    return n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function psNm_addThousandsFromRight(digitsOnly) {
+    const d = String(digitsOnly || "").replace(/\D/g, "");
+    if (!d) return "";
+    const rev = d.split("").reverse().join("");
+    const chunks = rev.match(/\d{1,3}/g) || [];
+    return chunks.map((chunk) => chunk.split("").reverse().join("")).reverse().join(".");
+}
+
+function psNm_extractPrecioTypingParts(str) {
+    const t = String(str ?? "").replace(/\$/g, "").replace(/\s/g, "");
+    if (!t) return { intDigits: "", decDigits: "", hasComma: false };
+    const commaIdx = t.lastIndexOf(",");
+    if (commaIdx === -1) {
+        return { intDigits: t.replace(/\./g, "").replace(/\D/g, ""), decDigits: "", hasComma: false };
+    }
+    const intP = t.slice(0, commaIdx).replace(/\./g, "").replace(/\D/g, "");
+    const decP = t.slice(commaIdx + 1).replace(/\D/g, "").slice(0, 2);
+    return { intDigits: intP, decDigits: decP, hasComma: true };
+}
+
+function psNm_buildPrecioLiveDisplay(intDigitsRaw, decDigitsRaw, hasComma) {
+    let intd = String(intDigitsRaw || "").replace(/\D/g, "");
+    intd = intd.replace(/^0+(?=\d)/, "");
+    const dec = String(decDigitsRaw || "").replace(/\D/g, "").slice(0, 2);
+    if (!intd && !hasComma && !dec) return "";
+    if (!intd && (hasComma || dec)) intd = "0";
+    const intFmt = intd ? psNm_addThousandsFromRight(intd) : "0";
+    const pref = "$ ";
+    if (!hasComma && !dec) return `${pref}${intFmt}`;
+    if (hasComma && !dec) return `${pref}${intFmt},`;
+    return `${pref}${intFmt},${dec}`;
+}
+
+function psNm_digitOffsetBeforeCaret(s, caret) {
+    const end = Math.min(caret ?? 0, String(s).length);
+    let n = 0;
+    for (let i = 0; i < end; i++) {
+        if (/\d/.test(s[i])) n++;
+    }
+    return n;
+}
+
+function psNm_posAfterNthDigit(display, n) {
+    if (!display) return 0;
+    if (n <= 0) {
+        for (let i = 0; i < display.length; i++) {
+            if (/\d/.test(display[i])) return i + 1;
+        }
+        return display.length;
+    }
+    let seen = 0;
+    for (let i = 0; i < display.length; i++) {
+        if (/\d/.test(display[i])) {
+            seen++;
+            if (seen === n) return i + 1;
+        }
+    }
+    return display.length;
+}
+
+function psNm_applyPrecioMientrasEscribe(el) {
+    if (!el || el.disabled || el.readOnly) return;
+    if (el.dataset.prPrecioComposing === "1") return;
+    const oldVal = el.value;
+    const caret = el.selectionStart ?? oldVal.length;
+    const commaOld = oldVal.lastIndexOf(",");
+    const hadCaretAfterComma = commaOld !== -1 && caret > commaOld;
+    const parts = psNm_extractPrecioTypingParts(oldVal);
+    const newVal = psNm_buildPrecioLiveDisplay(parts.intDigits, parts.decDigits, parts.hasComma);
+    if (newVal === oldVal) return;
+    el.dataset.prPrecioApplying = "1";
+    el.value = newVal;
+    const digitsBefore = psNm_digitOffsetBeforeCaret(oldVal, caret);
+    let newPos = psNm_posAfterNthDigit(newVal, digitsBefore);
+    if (hadCaretAfterComma) {
+        const nc = newVal.indexOf(",");
+        if (nc !== -1 && newPos <= nc) newPos = nc + 1;
+    }
+    if (caret >= oldVal.length) newPos = newVal.length;
+    newPos = Math.max(0, Math.min(newPos, newVal.length));
+    try {
+        el.setSelectionRange(newPos, newPos);
+    } catch (_) { /* noop */ }
+    window.requestAnimationFrame(() => {
+        delete el.dataset.prPrecioApplying;
+    });
+}
+
+function psNm_finalizarPrecioCampo(el) {
+    if (!el || el.disabled || el.readOnly) return;
+    const raw = el.value;
+    if (!String(raw).trim()) {
+        el.value = "";
+        return;
+    }
+    const n = psNm_parsePrecioInput(raw);
+    if (!isNaN(n) && n >= 0) {
+        el.value = psNm_formatPrecioFinal(n);
+    }
+}
+
+function psNm_parsePrecioInput(raw) {
+    if (raw == null) return NaN;
+    let s = String(raw).trim();
+    if (!s) return NaN;
+    s = s.replace(/\$/g, "").replace(/\s/g, "");
+    const lastComma = s.lastIndexOf(",");
+    if (lastComma !== -1) {
+        const intPart = s.slice(0, lastComma).replace(/\./g, "").replace(/[^\d]/g, "");
+        const decPart = s.slice(lastComma + 1).replace(/[^\d]/g, "");
+        return parseFloat(`${intPart || "0"}.${decPart || "0"}`);
+    }
+    const only = s.replace(/[^\d.]/g, "");
+    const parts = only.split(".");
+    if (parts.length > 2) {
+        return parseFloat(parts.join(""));
+    }
+    if (parts.length === 2) {
+        const decLen = parts[1].length;
+        if (decLen <= 2 && parts[0] !== "") {
+            return parseFloat(`${parts[0]}.${parts[1]}`);
+        }
+        return parseFloat(parts.join(""));
+    }
+    return parseFloat(parts[0] || "NaN");
+}
+
+function bindPrecioSueldoNuevoModif() {
+    if (!window.jQuery) return;
+    const $ = window.jQuery;
+    const sel = "#txtImporte.pr-precio-input, #txtPagoImporte.pr-precio-input";
+    $(document)
+        .off("input.psPrecioNM compositionstart.psPrecioNM compositionend.psPrecioNM paste.psPrecioNM focusout.psPrecioNM", sel)
+        .on("input.psPrecioNM", sel, function () {
+            psNm_applyPrecioMientrasEscribe(this);
+            if (this.id === "txtImporte") recalcularTotales();
+        })
+        .on("compositionstart.psPrecioNM", sel, function () {
+            this.dataset.prPrecioComposing = "1";
+        })
+        .on("compositionend.psPrecioNM", sel, function () {
+            delete this.dataset.prPrecioComposing;
+            psNm_applyPrecioMientrasEscribe(this);
+            if (this.id === "txtImporte") recalcularTotales();
+        })
+        .on("paste.psPrecioNM", sel, function (e) {
+            const el = this;
+            const ev = e.originalEvent || e;
+            const text = (ev.clipboardData || window.clipboardData).getData("text") || "";
+            e.preventDefault();
+            const n = psNm_parsePrecioInput(text.trim());
+            if (!isNaN(n) && n >= 0) {
+                el.value = psNm_formatPrecioFinal(n);
+                try {
+                    el.setSelectionRange(el.value.length, el.value.length);
+                } catch (_) { /* noop */ }
+            }
+            if (el.id === "txtImporte") recalcularTotales();
+        })
+        .on("focusout.psPrecioNM", sel, function () {
+            psNm_finalizarPrecioCampo(this);
+            if (this.id === "txtImporte") recalcularTotales();
+        });
+}
 
 // --------------------------- Helpers ---------------------------
 function _fmtNumber(n) {
@@ -16,12 +291,11 @@ function _fmtNumber(n) {
     return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 }
 function _toNumber(s) {
-    if (typeof formatearSinMiles === "function") return parseFloat(formatearSinMiles(s || 0));
-    return parseFloat(String(s || "0").replace(/\./g, '').replace(',', '.')) || 0;
+    const n = psNm_parsePrecioInput(s || "");
+    return isNaN(n) ? 0 : n;
 }
 function _toMiles(n) {
-    if (typeof formatearMiles === "function") return formatearMiles(n);
-    return _fmtNumber(n);
+    return psNm_formatPrecioFinal(parseFloat(n || 0));
 }
 function hoyISO() { return moment().format('YYYY-MM-DD'); }
 
@@ -35,8 +309,67 @@ function formatearFechaParaVista(fecha) {
     return m.isValid() ? m.format('DD/MM/YYYY') : '';
 }
 
+function aplicarModoSoloLecturaSueldoNuevoModif() {
+    document.querySelectorAll("#formSueldo input:not([type=hidden]), #formSueldo select, #formSueldo textarea").forEach((el) => {
+        el.disabled = true;
+    });
+    try {
+        if (window.jQuery && $("#cmbPersonal").length) $("#cmbPersonal").prop("disabled", true).trigger("change.select2");
+        if (window.jQuery && $("#cmbCuenta").length) $("#cmbCuenta").prop("disabled", true).trigger("change.select2");
+    } catch (_) { /* noop */ }
+    document.getElementById("btnGuardarGlobal")?.classList.add("d-none");
+    document.getElementById("btnEliminar")?.classList.add("d-none");
+    document.getElementById("btnAgregarPago")?.classList.add("d-none");
+    document.getElementById("btnExportarPdf")?.classList.add("d-none");
+    document.getElementById("btnPlusPersonalSueldo")?.classList.add("d-none");
+    document.getElementById("btnPlusCuentaSueldo")?.classList.add("d-none");
+    if (gridPagos) {
+        gridPagos.destroy();
+        gridPagos = null;
+    }
+    configurarTablaPagos();
+    refrescarTablaPagos();
+}
+
 // --------------------------- Init ---------------------------
 document.addEventListener("DOMContentLoaded", async () => {
+    Permisos.init();
+    const qs = new URLSearchParams(window.location.search || "");
+    State.soloVer = qs.get("ver") === "1";
+    const idHidden = (document.getElementById("txtId")?.value || "").trim();
+    const idNum = parseInt(idHidden || qs.get("id") || "0", 10) || 0;
+
+    if (State.soloVer) {
+        if (idNum <= 0) {
+            if (typeof errorModal === "function") await errorModal("Consulta no válida.");
+            window.location.href = "/PersonalSueldos/Index";
+            return;
+        }
+        if (!Permisos.tiene("PersonalSueldos", "Ver")) {
+            if (typeof errorModal === "function") await errorModal("No tenés permisos.");
+            window.location.href = "/PersonalSueldos/Index";
+            return;
+        }
+    } else {
+        Permisos.aplicarUINuevoModif("PersonalSueldos");
+    }
+
+    wireConfiguracionActualizadaPersonalSueldosNuevoModif();
+
+    const modalPagoEl = document.getElementById("modalPago");
+    if (modalPagoEl) {
+        modalPagoEl.addEventListener("hidden.bs.modal", () => {
+            requestAnimationFrame(() => {
+                if (!document.querySelector(".modal.show")) {
+                    document.body.classList.remove("modal-open");
+                    document.body.style.removeProperty("padding-right");
+                    document.body.style.removeProperty("overflow");
+                    document.querySelectorAll(".modal-backdrop").forEach((b) => b.remove());
+                }
+            });
+        });
+    }
+
     try {
         // evitar submit nativo del form
         const form = document.getElementById('formSueldo');
@@ -56,8 +389,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (id) await cargarSueldoExistente(parseInt(id));
 
-        attachLiveValidation?.('#formSueldo');
-        document.getElementById("txtImporte")?.addEventListener("input", recalcularTotales);
+        if (State.soloVer) aplicarModoSoloLecturaSueldoNuevoModif();
+
+        bindPrecioSueldoNuevoModif();
+
+        attachLiveValidation?.("#formSueldo", "#errorCampos");
+        attachLiveValidation?.("#formPago", "#errorCamposPago");
+        if (typeof wireSelect2Validation === "function") {
+            wireSelect2Validation("#formSueldo", "#errorCampos");
+            wireSelect2Validation("#formPago", "#errorCamposPago");
+        }
+        $("#cmbPersonal").off("select2:close.psSueldo").on("select2:close.psSueldo", function () {
+            if (typeof validarCampoIndividual === "function") validarCampoIndividual(this, "change");
+            if (typeof updateErrorBanner === "function") updateErrorBanner("#formSueldo", "#errorCampos");
+        });
+        $("#cmbCuenta").off("select2:close.psSueldo").on("select2:close.psSueldo", function () {
+            if (typeof validarCampoIndividual === "function") validarCampoIndividual(this, "change");
+            if (typeof updateErrorBanner === "function") updateErrorBanner("#formPago", "#errorCamposPago");
+        });
+
+        // txtImporte: recalcularTotales vía bindPrecioSueldoNuevoModif (input.psPrecioNM)
 
         // toolbar
         document.getElementById("btnExportarPdf")?.addEventListener("click", exportarReciboPdf);
@@ -67,51 +418,76 @@ document.addEventListener("DOMContentLoaded", async () => {
         // global
         document.getElementById("btnGuardarGlobal")?.addEventListener("click", guardarTodo);
     } catch (e) { console.error(e); }
+    finally {
+        wireCatalogPlusButtonsPersonalSueldosNuevoModif();
+    }
 });
 
 // --------------------------- Cargas Combos ---------------------------
 async function cargarPersonales() {
+    const cmb = document.getElementById("cmbPersonal");
+    if (!cmb) return;
+    const $c = $(cmb);
     try {
         const res = await fetch("/Personal/Lista", {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { Authorization: "Bearer " + getAuthToken(), "Content-Type": "application/json" }
         });
-        const data = await res.json();
-        State.personales = data || [];
-        const cmb = document.getElementById("cmbPersonal");
-        if (!cmb) return;
-        cmb.innerHTML = `<option value="">Seleccione</option>`;
-        State.personales.forEach(p => {
-            const op = document.createElement("option");
-            op.value = p.Id;
-            op.textContent = p.Nombre;
-            cmb.appendChild(op);
-        });
-    } catch { /* ignore */ }
+        if (!res.ok) {
+            console.error("Personal/Lista HTTP", res.status);
+            State.personales = [];
+        } else {
+            const data = await res.json();
+            State.personales = Array.isArray(data) ? data : [];
+        }
+    } catch (e) {
+        console.error(e);
+        State.personales = [];
+    }
+    destruirSelect2SiHay($c);
+    cmb.innerHTML = `<option value="">Seleccione</option>`;
+    State.personales.forEach((p) => {
+        const op = document.createElement("option");
+        op.value = p.Id;
+        op.textContent = p.Nombre ?? "";
+        cmb.appendChild(op);
+    });
+    initSelect2ComboSueldo($c);
 }
 
 async function cargarCuentas() {
+    const cmb = document.getElementById("cmbCuenta");
+    if (!cmb) return;
+    const $c = $(cmb);
     try {
         const res = await fetch("/Cuentas/Lista", {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { Authorization: "Bearer " + getAuthToken(), "Content-Type": "application/json" }
         });
-        const data = await res.json();
-        State.cuentas = data || [];
-        const cmb = document.getElementById("cmbCuenta");
-        if (!cmb) return;
-        cmb.innerHTML = `<option value="">Seleccione</option>`;
-        State.cuentas.forEach(c => {
-            const op = document.createElement("option");
-            op.value = c.Id;
-            op.textContent = c.Nombre ?? c.Descripcion ?? "";
-            cmb.appendChild(op);
-        });
-    } catch { /* ignore */ }
+        if (!res.ok) {
+            console.error("Cuentas/Lista HTTP", res.status);
+            State.cuentas = [];
+        } else {
+            const data = await res.json();
+            State.cuentas = Array.isArray(data) ? data : [];
+        }
+    } catch (e) {
+        console.error(e);
+        State.cuentas = [];
+    }
+    destruirSelect2SiHay($c);
+    cmb.innerHTML = `<option value="">Seleccione</option>`;
+    State.cuentas.forEach((c) => {
+        const op = document.createElement("option");
+        op.value = c.Id;
+        op.textContent = c.Nombre ?? c.Descripcion ?? "";
+        cmb.appendChild(op);
+    });
+    initSelect2ComboSueldo($c);
 }
 
 // --------------------------- Carga de sueldo (edición) ---------------------------
 async function cargarSueldoExistente(id) {
     const res = await fetch(`/PersonalSueldos/EditarInfo?id=${id}`, {
-        headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+        headers: { Authorization: "Bearer " + getAuthToken(), "Content-Type": "application/json" }
     });
     if (!res.ok) { errorModal("No se pudo cargar el pago de sueldo."); return; }
     const s = await res.json();
@@ -120,14 +496,15 @@ async function cargarSueldoExistente(id) {
     let pagos = [];
     try {
         const rp = await fetch(`/PersonalSueldos/PagosLista?idSueldo=${id}`, {
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { Authorization: "Bearer " + getAuthToken(), "Content-Type": "application/json" }
         });
         pagos = rp.ok ? await rp.json() : [];
     } catch { pagos = []; }
 
     // Cabecera
     document.getElementById("dtpFecha").value = formatearFechaParaInput(s.Fecha) || hoyISO();
-    document.getElementById("cmbPersonal").value = s.IdPersonal ?? "";
+    const idP = s.IdPersonal != null && s.IdPersonal !== "" ? String(s.IdPersonal) : "";
+    $("#cmbPersonal").val(idP).trigger("change");
     document.getElementById("txtConcepto").value = s.Concepto ?? "";
     document.getElementById("txtImporte").value = _toMiles(s.Importe ?? 0);
     document.getElementById("txtNota").value = s.NotaInterna ?? "";
@@ -161,6 +538,7 @@ function configurarTablaPagos() {
                 orderable: false,
                 className: "text-center",
                 render: (_, __, ___, meta) => {
+                    if (State.soloVer) return '<span class="text-muted">—</span>';
                     const idx = meta.row;
                     return `
             <button class="btn btn-link p-0 me-2 text-success" title="Editar" onclick="editarPago(${idx})">
@@ -180,6 +558,9 @@ function configurarTablaPagos() {
         pageLength: 8,
         dom: 't<"row mt-2"<"col-sm-12"p>>'
     });
+    if (typeof bindDataTableSeleccionFila === "function") {
+        bindDataTableSeleccionFila("#grd_Pagos", "psPagos");
+    }
 }
 function refrescarTablaPagos() {
     if (!gridPagos) return;
@@ -188,10 +569,12 @@ function refrescarTablaPagos() {
 
 // --------------------------- Validación del modal de pago ---------------------------
 function resetPagoValidation() {
-    ["dtpPagoFecha", "cmbCuenta", "txtPagoImporte"].forEach(id => {
+    document.getElementById("formPago")?.setAttribute("data-validacion-ui", "0");
+    ["dtpPagoFecha", "cmbCuenta", "txtPagoImporte"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
-        el.classList.remove("is-invalid", "is-valid");
+        if (typeof clearValidation === "function") clearValidation(el);
+        else el.classList.remove("is-invalid", "is-valid");
     });
     document.getElementById("errorCamposPago")?.classList.add("d-none");
 }
@@ -201,20 +584,29 @@ function validarCamposPago() {
     const cuentaEl = document.getElementById("cmbCuenta");
     const importeEl = document.getElementById("txtPagoImporte");
 
-    const fechaOK = !!fechaEl.value;
-    const cuentaOK = !!parseInt(cuentaEl.value || 0);
-    const importeOK = _toNumber(importeEl.value) > 0;
+    const fechaOK = !!fechaEl?.value;
+    const cuentaOK = !!parseInt(cuentaEl?.value || 0, 10);
+    const importeOK = _toNumber(importeEl?.value) > 0;
 
-    fechaEl.classList.toggle("is-invalid", !fechaOK);
-    cuentaEl.classList.toggle("is-invalid", !cuentaOK);
-    importeEl.classList.toggle("is-invalid", !importeOK);
-
-    fechaEl.classList.toggle("is-valid", fechaOK);
-    cuentaEl.classList.toggle("is-valid", cuentaOK);
-    importeEl.classList.toggle("is-valid", importeOK);
+    if (typeof setInvalid === "function" && typeof setValid === "function") {
+        if (!fechaOK) setInvalid("#dtpPagoFecha", "Campo obligatorio"); else setValid("#dtpPagoFecha");
+        if (!cuentaOK) setInvalid("#cmbCuenta", "Campo obligatorio"); else setValid("#cmbCuenta");
+        if (!importeOK) setInvalid("#txtPagoImporte", "Campo obligatorio"); else setValid("#txtPagoImporte");
+    } else {
+        fechaEl.classList.toggle("is-invalid", !fechaOK);
+        cuentaEl.classList.toggle("is-invalid", !cuentaOK);
+        importeEl.classList.toggle("is-invalid", !importeOK);
+        fechaEl.classList.toggle("is-valid", fechaOK);
+        cuentaEl.classList.toggle("is-valid", cuentaOK);
+        importeEl.classList.toggle("is-valid", importeOK);
+    }
 
     const ok = fechaOK && cuentaOK && importeOK;
-    document.getElementById("errorCamposPago")?.classList.toggle("d-none", ok);
+    const formPago = document.getElementById("formPago");
+    const modoSuave = formPago && formPago.getAttribute("data-validacion-ui") === "0";
+    if (!modoSuave) {
+        document.getElementById("errorCamposPago")?.classList.toggle("d-none", ok);
+    }
     return ok;
 }
 
@@ -232,15 +624,15 @@ function attachPagoLiveValidation() {
 
 // --------------------------- Modal Pago ---------------------------
 function setPagoModalMode(mode /* 'nuevo' | 'editar' */) {
-    const titleEl = document.querySelector('#modalPago .modal-title');
-    const btnEl = document.getElementById('btnGuardarPago')
-        || document.querySelector('#modalPago .modal-footer .btn.btn-success');
+    const titleEl = document.getElementById("modalPagoTitulo") || document.querySelector("#modalPago .modal-title");
+    const btnEl = document.getElementById("btnGuardarPago")
+        || document.querySelector("#modalPago .modal-footer .btn.btn-success");
 
-    if (mode === 'editar') {
-        if (titleEl) titleEl.innerHTML = `<i class="fa fa-pen-to-square me-2 text-success"></i>Editar Pago`;
+    if (mode === "editar") {
+        if (titleEl) titleEl.innerHTML = `<i class="fa fa-pen-to-square me-2"></i>Editar Pago`;
         if (btnEl) btnEl.innerHTML = `<i class="fa fa-check me-1"></i> Guardar`;
     } else {
-        if (titleEl) titleEl.innerHTML = `<i class="fa fa-plus-circle me-2 text-success"></i>Registrar Pago`;
+        if (titleEl) titleEl.innerHTML = `<i class="fa fa-plus-circle me-2"></i>Registrar Pago`;
         if (btnEl) btnEl.innerHTML = `<i class="fa fa-check me-1"></i> Registrar`;
     }
 }
@@ -250,15 +642,16 @@ function abrirModalPago() {
 
     // limpiar/defaults
     document.getElementById("dtpPagoFecha").value = hoyISO();
-    document.getElementById("cmbCuenta").value = "";
+    $("#cmbCuenta").val("").trigger("change");
     document.getElementById("txtPagoImporte").value = "";
     document.getElementById("txtPagoNota").value = "";
 
     resetPagoValidation();
     attachPagoLiveValidation();
-    setPagoModalMode('nuevo');
+    setPagoModalMode("nuevo");
+    bindPrecioSueldoNuevoModif();
 
-    new bootstrap.Modal(document.getElementById('modalPago')).show();
+    getBsModalPago()?.show();
 }
 
 function editarPago(idx) {
@@ -266,40 +659,74 @@ function editarPago(idx) {
     State.editIndex = idx;
 
     document.getElementById("dtpPagoFecha").value = formatearFechaParaInput(p.fecha) || hoyISO();
-    document.getElementById("cmbCuenta").value = p.idCuenta || "";
+    $("#cmbCuenta").val(p.idCuenta ? String(p.idCuenta) : "").trigger("change");
     document.getElementById("txtPagoImporte").value = _toMiles(p.importe || 0);
     document.getElementById("txtPagoNota").value = p.nota || "";
 
     resetPagoValidation();
     attachPagoLiveValidation();
-    setPagoModalMode('editar');
+    setPagoModalMode("editar");
+    bindPrecioSueldoNuevoModif();
 
-    new bootstrap.Modal(document.getElementById('modalPago')).show();
+    getBsModalPago()?.show();
 }
 
+let _guardarPagoBusy = false;
+
 function guardarPago() {
-    if (!validarCamposPago()) return;
+    if (_guardarPagoBusy) return;
+    _guardarPagoBusy = true;
+    try {
+        const fecha = document.getElementById("dtpPagoFecha")?.value;
+        const idCuenta = parseInt(document.getElementById("cmbCuenta")?.value || 0, 10);
+        const importePago = _toNumber(document.getElementById("txtPagoImporte")?.value);
+        const okNegocio = !!fecha && !!idCuenta && importePago > 0;
+        if (!okNegocio) {
+            if (typeof forzarValidacionModal === "function") {
+                forzarValidacionModal("#formPago", "#errorCamposPago");
+            } else {
+                validarCamposPago();
+            }
+            if (!(importePago > 0) && typeof setInvalid === "function") {
+                setInvalid("#txtPagoImporte", "Campo obligatorio");
+                if (typeof updateErrorBanner === "function") {
+                    updateErrorBanner("#formPago", "#errorCamposPago");
+                }
+            }
+            const err = document.getElementById("errorCamposPago");
+            if (err) {
+                err.textContent = "Debes completar los campos obligatorios.";
+                err.classList.remove("d-none");
+            }
+            return;
+        }
 
-    const fecha = document.getElementById("dtpPagoFecha").value;
-    const idCuenta = parseInt(document.getElementById("cmbCuenta").value || 0);
-    const cuenta = document.getElementById("cmbCuenta").selectedOptions[0]?.textContent || "";
-    const importe = _toNumber(document.getElementById("txtPagoImporte").value);
-    const nota = (document.getElementById("txtPagoNota").value || "").trim();
+        document.getElementById("formPago")?.setAttribute("data-validacion-ui", "0");
+        document.getElementById("errorCamposPago")?.classList.add("d-none");
 
-    const item = { id: 0, fecha, idCuenta, cuenta, importe, nota };
+        const cuenta = document.getElementById("cmbCuenta").selectedOptions[0]?.textContent || "";
+        const nota = (document.getElementById("txtPagoNota").value || "").trim();
 
-    if (State.editIndex >= 0) {
-        State.pagos[State.editIndex] = { ...State.pagos[State.editIndex], ...item };
-    } else {
-        State.pagos.push(item);
+        const item = { id: 0, fecha, idCuenta, cuenta, importe: importePago, nota };
+
+        if (State.editIndex >= 0) {
+            State.pagos[State.editIndex] = { ...State.pagos[State.editIndex], ...item };
+        } else {
+            State.pagos.push(item);
+        }
+
+        State.editIndex = -1;
+        setPagoModalMode("nuevo");
+
+        refrescarTablaPagos();
+        recalcularTotales();
+        getBsModalPago()?.hide();
+    } finally {
+        const q = typeof queueMicrotask === "function" ? queueMicrotask : (fn) => Promise.resolve().then(fn);
+        q(() => {
+            _guardarPagoBusy = false;
+        });
     }
-
-    State.editIndex = -1;
-    setPagoModalMode('nuevo');
-
-    refrescarTablaPagos();
-    recalcularTotales();
-    bootstrap.Modal.getInstance(document.getElementById('modalPago'))?.hide();
 }
 
 async function eliminarPago(idx) {
@@ -311,6 +738,17 @@ async function eliminarPago(idx) {
 }
 
 // --------------------------- Totales ---------------------------
+/** Si el banner era por “pagos superan importe” y ya no aplica, lo oculta (no afecta validación de obligatorios). */
+function syncSueldoErrorBannerAfterTotalesOk() {
+    const err = document.getElementById("errorCampos");
+    if (!err || err.classList.contains("d-none")) return;
+    const importe = _toNumber(document.getElementById("txtImporte")?.value);
+    const abonado = State.pagos.reduce((a, p) => a + (parseFloat(p.importe) || 0), 0);
+    const EPS = 0.000001;
+    if (abonado - importe > EPS) return;
+    if ((err.textContent || "").includes("supera")) clearErrorCampos();
+}
+
 function recalcularTotales() {
     const importe = _toNumber(document.getElementById("txtImporte")?.value);
     const abonado = State.pagos.reduce((a, p) => a + (parseFloat(p.importe) || 0), 0);
@@ -319,6 +757,7 @@ function recalcularTotales() {
     document.getElementById("statImporte").textContent = _fmtNumber(importe);
     document.getElementById("statAbonado").textContent = _fmtNumber(abonado);
     document.getElementById("statSaldo").textContent = _fmtNumber(saldo);
+    syncSueldoErrorBannerAfterTotalesOk();
 }
 
 // --------------------------- Guardar todo (sueldo + pagos) ---------------------------
@@ -333,20 +772,36 @@ async function guardarTodo() {
     const importe = _toNumber(document.getElementById("txtImporte").value);
     const notaInterna = (document.getElementById("txtNota").value || "").trim();
 
-    const mark = (sel, bad) => document.querySelector(sel)?.classList.toggle("is-invalid", bad);
-    mark("#dtpFecha", !fecha);
-    mark("#cmbPersonal", !idPersonal);
-    mark("#txtConcepto", !concepto);
-    mark("#txtImporte", !(importe > 0));
-
-    // Validación de requeridos
+    const formSueldo = document.getElementById("formSueldo");
     if (!(fecha && idPersonal && concepto && importe > 0)) {
+        if (typeof forzarValidacionModal === "function") {
+            forzarValidacionModal("#formSueldo", "#errorCampos");
+        } else {
+            const mark = (sel, bad) => document.querySelector(sel)?.classList.toggle("is-invalid", bad);
+            if (typeof setInvalid === "function" && typeof setValid === "function") {
+                if (!fecha) setInvalid("#dtpFecha", "Campo obligatorio"); else setValid("#dtpFecha");
+                if (!idPersonal) setInvalid("#cmbPersonal", "Campo obligatorio"); else setValid("#cmbPersonal");
+                if (!concepto) setInvalid("#txtConcepto", "Campo obligatorio"); else setValid("#txtConcepto");
+                if (!(importe > 0)) setInvalid("#txtImporte", "Campo obligatorio"); else setValid("#txtImporte");
+            } else {
+                mark("#dtpFecha", !fecha);
+                mark("#cmbPersonal", !idPersonal);
+                mark("#txtConcepto", !concepto);
+                mark("#txtImporte", !(importe > 0));
+            }
+        }
+        if (!(importe > 0) && typeof setInvalid === "function") {
+            setInvalid("#txtImporte", "Campo obligatorio");
+            if (typeof updateErrorBanner === "function") {
+                updateErrorBanner("#formSueldo", "#errorCampos");
+            }
+        }
         setErrorCampos("Debes completar los campos obligatorios.");
         isSaving = false;
         return;
-    } else {
-        clearErrorCampos();
     }
+    formSueldo?.setAttribute("data-validacion-ui", "0");
+    clearErrorCampos();
 
     // Suma de pagos vs Importe
     const abonado = State.pagos.reduce((a, p) => a + (parseFloat(p.importe) || 0), 0);
@@ -385,7 +840,7 @@ async function guardarTodo() {
         const res = await fetch(url, {
             method,
             headers: {
-                "Authorization": "Bearer " + (token || ""),
+                "Authorization": "Bearer " + getAuthToken(),
                 "Content-Type": "application/json;charset=utf-8"
             },
             body: JSON.stringify(payload)
@@ -417,7 +872,7 @@ async function eliminarActual() {
     try {
         const res = await fetch(`/PersonalSueldos/Eliminar?id=${id}`, {
             method: "DELETE",
-            headers: { "Authorization": "Bearer " + (token || ""), "Content-Type": "application/json" }
+            headers: { Authorization: "Bearer " + getAuthToken(), "Content-Type": "application/json" }
         });
         if (!res.ok) throw new Error(res.statusText);
         const r = await res.json();
@@ -431,7 +886,9 @@ function exportarReciboPdf() {
     const idPersonal = parseInt(document.getElementById("cmbPersonal").value || 0);
     const fecha = document.getElementById("dtpFecha").value;
     const concepto = (document.getElementById("txtConcepto").value || "").trim();
-    const personalName = document.getElementById("cmbPersonal").selectedOptions[0]?.textContent || "";
+    const personalName = ($("#cmbPersonal option:selected").text() || "").trim()
+        || document.getElementById("cmbPersonal")?.selectedOptions?.[0]?.textContent
+        || "";
     const importe = _toNumber(document.getElementById("txtImporte").value);
 
     if (!idPersonal) { errorModal("Seleccioná un personal para exportar."); return; }
@@ -535,9 +992,10 @@ function volverIndex() { window.location.href = "/PersonalSueldos/Index"; }
 function setErrorCampos(msg) {
     const el = document.getElementById("errorCampos");
     if (!el) return;
-    el.textContent = msg || "Debes completar los campos obligatorios.";
+    const text = msg || "Debes completar los campos obligatorios.";
+    el.textContent = text;
     el.classList.remove("d-none");
-    // opcional: llevar el scroll al bloque de error
+    el.setAttribute("data-banner-reason", String(text).includes("supera") ? "negocio" : "validacion");
     el.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 function clearErrorCampos() {
@@ -545,4 +1003,5 @@ function clearErrorCampos() {
     if (!el) return;
     el.textContent = "Debes completar los campos obligatorios.";
     el.classList.add("d-none");
+    el.removeAttribute("data-banner-reason");
 }

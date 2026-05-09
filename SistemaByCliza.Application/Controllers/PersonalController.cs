@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaByCliza.Application.Models.ViewModels;
 using SistemaByCliza.BLL.Service;
@@ -98,8 +98,8 @@ namespace SistemaByCliza.Application.Controllers
                 IdSucursal = model.IdSucursal,
             };
 
-            var ok = await _PersonalService.Insertar(entidad);
-            return Ok(new { valor = ok });
+            var nuevoId = await _PersonalService.Insertar(entidad);
+            return Ok(new { valor = nuevoId > 0, id = nuevoId });
         }
 
         // 🔹 PUT actualizar

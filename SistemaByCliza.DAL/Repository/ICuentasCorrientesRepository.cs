@@ -7,10 +7,12 @@ namespace SistemaByCliza.DAL.Repository
     {
         Task<List<Cliente>> ListarClientes(string? texto);
 
+        /// <param name="idsSucursalesPermitidas"><see langword="null"/>: sin restricción (admin). Lista vacía: ninguna sucursal. Caso contrario: solo movimientos en esas sucursales.</param>
         Task<(List<ClientesCuentaCorriente> Lista, decimal SaldoAnterior)> ListarConSaldoAnterior(
-            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto);
+            int idCliente, DateTime? desde, DateTime? hasta, int? idSucursal, string? texto,
+            IReadOnlyList<int>? idsSucursalesPermitidas = null);
 
-        Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal);
+        Task<decimal> ObtenerSaldo(int idCliente, int? idSucursal, IReadOnlyList<int>? idsSucursalesPermitidas = null);
 
         Task<ClientesCuentaCorriente?> Obtener(int id);
         Task<bool> InsertarManual(ClientesCuentaCorriente mov, bool impactaCaja, int? idCuentaCaja);

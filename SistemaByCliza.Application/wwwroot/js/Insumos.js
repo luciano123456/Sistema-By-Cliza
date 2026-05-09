@@ -1,4 +1,4 @@
-﻿/* =========================
+/* =========================
    Insumos.js
    ========================= */
 
@@ -10,7 +10,46 @@ const Catalogos = {
     categoriasMap: new Map(),
     proveedores: [],
     proveedoresMap: new Map()
+
+
+
 };
+
+let pendingSeleccionCatalogoInsumo = null;
+
+/** Se pone en true al abrir configuración desde el + del modal insumo (no depender solo de `window.esModoAtajo`). */
+let insumosPedirRefrescoTrasInsertConfig = false;
+
+/** true si el guardado viene del flujo + atajo (NavBar manda `detail.esAtajo`; fallback por compat). */
+function insumosEventoConfiguracionEsAtajo(d) {
+    if (d && d.esAtajo === false) return false;
+    if (d && d.esAtajo === true) return true;
+    return window.esModoAtajo === true || window.esModoAtajo === 1 || window.esModoAtajo === "true" || window.esModoAtajo === "1";
+}
+
+function destruirSelect2CombosInsumo() {
+    ["cmbCategoria", "cmbProveedor"].forEach((id) => {
+        const $s = $("#" + id);
+        if ($s.length && $s.hasClass("select2-hidden-accessible")) {
+            $s.select2("destroy");
+        }
+    });
+}
+
+/** Con modales apilados `#modalEdicion` puede perder `.show` y `initSelect2` del site no inicializa; forzamos solo estos combos. */
+function inicializarSelect2CombosInsumoSiHaceFalta() {
+    const $modal = $("#modalEdicion");
+    if (!$modal.length || !(window.jQuery && $.fn.select2)) return;
+    ["cmbCategoria", "cmbProveedor"].forEach((id) => {
+        const $s = $("#" + id);
+        if (!$s.length || $s.hasClass("no-select2") || $s.is('[data-no-select2="1"]')) return;
+        if ($s.hasClass("select2-hidden-accessible")) return;
+        $s.select2({
+            width: "100%",
+            dropdownParent: $modal
+        });
+    });
+}
 
 /* ---------- Filtros DataTable ---------- */
 const columnConfig = [
@@ -23,6 +62,8 @@ const columnConfig = [
 
 /* ========== Init ========== */
 $(document).ready(async () => {
+    Permisos.init();
+    Permisos.aplicarUI("Insumos");
     await Promise.all([
         cargarCategorias(),
         cargarProveedores()
@@ -33,64 +74,137 @@ $(document).ready(async () => {
     if (typeof attachLiveValidation === 'function') {
         attachLiveValidation('#modalEdicion');
     }
-
-    // Fallback toggleAcciones
-    if (typeof window.toggleAcciones === 'undefined') {
-        window.toggleAcciones = function (id) {
-            const $dd = $(`.acciones-menu[data-id="${id}"] .acciones-dropdown`);
-            if ($dd.is(":visible")) $dd.hide();
-            else { $('.acciones-dropdown').hide(); $dd.show(); }
-        };
-        $(document).on('click', function (e) {
-            if (!$(e.target).closest('.acciones-menu').length) $('.acciones-dropdown').hide();
-        });
+    if (typeof wireSelect2Validation === "function") {
+        wireSelect2Validation("#modalEdicion");
     }
+
+    $("#cmbCategoria, #cmbProveedor")
+        .off("select2:close.insumosBlur")
+        .on("select2:close.insumosBlur", function () {
+            if ($(this).prop("disabled")) return;
+            validarSelectIndividualInsumo("#" + this.id);
+        });
+
+    bindAtajosCatalogosInsumo();
+    bindCostoInputInsumos();
 });
 
 /* =========================
    Crear / Editar
    ========================= */
 
-function validarCampos() {
+function limpiarEstilosValidacionInsumo() {
+    $("#errorCampos").addClass("d-none").text("Debes completar los campos obligatorios.");
+    $("#txtCodigo, #txtDescripcion, #txtCosto, #cmbCategoria, #cmbProveedor").removeClass("is-invalid is-valid");
+    const $s2cat = $("#cmbCategoria").next(".select2");
+    if ($s2cat.length) $s2cat.find(".select2-selection").removeClass("is-invalid is-valid");
+    const $s2prov = $("#cmbProveedor").next(".select2");
+    if ($s2prov.length) $s2prov.find(".select2-selection").removeClass("is-invalid is-valid");
+}
+
+function camposInsumoOk() {
     const codigo = ($("#txtCodigo").val() || '').trim();
     const descripcion = ($("#txtDescripcion").val() || '').trim();
     const idCat = $("#cmbCategoria").val();
     const idProv = $("#cmbProveedor").val();
-    const costo = $("#txtCosto").val();
+    const costo = ($("#txtCosto").val() ?? "").toString().trim();
+    const costoNum = parseCostoInputInsumo(costo);
 
     const okCodigo = codigo !== '';
     const okDesc = descripcion !== '';
     const okCat = !!idCat;
     const okProv = !!idProv;
-    const okCosto = costo !== '' && !isNaN(parseFloat(costo));
-
-    $("#txtCodigo").toggleClass("is-invalid", !okCodigo);
-    $("#txtDescripcion").toggleClass("is-invalid", !okDesc);
-    $("#cmbCategoria").toggleClass("is-invalid", !okCat);
-    $("#cmbProveedor").toggleClass("is-invalid", !okProv);
-    $("#txtCosto").toggleClass("is-invalid", !okCosto);
-
-    $("#errorCampos")
-        .toggleClass('d-none', (okCodigo && okDesc && okCat && okProv && okCosto))
-        .text('Debes completar los campos obligatorios.');
+    const okCosto = costo !== '' && !isNaN(costoNum) && costoNum >= 0;
 
     return okCodigo && okDesc && okCat && okProv && okCosto;
 }
 
+function validarCampos(forzarUI = false) {
+    const ok = camposInsumoOk();
+    const modal = document.getElementById("modalEdicion");
+    if (!forzarUI && modal && modal.getAttribute("data-validacion-ui") === "0") {
+        return ok;
+    }
+
+    const codigo = ($("#txtCodigo").val() || '').trim();
+    const descripcion = ($("#txtDescripcion").val() || '').trim();
+    const idCat = $("#cmbCategoria").val();
+    const idProv = $("#cmbProveedor").val();
+    const costo = ($("#txtCosto").val() ?? "").toString().trim();
+    const costoNum = parseCostoInputInsumo(costo);
+
+    const okCodigo = codigo !== '';
+    const okDesc = descripcion !== '';
+    const okCat = !!idCat;
+    const okProv = !!idProv;
+    const okCosto = costo !== '' && !isNaN(costoNum) && costoNum >= 0;
+
+    if (typeof setInvalid === "function" && typeof setValid === "function") {
+        if (!okCodigo) setInvalid("#txtCodigo", "Campo obligatorio"); else setValid("#txtCodigo");
+        if (!okDesc) setInvalid("#txtDescripcion", "Campo obligatorio"); else setValid("#txtDescripcion");
+        if (!okCat) setInvalid("#cmbCategoria", "Campo obligatorio"); else setValid("#cmbCategoria");
+        if (!okProv) setInvalid("#cmbProveedor", "Campo obligatorio"); else setValid("#cmbProveedor");
+        if (!okCosto) setInvalid("#txtCosto", "Campo obligatorio"); else setValid("#txtCosto");
+    } else {
+        $("#txtCodigo").toggleClass("is-invalid", !okCodigo);
+        $("#txtDescripcion").toggleClass("is-invalid", !okDesc);
+        $("#cmbCategoria").toggleClass("is-invalid", !okCat);
+        $("#cmbProveedor").toggleClass("is-invalid", !okProv);
+        $("#txtCosto").toggleClass("is-invalid", !okCosto);
+    }
+
+    const $s2cat = $("#cmbCategoria").next(".select2");
+    if ($s2cat.length) {
+        $s2cat.find(".select2-selection")
+            .toggleClass("is-invalid", !okCat)
+            .toggleClass("is-valid", okCat && !!idCat);
+    }
+    const $s2prov = $("#cmbProveedor").next(".select2");
+    if ($s2prov.length) {
+        $s2prov.find(".select2-selection")
+            .toggleClass("is-invalid", !okProv)
+            .toggleClass("is-valid", okProv && !!idProv);
+    }
+
+    $("#errorCampos")
+        .toggleClass('d-none', ok)
+        .text('Debes completar los campos obligatorios.');
+
+    return ok;
+}
+
 async function guardarCambios() {
-    if (!validarCampos()) return;
+
+    if (!camposInsumoOk()) {
+
+        if (typeof forzarValidacionModal === "function") {
+
+            forzarValidacionModal("#modalEdicion", "#errorCampos");
+
+        } else {
+
+            document.getElementById("modalEdicion")
+                ?.setAttribute("data-validacion-ui", "1");
+        }
+
+        validarCampos(true);
+
+        return;
+    }
 
     const id = $("#txtId").val();
+
     const modelo = {
         Id: id !== "" ? parseInt(id) : 0,
         Codigo: $("#txtCodigo").val().trim(),
         Descripcion: $("#txtDescripcion").val().trim(),
         IdCategoria: parseInt($("#cmbCategoria").val()),
         IdProveedor: parseInt($("#cmbProveedor").val()),
-        CostoUnitario: parseFloat($("#txtCosto").val())
+        CostoUnitario: parseCostoInputInsumo($("#txtCosto").val())
     };
 
     const url = id === "" ? "/Insumos/Insertar" : "/Insumos/Actualizar";
+
     const method = id === "" ? "POST" : "PUT";
 
     fetch(url, {
@@ -102,49 +216,115 @@ async function guardarCambios() {
         body: JSON.stringify(modelo)
     })
         .then(r => {
-            if (!r.ok) throw new Error(r.statusText);
+
+            if (!r.ok)
+                throw new Error(r.statusText);
+
             return r.json();
         })
         .then(() => {
+
             $('#modalEdicion').modal('hide');
-            exitoModal(id === "" ? "Insumo registrado" : "Insumo modificado");
+
+            exitoModal(
+                id === ""
+                    ? "Insumo registrado"
+                    : "Insumo modificado"
+            );
+
             listaInsumos();
         })
         .catch(err => {
+
             console.error('Error:', err);
+
             errorModal("No se pudo guardar el insumo.");
         });
 }
-
 function nuevoInsumo() {
+
+    $("#modalEdicion")
+        .attr("data-validacion-ui", "0");
+
     limpiarModal('#modalEdicion', '#errorCampos');
 
-    if (document.getElementById('cmbCategoria')) llenarSelect('cmbCategoria', Catalogos.categorias);
-    if (document.getElementById('cmbProveedor')) llenarSelect('cmbProveedor', Catalogos.proveedores);
+    limpiarEstilosValidacionInsumo();
 
-    $("#btnGuardar").text("Registrar");
-    $("#modalEdicionLabel").text("Nuevo Insumo");
+    destruirSelect2CombosInsumo();
+
+    if (document.getElementById('cmbCategoria'))
+        llenarSelect('cmbCategoria', Catalogos.categorias);
+
+    if (document.getElementById('cmbProveedor'))
+        llenarSelect('cmbProveedor', Catalogos.proveedores);
+
+    $("#btnGuardar")
+        .removeClass("d-none")
+        .text("Registrar");
+
+    $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea")
+        .prop("disabled", false);
+
+    $("#modalEdicionLabel")
+        .text("Nuevo Insumo");
+
     $('#modalEdicion').modal('show');
 }
+async function mostrarModal(modelo, opts = {}) {
 
-async function mostrarModal(modelo) {
+    const readOnly = !!opts.readOnly;
+
+    $("#modalEdicion").attr("data-validacion-ui", "0");
+
     limpiarModal('#modalEdicion', '#errorCampos');
+    limpiarEstilosValidacionInsumo();
 
-    if (document.getElementById('cmbCategoria')) llenarSelect('cmbCategoria', Catalogos.categorias);
-    if (document.getElementById('cmbProveedor')) llenarSelect('cmbProveedor', Catalogos.proveedores);
+    destruirSelect2CombosInsumo();
+
+    if (document.getElementById('cmbCategoria')) {
+        llenarSelect('cmbCategoria', Catalogos.categorias);
+    }
+
+    if (document.getElementById('cmbProveedor')) {
+        llenarSelect('cmbProveedor', Catalogos.proveedores);
+    }
 
     $("#txtId").val(modelo.Id ?? 0);
     $("#txtCodigo").val(modelo.Codigo ?? '');
     $("#txtDescripcion").val(modelo.Descripcion ?? '');
-    $("#cmbCategoria").val(modelo.IdCategoria ?? '').trigger('change');
-    $("#cmbProveedor").val(modelo.IdProveedor ?? '').trigger('change');
-    $("#txtCosto").val(modelo.CostoUnitario ?? '');
 
-    $("#btnGuardar").text("Guardar");
-    $("#modalEdicionLabel").text("Editar Insumo");
+    const c = modelo.CostoUnitario;
+    const n = typeof c === "number"
+        ? c
+        : parseCostoInputInsumo(c);
+
+    $("#txtCosto").val(
+        c != null && c !== "" && !isNaN(n)
+            ? formatCostoCampoInsumo(n)
+            : ""
+    );
+
+    $("#cmbCategoria").val(modelo.IdCategoria ?? '').trigger("change");
+    $("#cmbProveedor").val(modelo.IdProveedor ?? '').trigger("change");
+
+    limpiarEstilosValidacionInsumo();
+
+    if (readOnly) {
+        $("#modalEdicionLabel").text("Ver Insumo");
+        $("#btnGuardar").addClass("d-none");
+
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea")
+            .prop("disabled", true);
+    } else {
+        $("#modalEdicionLabel").text("Editar Insumo");
+        $("#btnGuardar").removeClass("d-none").text("Guardar");
+
+        $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea")
+            .prop("disabled", false);
+    }
+
     $('#modalEdicion').modal('show');
 }
-
 /* =========================
    Listado / Editar / Eliminar
    ========================= */
@@ -184,8 +364,35 @@ async function listaInsumos() {
     actualizarKpisInsumos();
 }
 
+async function verInsumo(id) {
+    Permisos.init();
+    if (!Permisos.tiene("Insumos", "Ver")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
+    try {
+        const r = await fetch("/Insumos/EditarInfo?id=" + id, {
+            method: "GET",
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+        if (!r.ok) throw new Error();
+        const dataJson = await r.json();
+        if (dataJson) await mostrarModal(dataJson, { readOnly: true });
+        else throw new Error();
+    } catch {
+        errorModal("Ha ocurrido un error.");
+    }
+}
+
 const editarInsumo = id => {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Insumos", "Editar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
 
     fetch("/Insumos/EditarInfo?id=" + id, {
         method: 'GET',
@@ -198,12 +405,16 @@ const editarInsumo = id => {
             if (!r.ok) throw new Error("Ha ocurrido un error.");
             return r.json();
         })
-        .then(dataJson => dataJson ? mostrarModal(dataJson) : (() => { throw new Error("Ha ocurrido un error."); })())
+        .then(dataJson => dataJson ? mostrarModal(dataJson, { readOnly: false }) : (() => { throw new Error("Ha ocurrido un error."); })())
         .catch(() => errorModal("Ha ocurrido un error."));
 };
 
 async function eliminarInsumo(id) {
-    $('.acciones-dropdown').hide();
+    Permisos.init();
+    if (!Permisos.tiene("Insumos", "Eliminar")) {
+        errorModal("No tenés permisos.");
+        return;
+    }
     const confirmado = await confirmarModal("¿Desea eliminar este Insumo?");
     if (!confirmado) return;
 
@@ -252,20 +463,11 @@ async function configurarDataTableInsumos(data) {
                     title: '',
                     width: "1%",
                     render: function (data) {
-                        return `
-                <div class="acciones-menu" data-id="${data}">
-                    <button class='btn btn-sm btnacciones' type='button' onclick='toggleAcciones(${data})' title='Acciones'>
-                        <i class='fa fa-ellipsis-v fa-lg text-white' aria-hidden='true'></i>
-                    </button>
-                    <div class="acciones-dropdown" style="display: none;">
-                        <button class='btn btn-sm btneditar' type='button' onclick='editarInsumo(${data})' title='Editar'>
-                            <i class='fa fa-pencil-square-o fa-lg text-success' aria-hidden='true'></i> Editar
-                        </button>
-                        <button class='btn btn-sm btneliminar' type='button' onclick='eliminarInsumo(${data})' title='Eliminar'>
-                            <i class='fa fa-trash-o fa-lg text-danger' aria-hidden='true'></i> Eliminar
-                        </button>
-                    </div>
-                </div>`;
+                        return renderAccionesGrid(data, {
+                            ver: "verInsumo",
+                            editar: "editarInsumo",
+                            eliminar: "eliminarInsumo"
+                        }, "Insumos");
                     },
                     orderable: false,
                     searchable: false,
@@ -280,7 +482,7 @@ async function configurarDataTableInsumos(data) {
                 }                                                       // 5
             ],
             dom: 'Bfrtip',
-            buttons: [
+            buttons: dataTableButtonsExportCondicional("Insumos", [
                 {
                     extend: 'excelHtml5',
                     text: 'Exportar Excel',
@@ -304,8 +506,7 @@ async function configurarDataTableInsumos(data) {
                     exportOptions: { columns: [1, 2, 3, 4, 5] },
                     className: 'btn-exportar-print'
                 },
-                'pageLength'
-            ],
+            ]),
             orderCellsTop: true,
             fixedHeader: true,
 
@@ -358,6 +559,10 @@ async function configurarDataTableInsumos(data) {
 
                 if (typeof configurarOpcionesColumnas === 'function') {
                     configurarOpcionesColumnas('#grd_Insumos', '#configColumnasMenu', 'Insumos_Columnas');
+                }
+
+                if (typeof bindDataTableSeleccionFila === "function") {
+                    bindDataTableSeleccionFila("#grd_Insumos", "insumos");
                 }
 
                 setTimeout(() => gridInsumos.columns.adjust(), 10);
@@ -413,6 +618,150 @@ function cargarProveedores() {
         });
 }
 
+function aplicarValorSelectPorIdDom(idDom, nid) {
+    const $s = $("#" + idDom);
+    if (!$s.length) return;
+    const el = $s.get(0);
+    let valStr = String(nid);
+    if (el && el.querySelector) {
+        const esc = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(valStr) : valStr.replace(/["\\]/g, "\\$&");
+        if (!el.querySelector(`option[value="${esc}"]`)) {
+            const match = Array.from(el.options || []).find((o) => Number(o.value) === nid);
+            if (match) valStr = match.value;
+        }
+    }
+    $s.val(valStr).trigger("change");
+}
+
+function aplicarPendienteSeleccionCatalogoInsumo(pending) {
+    if (!pending || pending.nuevoId == null) return;
+    const nid = Number(pending.nuevoId);
+    if (!Number.isFinite(nid) || nid <= 0) return;
+
+    switch (pending.tipo) {
+        case "InsumosCategoria":
+            aplicarValorSelectPorIdDom("cmbCategoria", nid);
+            break;
+        case "Proveedores":
+            aplicarValorSelectPorIdDom("cmbProveedor", nid);
+            break;
+        default:
+            break;
+    }
+}
+
+async function refrescarCatalogosTrasConfiguracionInsumo() {
+    const pend = pendingSeleccionCatalogoInsumo;
+    pendingSeleccionCatalogoInsumo = null;
+
+    const catVal = $("#cmbCategoria").val();
+    const provVal = $("#cmbProveedor").val();
+
+    destruirSelect2CombosInsumo();
+
+    await Promise.all([cargarCategorias(), cargarProveedores()]);
+
+    if (catVal) $("#cmbCategoria").val(catVal);
+    if (provVal) $("#cmbProveedor").val(provVal);
+
+    aplicarPendienteSeleccionCatalogoInsumo(pend);
+
+    const ins = document.getElementById("modalEdicion");
+    if (ins && typeof initSelect2 === "function") {
+        if (ins.classList.contains("show")) {
+            initSelect2(ins);
+        } else {
+            inicializarSelect2CombosInsumoSiHaceFalta();
+        }
+    }
+    ["#cmbCategoria", "#cmbProveedor"].forEach((sel) => {
+        const $x = $(sel);
+        if ($x.length && $x.hasClass("select2-hidden-accessible")) {
+            $x.trigger("change");
+        }
+    });
+}
+
+function bindAtajosCatalogosInsumo() {
+    const modalCfg = document.getElementById("modalConfiguracion");
+    if (modalCfg && !modalCfg.dataset.insumosAtajoRefresh) {
+        modalCfg.dataset.insumosAtajoRefresh = "1";
+        modalCfg.addEventListener("hidden.bs.modal", async () => {
+            insumosPedirRefrescoTrasInsertConfig = false;
+            if (!/\/Insumos/i.test(location.pathname || "")) return;
+            if (!document.getElementById("modalEdicion")) return;
+            if (!pendingSeleccionCatalogoInsumo) return;
+            await refrescarCatalogosTrasConfiguracionInsumo();
+        });
+    }
+
+    if (!document.documentElement.dataset.insumosConfigInsertListener) {
+        document.documentElement.dataset.insumosConfigInsertListener = "1";
+        document.addEventListener("configuracionActualizada", async (e) => {
+            if (!/\/Insumos/i.test(location.pathname || "")) return;
+            if (!document.getElementById("modalEdicion")) return;
+            const d = e.detail || {};
+            const desdeAtajo = insumosEventoConfiguracionEsAtajo(d) || insumosPedirRefrescoTrasInsertConfig;
+            if (!desdeAtajo) return;
+            if (d.accion !== "insertar") {
+                insumosPedirRefrescoTrasInsertConfig = false;
+                return;
+            }
+            const tipo = (d.tipo || "").trim();
+            if (tipo !== "InsumosCategoria" && tipo !== "Proveedores") {
+                insumosPedirRefrescoTrasInsertConfig = false;
+                return;
+            }
+            const raw = d.nuevoId ?? d.NuevoId ?? d.nuevoID;
+            const nuevoId = raw != null && raw !== "" ? Number(raw) : NaN;
+            if (!Number.isFinite(nuevoId) || nuevoId <= 0) {
+                try {
+                    await Promise.all([cargarCategorias(), cargarProveedores()]);
+                    const ins = document.getElementById("modalEdicion");
+                    if (ins && ins.classList.contains("show") && typeof initSelect2 === "function") {
+                        initSelect2(ins);
+                    } else if (ins) {
+                        inicializarSelect2CombosInsumoSiHaceFalta();
+                    }
+                } catch (err) {
+                    console.error(err);
+                } finally {
+                    insumosPedirRefrescoTrasInsertConfig = false;
+                }
+                return;
+            }
+            pendingSeleccionCatalogoInsumo = { tipo, nuevoId };
+            try {
+                await refrescarCatalogosTrasConfiguracionInsumo();
+            } catch (err) {
+                console.error(err);
+            } finally {
+                insumosPedirRefrescoTrasInsertConfig = false;
+            }
+        });
+    }
+
+    $("#btnPlusCategoria").off("click").on("click", async () => {
+        if (typeof window.abrirConfiguracion !== "function") return;
+        insumosPedirRefrescoTrasInsertConfig = true;
+        try {
+            await window.abrirConfiguracion("Insumos Categorias", "InsumosCategoria", null, null, null, true);
+        } catch (_) {
+            insumosPedirRefrescoTrasInsertConfig = false;
+        }
+    });
+
+    $("#btnPlusProveedor").off("click").on("click", async () => {
+        if (typeof window.abrirConfiguracion !== "function") return;
+        insumosPedirRefrescoTrasInsertConfig = true;
+        try {
+            await window.abrirConfiguracion("Proveedor", "Proveedores", null, null, null, true);
+        } catch (_) {
+            insumosPedirRefrescoTrasInsertConfig = false;
+        }
+    });
+}
+
 /* =========================
    Filtros (select header)
    ========================= */
@@ -429,4 +778,106 @@ async function listaProveedoresFilter() {
    ========================= */
 function escapeRegex(text) {
     return (text + '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/* =========================
+   Costo Unitario en UI (igual criterio que Productos)
+   ========================= */
+function formatCostoCampoInsumo(n) {
+    if (typeof n !== "number" || isNaN(n)) return "";
+    if (typeof formatNumber === "function") return formatNumber(n);
+    return n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function parseCostoInputInsumo(raw) {
+
+    if (raw == null) return NaN;
+
+    let s = String(raw).trim();
+
+    if (s === "") return NaN;
+
+    // sacar símbolo $
+    s = s.replace(/\$/g, "");
+
+    // sacar espacios
+    s = s.replace(/\s/g, "");
+
+    // formato argentino
+    // 1.234,56 -> 1234.56
+    s = s.replace(/\./g, "");
+    s = s.replace(",", ".");
+
+    const n = parseFloat(s);
+
+    return isNaN(n) ? NaN : n;
+}
+function bindCostoInputInsumos() {
+
+    const $modal = $("#modalEdicion");
+
+    $modal
+        .off("input.insCosto", ".ins-costo-input")
+        .on("input.insCosto", ".ins-costo-input", function () {
+
+            const raw = this.value;
+
+            const num = raw.replace(/\D/g, "");
+
+            if (!num) {
+
+                this.value = "";
+
+                return;
+            }
+
+            this.value = "$ " + Number(num).toLocaleString("es-AR");
+        });
+
+    $modal
+        .off("focusout.insCosto", ".ins-costo-input")
+        .on("focusout.insCosto", ".ins-costo-input", function () {
+
+            const raw = this.value;
+
+            if (!String(raw).trim()) {
+
+                this.value = "";
+
+                return;
+            }
+
+            const n = parseCostoInputInsumo(raw);
+
+            if (!isNaN(n) && n >= 0) {
+
+                this.value = formatCostoCampoInsumo(n);
+            }
+        });
+}
+
+function validarSelectIndividualInsumo(selector) {
+
+    const val = $(selector).val();
+
+    const ok = !!val;
+
+    if (typeof setInvalid === "function" && typeof setValid === "function") {
+
+        if (!ok)
+            setInvalid(selector, "Campo obligatorio");
+        else
+            setValid(selector);
+    }
+
+    const $s2 = $(selector).next(".select2");
+
+    if ($s2.length) {
+
+        $s2.find(".select2-selection")
+            .toggleClass("is-invalid", !ok)
+            .toggleClass("is-valid", ok);
+    }
+
+    return ok;
 }

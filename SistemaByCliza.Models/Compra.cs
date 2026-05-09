@@ -23,9 +23,21 @@ public partial class Compra
 
     public string NotaInterna { get; set; } = null!;
 
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
+
     public virtual ICollection<ComprasInsumo> ComprasInsumos { get; set; } = new List<ComprasInsumo>();
 
     public virtual ICollection<ComprasPago> ComprasPagos { get; set; } = new List<ComprasPago>();
 
     public virtual Proveedor IdProveedorNavigation { get; set; } = null!;
+
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
+
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
 }

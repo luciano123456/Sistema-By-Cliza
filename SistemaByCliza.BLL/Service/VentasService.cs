@@ -1,4 +1,4 @@
-﻿// SistemaByCliza.BLL/Service/VentasService.cs
+// SistemaByCliza.BLL/Service/VentasService.cs
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -17,8 +17,10 @@ namespace SistemaByCliza.BLL.Service
         }
 
         // --------- Listado / Obtener ----------
-        public Task<List<Venta>> Listar(DateTime? desde, DateTime? hasta, int? idCliente, int? idVendedor, string? estado, string? texto)
-            => _repo.Listar(desde, hasta, idCliente, idVendedor, estado, texto);
+        public Task<List<Venta>> Listar(DateTime? desde, DateTime? hasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto,
+            int? restringirUsuarioRegistraId,
+            IReadOnlyList<int>? idsSucursalesPermitidas)
+            => _repo.Listar(desde, hasta, idCliente, idVendedor, idSucursal, estado, texto, restringirUsuarioRegistraId, idsSucursalesPermitidas);
 
         public Task<Venta?> Obtener(int id)
             => _repo.Obtener(id);
@@ -53,5 +55,8 @@ namespace SistemaByCliza.BLL.Service
 
         public Task<List<ProductosVariante>> ObtenerVariantesPorProducto(int idProducto)
             => _repo.ObtenerVariantesPorProducto(idProducto);
+
+        public Task<List<string>> ListarEstadosDistintos()
+            => _repo.ListarEstadosDistintos();
     }
 }

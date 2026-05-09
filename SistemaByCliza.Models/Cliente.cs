@@ -31,6 +31,14 @@ public partial class Cliente
 
     public int IdListaPrecio { get; set; }
 
+    public int? IdUsuarioRegistra { get; set; }
+
+    public DateTime? FechaRegistra { get; set; }
+
+    public int? IdUsuarioModifica { get; set; }
+
+    public DateTime? FechaModifica { get; set; }
+
     public virtual ICollection<ClientesCobro> ClientesCobros { get; set; } = new List<ClientesCobro>();
 
     public virtual ICollection<ClientesCuentaCorriente> ClientesCuentaCorrientes { get; set; } = new List<ClientesCuentaCorriente>();
@@ -40,6 +48,10 @@ public partial class Cliente
     public virtual ListasPrecio IdListaPrecioNavigation { get; set; } = null!;
 
     public virtual Provincia? IdProvinciaNavigation { get; set; }
+
+    public virtual User? IdUsuarioModificaNavigation { get; set; }
+
+    public virtual User? IdUsuarioRegistraNavigation { get; set; }
 
     public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();
 }
