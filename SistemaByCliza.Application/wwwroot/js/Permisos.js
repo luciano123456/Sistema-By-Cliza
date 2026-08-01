@@ -42,7 +42,8 @@ var Permisos = (() => {
         personalsueldos: ["sueldos"],
         ordenescorte: ["ordenesdecorte", "ordenesdecortes"],
         /** Maestro /Talleres. CC Talleres usa claves cuentascorrientestalleres / cctalleres (otro módulo). */
-        talleres: ["taller"]
+        talleres: ["taller"],
+        analisisdatos: ["analisisdedatos"]
     };
 
     /**

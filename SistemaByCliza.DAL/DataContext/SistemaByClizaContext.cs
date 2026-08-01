@@ -1258,6 +1258,10 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.Nombre)
                 .HasMaxLength(200)
                 .IsUnicode(false);
+            entity.Property(e => e.TipoCanal)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasDefaultValue("TiendaFisica");
         });
 
         modelBuilder.Entity<Taller>(entity =>
@@ -1534,6 +1538,10 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.Estado)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.TipoVenta)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("Fisico");
             entity.Property(e => e.Fecha).HasColumnType("date");
             entity.Property(e => e.FechaModifica).HasColumnType("date");
             entity.Property(e => e.FechaRegistra).HasColumnType("date");

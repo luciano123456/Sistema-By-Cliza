@@ -73,8 +73,16 @@
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo de venta</label>
+                        <select id="cmbTipoVenta" class="form-select" required title="Canal de la venta: físico u online">
+                            <option value="Fisico" selected>Físico</option>
+                            <option value="Online">Online</option>
+                        </select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
 
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label class="form-label">Estado</label>
                         <select id="cmbEstado" class="form-select" required title="Valores ya usados en ventas (tabla Ventas) + PENDIENTE/FINALIZADA">
                             <option value="PENDIENTE">PENDIENTE</option>
@@ -425,5 +433,5 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/utils/moment.js"></script>
     <script src="~/js/Entities/M_Producto.js?v=1.2"></script>
-    <script src="~/js/VentasNuevoModif.js?v=1.9"></script>
+    <script src="~/js/VentasNuevoModif.js?v=1.10"></script>
 }

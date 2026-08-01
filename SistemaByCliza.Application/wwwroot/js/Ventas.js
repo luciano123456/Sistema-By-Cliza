@@ -4,11 +4,12 @@ let gridVentas;
 const columnConfigVentas = [
     { index: 1, filterType: 'text' },
     { index: 2, filterType: 'select', fetchDataFunc: listaSucursalesVentasFilter },
-    { index: 3, filterType: 'select', fetchDataFunc: listaClientesFilter },
-    { index: 4, filterType: 'text' },
+    { index: 3, filterType: 'select', fetchDataFunc: async () => [{ Id: "Fisico", Nombre: "Físico" }, { Id: "Online", Nombre: "Online" }] },
+    { index: 4, filterType: 'select', fetchDataFunc: listaClientesFilter },
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'text' },
     { index: 7, filterType: 'text' },
+    { index: 8, filterType: 'text' },
 ];
 
 $(document).ready(() => {
@@ -110,6 +111,16 @@ async function configurarDataTableVentas(data) {
                 },
                 { data: "Fecha", title: "Fecha", render: f => formatearFechaParaVista(f) },
                 { data: "Sucursal", title: "Sucursal" },
+                {
+                    data: "TipoVenta", title: "Tipo",
+                    render: (t, type) => {
+                        const v = ((t || "Fisico") + "").trim() === "Online" ? "Online" : "Fisico";
+                        if (type === "filter" || type === "sort" || type === "type") return v;
+                        return v === "Online"
+                            ? '<span class="badge bg-primary">Online</span>'
+                            : '<span class="badge bg-secondary">Físico</span>';
+                    }
+                },
                 { data: "Cliente", title: "Cliente" },
                 { data: "Subtotal", title: "Subtotal", className: "text-end", render: n => formatNumber(n) },
                 { data: "Descuentos", title: "Descuentos", className: "text-end", render: n => formatNumber(n) },
@@ -118,9 +129,9 @@ async function configurarDataTableVentas(data) {
             ],
             dom: 'Bfrtip',
             buttons: dataTableButtonsExportCondicional("Ventas", [
-                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] }, className: 'btn-exportar-excel' },
-                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] }, className: 'btn-exportar-pdf' },
-                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] }, className: 'btn-exportar-print' },
+                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, className: 'btn-exportar-excel' },
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, className: 'btn-exportar-print' },
             ]),
             order: [[1, "desc"], [0, "desc"]],
             orderCellsTop: true,
@@ -271,6 +282,7 @@ async function initFiltrosVentas() {
             sucursal: { el: '#fltSucursal', param: 'idSucursal', parse: v => v ? Number(v) : null },
             vendedor: { el: '#fltVendedor', param: 'idVendedor', parse: v => v ? Number(v) : null },
             estado: { el: '#fltEstado', param: 'estado', parse: v => v || null },
+            tipoVenta: { el: '#fltTipoVenta', param: 'tipoVenta', parse: v => v || null },
             texto: { el: '#fltTexto', param: 'texto', parse: v => (v || '').trim() || null }
         },
         onSearch: async (params) => {

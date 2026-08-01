@@ -22,7 +22,13 @@ namespace SistemaByCliza.DAL.Repository
         }
         public async Task<bool> Actualizar(Sucursal model)
         {
-            _dbcontext.Sucursales.Update(model);
+            var db = await _dbcontext.Sucursales.FirstOrDefaultAsync(s => s.Id == model.Id);
+            if (db is null) return false;
+
+            db.Nombre = model.Nombre;
+            if (!string.IsNullOrWhiteSpace(model.TipoCanal))
+                db.TipoCanal = model.TipoCanal;
+
             await _dbcontext.SaveChangesAsync();
             return true;
         }
@@ -37,6 +43,9 @@ namespace SistemaByCliza.DAL.Repository
 
         public async Task<bool> Insertar(Sucursal model)
         {
+            if (string.IsNullOrWhiteSpace(model.TipoCanal))
+                model.TipoCanal = "TiendaFisica";
+
             _dbcontext.Sucursales.Add(model);
             await _dbcontext.SaveChangesAsync();
             return true;

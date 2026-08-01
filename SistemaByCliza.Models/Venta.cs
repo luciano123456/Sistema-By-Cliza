@@ -30,6 +30,9 @@ public partial class Venta
     public string? NotaInterna { get; set; }
     public string? Estado { get; set; }
 
+    /// <summary>Tipo de venta: Fisico | Online (default Fisico).</summary>
+    public string TipoVenta { get; set; } = "Fisico";
+
     public string? NotaCliente { get; set; }
 
     public int? IdUsuarioRegistra { get; set; }

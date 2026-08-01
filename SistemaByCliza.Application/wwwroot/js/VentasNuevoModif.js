@@ -30,7 +30,7 @@ const State = {
     editItemIndex: -1,
     editPagoIndex: -1,
     estado: "PENDIENTE",
-
+    tipoVenta: "Fisico",
 };
 
 function ventaEsSoloLectura() {
@@ -285,7 +285,7 @@ function addComboSync(selector, stateKey, { extra = null } = {}) {
 function syncStateFromUI() {
     const dtp = document.getElementById("dtpFecha");
     if (dtp) { if (wasSubmitVenta) (dtp.value ? setValid(dtp) : setInvalid(dtp)); else clearValidation(dtp); }
-    [["#cmbCliente", "clienteId"], ["#cmbListaPrecio", "listaPrecioId"], ["#cmbSucursal", "sucursalId"], ["#cmbEstado", "estado"]].forEach(([sel, key]) => {
+    [["#cmbCliente", "clienteId"], ["#cmbListaPrecio", "listaPrecioId"], ["#cmbSucursal", "sucursalId"], ["#cmbEstado", "estado"], ["#cmbTipoVenta", "tipoVenta"]].forEach(([sel, key]) => {
         const el = document.querySelector(sel); if (!el) return;
         State[key] = el.value ? (isFinite(+el.value) ? +el.value : el.value) : 0;
         if (wasSubmitVenta) (State[key] ? setValid(el) : setInvalid(el)); else clearValidation(el);
@@ -297,7 +297,7 @@ function syncStateFromUI() {
 // Apaga TODA la validación visible (para la 1ra apertura o un reset manual)
 async function hideInitialRequiredHints(root = document) {
     wasSubmitVenta = false;
-    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado"].forEach(clearValidation);
+    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado", "#cmbTipoVenta"].forEach(clearValidation);
     root.querySelectorAll(".invalid-feedback").forEach(fb => fb.style.display = "none");
     document.getElementById("errorCamposVenta")?.classList.add("d-none");
     updateGates();
@@ -348,6 +348,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         removeEmptyOptionOnSelect("#cmbSucursal");
         initSelect2Base("#cmbEstado");
         removeEmptyOptionOnSelect("#cmbEstado");
+        initSelect2Base("#cmbTipoVenta");
+        removeEmptyOptionOnSelect("#cmbTipoVenta");
 
         bindPagoImporteVenta();
         bindVentasNuevoModifAtajosCatalogo();
@@ -372,6 +374,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         addComboSync("#cmbSucursal", "sucursalId");
         addComboSync("#cmbEstado", "estado");
+        addComboSync("#cmbTipoVenta", "tipoVenta");
 
         // Cargar datos de combos/maestros
         await Promise.all([
@@ -403,6 +406,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (cmbEstado) {
                 cmbEstado.value = "PENDIENTE";
                 if ($.fn.select2) $("#cmbEstado").val("PENDIENTE").trigger("change.select2");
+            }
+            const cmbTipo = document.getElementById("cmbTipoVenta");
+            if (cmbTipo) {
+                cmbTipo.value = "Fisico";
+                State.tipoVenta = "Fisico";
+                if ($.fn.select2) $("#cmbTipoVenta").val("Fisico").trigger("change.select2");
             }
 
 
@@ -635,6 +644,13 @@ async function cargarVentaExistente(id) {
         State.estado = est;
     }
 
+    const tipoVenta = ((v.TipoVenta || v.tipoVenta || "Fisico") + "").trim() === "Online" ? "Online" : "Fisico";
+    State.tipoVenta = tipoVenta;
+    const cmbTipoVenta = document.getElementById("cmbTipoVenta");
+    if (cmbTipoVenta) {
+        cmbTipoVenta.value = tipoVenta;
+        if ($.fn.select2) $("#cmbTipoVenta").val(tipoVenta).trigger("change.select2");
+    }
 
     if ($.fn.select2) $("#cmbCliente, #cmbListaPrecio").trigger("change.select2");
 
@@ -1109,6 +1125,7 @@ function camposVentaValidos() {
     ok = (State.listaPrecioId ? setValid("#cmbListaPrecio") : setInvalid("#cmbListaPrecio")) && ok;
     ok = (State.sucursalId ? setValid("#cmbSucursal") : setInvalid("#cmbSucursal")) && ok;
     ok = (State.estado ? setValid("#cmbEstado") : setInvalid("#cmbEstado")) && ok;
+    ok = (State.tipoVenta ? setValid("#cmbTipoVenta") : setInvalid("#cmbTipoVenta")) && ok;
 
     return ok;
 }
@@ -1122,7 +1139,7 @@ function updateFormErrorBanner() {
 
 function clearAllValidationVenta() {
     wasSubmitVenta = false;
-    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado"].forEach(clearValidation);
+    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado", "#cmbTipoVenta"].forEach(clearValidation);
     document.getElementById("errorCamposVenta")?.classList.add("d-none");
 }
 
@@ -1145,6 +1162,7 @@ window.guardarVenta = async function () {
         Subtotal: tot.sub, Descuentos: tot.desc, TotalIva: tot.iva, ImporteTotal: tot.total,
         NotaInterna: notaInterna, NotaCliente: notaCliente,
         Estado: State.estado,
+        TipoVenta: State.tipoVenta || document.getElementById("cmbTipoVenta")?.value || "Fisico",
         Productos: State.items.map(i => ({
             Id: i.id || 0, IdProducto: i.idProducto,
             PrecioUnitario: i.precioUnitario,

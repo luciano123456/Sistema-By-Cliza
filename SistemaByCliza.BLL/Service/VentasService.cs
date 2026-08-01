@@ -19,8 +19,9 @@ namespace SistemaByCliza.BLL.Service
         // --------- Listado / Obtener ----------
         public Task<List<Venta>> Listar(DateTime? desde, DateTime? hasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto,
             int? restringirUsuarioRegistraId,
-            IReadOnlyList<int>? idsSucursalesPermitidas)
-            => _repo.Listar(desde, hasta, idCliente, idVendedor, idSucursal, estado, texto, restringirUsuarioRegistraId, idsSucursalesPermitidas);
+            IReadOnlyList<int>? idsSucursalesPermitidas,
+            string? tipoVenta = null)
+            => _repo.Listar(desde, hasta, idCliente, idVendedor, idSucursal, estado, texto, restringirUsuarioRegistraId, idsSucursalesPermitidas, tipoVenta);
 
         public Task<Venta?> Obtener(int id)
             => _repo.Obtener(id);

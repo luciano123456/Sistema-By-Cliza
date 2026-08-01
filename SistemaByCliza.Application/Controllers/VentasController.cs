@@ -89,7 +89,7 @@ namespace SistemaByCliza.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lista(DateTime? fechaDesde, DateTime? fechaHasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto)
+        public async Task<IActionResult> Lista(DateTime? fechaDesde, DateTime? fechaHasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto, string? tipoVenta = null)
         {
             if (!EsAdministradorTotal() && User.GetUserId() is null)
                 return Forbid();
@@ -97,7 +97,7 @@ namespace SistemaByCliza.Application.Controllers
             var (restrUser, idsSuc) = await ResolverRestriccionesVentasAsync();
             var filtroVendedor = EsAdministradorTotal() ? idVendedor : null;
 
-            var data = await _srv.Listar(fechaDesde, fechaHasta, idCliente, filtroVendedor, idSucursal, estado, texto, restrUser, idsSuc);
+            var data = await _srv.Listar(fechaDesde, fechaHasta, idCliente, filtroVendedor, idSucursal, estado, texto, restrUser, idsSuc, tipoVenta);
             var vm = data.Select(v => new VMVenta
             {
                 Id = v.Id,
@@ -113,7 +113,9 @@ namespace SistemaByCliza.Application.Controllers
                 ImporteTotal = v.ImporteTotal,
                 Cliente = v.IdClienteNavigation?.Nombre ?? "",
                 Sucursal = v.IdSucursalNavigation?.Nombre ?? "",
-                Vendedor = NombreVendedorVenta(v)
+                Vendedor = NombreVendedorVenta(v),
+                TipoVenta = string.IsNullOrWhiteSpace(v.TipoVenta) ? "Fisico" : v.TipoVenta,
+                Estado = v.Estado
             }).ToList();
             return Ok(vm);
         }
@@ -177,6 +179,7 @@ namespace SistemaByCliza.Application.Controllers
                 NotaInterna = v.NotaInterna,
                 NotaCliente = v.NotaCliente,
                 Estado = v.Estado,
+                TipoVenta = string.IsNullOrWhiteSpace(v.TipoVenta) ? "Fisico" : v.TipoVenta,
                 Cliente = v.IdClienteNavigation?.Nombre ?? "",
                 Sucursal = v.IdSucursalNavigation?.Nombre ?? "",
                 Vendedor = NombreVendedorVenta(v),
@@ -376,7 +379,15 @@ namespace SistemaByCliza.Application.Controllers
             NotaInterna = vm.NotaInterna,
             NotaCliente = vm.NotaCliente,
             Estado = vm.Estado,
+            TipoVenta = NormalizarTipoVenta(vm.TipoVenta),
         };
+
+        private static string NormalizarTipoVenta(string? tipo)
+        {
+            return string.Equals(tipo?.Trim(), "Online", StringComparison.OrdinalIgnoreCase)
+                ? "Online"
+                : "Fisico";
+        }
 
         private static (List<VentasProducto> items, List<VentasProductosVariante> vars) MapItems(VMVenta vm)
         {

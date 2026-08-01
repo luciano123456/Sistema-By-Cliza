@@ -1,7 +1,20 @@
 ﻿/* ============================== SITE.JS ============================== */
-const token = localStorage.getItem('JwtToken');
+function obtenerTokenJwt() {
+    return localStorage.getItem('JwtToken');
+}
+
+function syncTokenFromStorage() {
+    token = obtenerTokenJwt();
+    try {
+        window.token = token;
+    } catch (_) { /* no window (tests) */ }
+}
+
+var token = obtenerTokenJwt();
 try {
     window.token = token;
+    window.obtenerTokenJwt = obtenerTokenJwt;
+    window.syncTokenFromStorage = syncTokenFromStorage;
 } catch (_) { /* no window (tests) */ }
 
 async function MakeAjax(options) {

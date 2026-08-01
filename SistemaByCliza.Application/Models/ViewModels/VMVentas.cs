@@ -23,6 +23,9 @@ namespace SistemaByCliza.Application.Models.ViewModels
         public string? NotaCliente { get; set; }
         public string? Estado { get; set; }
 
+        /// <summary>Fisico | Online</summary>
+        public string TipoVenta { get; set; } = "Fisico";
+
         public string Cliente { get; set; } = "";
         public string Vendedor { get; set; } = "";
         public string Sucursal { get; set; } = "";
