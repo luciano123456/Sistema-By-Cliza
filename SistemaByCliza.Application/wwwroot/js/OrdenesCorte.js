@@ -5,7 +5,7 @@ function _ocJwt() {
 }
 let gridOC;
 
-const columnConfigOC = [
+const columnConfigOC = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },                                  // Fecha
     { index: 2, filterType: 'select', fetchDataFunc: listaEstadosFilter }, // Estado
     { index: 3, filterType: 'text' },                                  // A producir
@@ -16,7 +16,7 @@ const columnConfigOC = [
     { index: 8, filterType: 'text' },                                  // Ancho
     { index: 9, filterType: 'text' },                                  // Inicio Corte
     { index: 10, filterType: 'text' },                                 // Fin Corte
-];
+]);
 
 $(document).ready(() => {
     Permisos.init();
@@ -119,6 +119,7 @@ async function configurarDataTableOC(data) {
                         eliminar: "eliminarOC"
                     }, "OrdenesCorte")
                 },
+                colDataTableId(),
                 { data: "FechaInicio", title: "Fecha", render: f => formatearFechaParaVista(f) },
                 { data: "Estado", title: "Estado" }, // <- string que arma el Controller (Estado = OrdenesCorteEstado.Nombre)
                 { data: "CantidadProducir", title: "A producir", className: "text-center", render: n => formatNumber(n) },
@@ -132,11 +133,11 @@ async function configurarDataTableOC(data) {
             ],
             dom: 'Bfrtip',
             buttons: dataTableButtonsExportCondicional("OrdenesCorte", [
-                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Ordenes de Corte', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-excel' },
-                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Ordenes de Corte', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-pdf' },
-                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-print' },
+                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Ordenes de Corte', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }, className: 'btn-exportar-excel' },
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Ordenes de Corte', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }, className: 'btn-exportar-print' },
             ]),
-            order: [[1, "desc"], [0, "desc"]],
+            order: [[2, "desc"], [0, "desc"]],
             orderCellsTop: true,
             fixedHeader: true,
             initComplete: async function () {

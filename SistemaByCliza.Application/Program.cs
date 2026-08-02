@@ -3,6 +3,7 @@ using SistemaByCliza.BLL.Service;
 using SistemaByCliza.DAL.DataContext;
 using SistemaByCliza.DAL.Repository;
 using SistemaByCliza.Models;
+using SistemaByCliza.Application.Configuration;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -112,6 +113,9 @@ builder.Services.AddScoped<IInsumosService, InsumosService>();
 builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
 builder.Services.AddScoped<IProveedoresRepository<Proveedor>, ProveedoresRepository>();
 
+builder.Services.AddScoped<ITransportesService, TransportesService>();
+builder.Services.AddScoped<ITransportesRepository<Transporte>, TransportesRepository>();
+
 builder.Services.AddScoped<IComprasRepository<Compra>, ComprasRepository>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 
@@ -137,6 +141,9 @@ builder.Services.AddScoped<ICuentasCorrientesTallService, CuentasCorrientesTallS
 builder.Services.AddScoped<IUsuariosPermisosRepository, UsuariosPermisosRepository>();
 builder.Services.AddScoped<IUsuariosPermisosService, UsuariosPermisosService>();
 
+builder.Services.AddScoped<IAnalisisDatosRepository, AnalisisDatosRepository>();
+builder.Services.AddScoped<IAnalisisDatosService, AnalisisDatosService>();
+
 
 
 
@@ -149,6 +156,19 @@ builder.Services.AddControllersWithViews()
 
 
 
+var sessionSettings = new SessionSettings();
+builder.Configuration.GetSection("SessionSettings").Bind(sessionSettings);
+
+var remitoEmpresaSettings = new RemitoEmpresaSettings();
+builder.Configuration.GetSection(RemitoEmpresaSettings.SectionName).Bind(remitoEmpresaSettings);
+builder.Services.AddSingleton(remitoEmpresaSettings);
+if (sessionSettings.GetDuration() <= TimeSpan.Zero)
+{
+    throw new InvalidOperationException(
+        "Configure SessionSettings:DurationHours y/o SessionSettings:DurationMinutes en appsettings.json");
+}
+builder.Services.AddSingleton(sessionSettings);
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -160,11 +180,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!)),
+            ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 
-// Definir el esquema de autenticación predeterminado
+// Definir el esquema de autenticaciï¿½n predeterminado
 builder.Services.AddAuthorization(options =>
 {
     options.DefaultPolicy = new AuthorizationPolicyBuilder()
@@ -197,7 +218,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Index}/{id?}");
 
-// Asegúrate de que las rutas de login estén excluidas del middleware de autenticación
+// Asegï¿½rate de que las rutas de login estï¿½n excluidas del middleware de autenticaciï¿½n
 app.MapControllerRoute(
     name: "login",
     pattern: "Login/{action=Index}",

@@ -59,6 +59,7 @@
                         <thead>
                             <tr>
                                 <th></th>
+                                <th>Id</th>
                                 <th>Nombre</th>
                                 <th>Teléfono</th>
                                 <th>Teléfono Alternativo</th>
@@ -193,6 +194,23 @@
                         <input type="text" class="form-control" id="txtCodigoPostal">
                     </div>
 
+                    <div class="col-md-3">
+                        <label for="cmbTransporte" class="form-label">Transporte</label>
+                        <select id="cmbTransporte" class="form-select select2">
+                            <option value="">Seleccione</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="txtDireccionEntrega" class="form-label">Dirección de entrega</label>
+                        <input type="text" class="form-control" id="txtDireccionEntrega">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="txtReferencias" class="form-label">Referencias</label>
+                        <input type="text" class="form-control" id="txtReferencias" maxlength="250" placeholder="Ej: PEDIR SOBRE">
+                    </div>
+
                     <div id="errorCampos" class="alert alert-danger d-none col-12">
                         Debes completar los campos obligatorios.
                     </div>
@@ -202,7 +220,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fa fa-arrow-left"></i> Volver
                 </button>
-                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCambios()">
+                <button type="button" id="btnGuardar" class="btn btn-primary" data-busy-label="Guardando..." onclick="guardarCambios()">
                     <i class="fa fa-check"></i> Registrar
                 </button>
             </div>
@@ -243,5 +261,5 @@
     <script src="~/js/utils/moment.js"></script>
 
     <!-- lógica Clientes -->
-    <script src="~/js/Clientes.js?v=3.0"></script>
+    <script src="~/js/Clientes.js?v=3.2"></script>
 }

@@ -7,7 +7,8 @@ namespace SistemaByCliza.BLL.Service
     {
         Task<List<Venta>> Listar(DateTime? desde, DateTime? hasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto,
             int? restringirUsuarioRegistraId,
-            IReadOnlyList<int>? idsSucursalesPermitidas);
+            IReadOnlyList<int>? idsSucursalesPermitidas,
+            string? tipoVenta = null);
         Task<Venta?> Obtener(int id);
 
         Task<bool> InsertarConDetallesYPagos(Venta venta, IEnumerable<VentasProducto> items, IEnumerable<VentasProductosVariante> variantes,

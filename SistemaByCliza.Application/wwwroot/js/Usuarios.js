@@ -12,7 +12,7 @@ const sucursalesUsuarioSelected = new Set();
 
 const PERMISOS_COLUMNAS = ["VER", "CREAR", "EDITAR", "ELIMINAR", "EXPORTAR"];
 
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
@@ -22,7 +22,7 @@ const columnConfig = [
     { index: 7, filterType: 'select', fetchDataFunc: listaRolesFilter },
     { index: 8, filterType: 'select', fetchDataFunc: listaEstadosFilter },
     { index: 9, filterType: 'text' }
-];
+]);
 
 $(document).ready(() => {
     listaUsuarios();
@@ -366,6 +366,7 @@ async function configurarDataTable(data) {
                     },
                     orderable: false, searchable: false
                 },
+                colDataTableId(),
                 { data: 'Usuario', title: 'Usuario' },     // 1
                 { data: 'Nombre', title: 'Nombre' },       // 2
                 { data: 'Apellido', title: 'Apellido' },   // 3
@@ -382,7 +383,7 @@ async function configurarDataTable(data) {
                     text: 'Exportar Excel',
                     filename: 'Reporte_Usuarios',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
                     className: 'btn-exportar-excel'
                 },
                 {
@@ -392,7 +393,7 @@ async function configurarDataTable(data) {
                     title: null,
                     orientation: 'landscape',
                     pageSize: 'A4',
-                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
                     className: 'buttons-pdf btn-exportar-pdf',
                     customize: function (doc) {
                         const now = moment().format('DD/MM/YYYY HH:mm');
@@ -437,7 +438,7 @@ async function configurarDataTable(data) {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
                     className: 'btn-exportar-print'
                 },
             ]),

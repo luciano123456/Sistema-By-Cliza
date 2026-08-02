@@ -303,8 +303,24 @@ async function obtenerVariantesProducto(idProducto) {
         const r = await fetch(`/Ventas/ProductoInfoVenta?idProducto=${idProducto}&idListaPrecio=1`, authHeaders());
         if (!r.ok) throw new Error(r.statusText);
         const j = await r.json();
-        return (j?.variantes || []).map(v => ({ id: v.Id, idProducto: v.IdProducto, nombre: v.Nombre || `${v.Color || ""} / ${v.Talle || ""}`.trim() }));
+        return (j?.variantes || []).map(v => ({
+            id: v.Id,
+            idProducto: v.IdProducto,
+            color: v.Color || "",
+            talle: v.Talle || "",
+            nombre: v.Nombre || `${v.Color || ""} / ${v.Talle || ""}`.trim()
+        }));
     } catch (e) { console.error("variantes:", e); return []; }
+}
+
+function _splitColorTalle(v) {
+    if (!v) return { color: "", talle: "" };
+    if (v.color || v.talle || v.Color || v.Talle) {
+        return { color: (v.color || v.Color || "").trim(), talle: (v.talle || v.Talle || "").trim() };
+    }
+    const n = String(v.nombre || "").trim();
+    const parts = n.split("/").map(s => s.trim());
+    return { color: parts[0] || "", talle: parts.slice(1).join(" / ") || "" };
 }
 
 /* ---------------- Productos: modal + tabla ---------------- */
@@ -328,7 +344,8 @@ function leerVariantesDesdeUI() {
         const idVar = parseInt(r.dataset.idVar, 10);
         const nombre = r.querySelector(".var-name")?.textContent?.trim() || "";
         const cantidad = _toNumber(r.querySelector(".var-qty")?.value);
-        if (idVar && cantidad > 0) res.push({ idProductoVariante: idVar, nombre, cantidad });
+        const ct = _splitColorTalle({ nombre });
+        if (idVar && cantidad > 0) res.push({ idProductoVariante: idVar, nombre, color: ct.color, talle: ct.talle, cantidad });
     });
     return res;
 }
@@ -980,7 +997,14 @@ async function cargarOC(id) {
         idProducto: p.IdProducto,
         productoNombre: p.Producto || ("Producto " + p.IdProducto) || "",
         cantidad: parseFloat(p.Cantidad || 0),
-        variantes: (p.Variantes || []).map(v => ({ id: v.Id || 0, idProductoVariante: v.IdProductoVariante, nombre: (v.Color && v.Talle) ? `${v.Color} / ${v.Talle}` : (v.Color || v.Talle || ""), cantidad: parseFloat(v.Cantidad || 0) }))
+        variantes: (p.Variantes || []).map(v => ({
+            id: v.Id || 0,
+            idProductoVariante: v.IdProductoVariante,
+            color: v.Color || "",
+            talle: v.Talle || "",
+            nombre: (v.Color && v.Talle) ? `${v.Color} / ${v.Talle}` : (v.Color || v.Talle || ""),
+            cantidad: parseFloat(v.Cantidad || 0)
+        }))
     }));
     refreshProductos();
 
@@ -1067,15 +1091,31 @@ async function guardarOC() {
         }))
     };
 
-    const url = State.idOC ? "/OrdenesCorte/Actualizar" : "/OrdenesCorte/Insertar";
-    const method = State.idOC ? "PUT" : "POST";
+    const eraNuevo = !(State.idOC > 0);
+    const url = eraNuevo ? "/OrdenesCorte/Insertar" : "/OrdenesCorte/Actualizar";
+    const method = eraNuevo ? "POST" : "PUT";
 
     try {
         isSaving = true;
         const res = await fetch(url, { method, headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json;charset=utf-8" }, body: JSON.stringify(payload) });
         if (!res.ok) throw new Error(res.statusText);
         const j = await res.json();
-        if (j === true || j?.valor === true || j?.valor === "OK") { exitoModal?.(State.idOC ? "Orden actualizada" : "Orden registrada"); volverIndexOC(); }
+        if (j === true || j?.valor === true || j?.valor === "OK") {
+            const newId = parseInt(j?.id || State.idOC || 0, 10) || 0;
+            if (newId > 0) State.idOC = newId;
+            const accion = await despuesGuardarNuevoModif({
+                mensaje: eraNuevo ? "Orden registrada" : "Orden actualizada",
+                indexUrl: "/OrdenesCorte/Index",
+                editUrl: "/OrdenesCorte/NuevoModif",
+                id: State.idOC,
+                eraNuevo
+            });
+            if (accion === "editar") {
+                syncSaveButton();
+                const btnElim = document.getElementById("btnEliminarOC");
+                if (btnElim && State.idOC > 0) btnElim.classList.remove("d-none");
+            }
+        }
         else { errorModal?.("No se pudo guardar la orden."); }
     } catch (e) { console.error(e); errorModal?.("Error al guardar la orden."); }
     finally { isSaving = false; }
@@ -1094,6 +1134,295 @@ async function eliminarOC() {
 }
 window.volverIndexOC = function () { window.location.href = "/OrdenesCorte/Index"; };
 
+async function _loadLogoRemitoOC() {
+    const tryUrl = async (url) => {
+        try {
+            const r = await fetch(url, { cache: "no-cache" });
+            if (!r.ok) return null;
+            const blob = await r.blob();
+            return await new Promise((resolve) => {
+                const fr = new FileReader();
+                fr.onload = () => resolve(fr.result);
+                fr.onerror = () => resolve(null);
+                fr.readAsDataURL(blob);
+            });
+        } catch { return null; }
+    };
+    return (await tryUrl("/Imagenes/LogoRemito.png?v=4"))
+        || (await tryUrl("/Imagenes/Logo.png?v=4"))
+        || null;
+}
+
+function _loadImg(src) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
+/** Convierte el logo azul a blanco sólido (fondo transparente). */
+function _whitenLogoCanvas(img, size) {
+    const tc = document.createElement("canvas");
+    tc.width = size;
+    tc.height = size;
+    const tctx = tc.getContext("2d");
+    const pad = Math.round(size * 0.06);
+    tctx.drawImage(img, pad, pad, size - pad * 2, size - pad * 2);
+    const imageData = tctx.getImageData(0, 0, size, size);
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+        const brightness = (r + g + b) / 3;
+        if (a < 20 || brightness > 205) {
+            d[i] = 0; d[i + 1] = 0; d[i + 2] = 0; d[i + 3] = 0;
+        } else {
+            d[i] = 255; d[i + 1] = 255; d[i + 2] = 255; d[i + 3] = 255;
+        }
+    }
+    tctx.putImageData(imageData, 0, 0);
+    return tc;
+}
+
+/** Triángulo delta blanco (fallback si falla la imagen). */
+function _drawDeltaLogo(ctx, cx, cy, s) {
+    ctx.save();
+    ctx.strokeStyle = "#ffffff";
+    ctx.fillStyle = "#ffffff";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    // anillo exterior
+    ctx.lineWidth = Math.max(3, s * 0.13);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - s * 0.58);
+    ctx.lineTo(cx + s * 0.58, cy + s * 0.48);
+    ctx.lineTo(cx - s * 0.58, cy + s * 0.48);
+    ctx.closePath();
+    ctx.stroke();
+
+    // anillo interior
+    ctx.lineWidth = Math.max(2.5, s * 0.10);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - s * 0.28);
+    ctx.lineTo(cx + s * 0.30, cy + s * 0.24);
+    ctx.lineTo(cx - s * 0.30, cy + s * 0.24);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+/** Banner negro "JATUN" + logo triángulo blanco (como el papel). */
+async function _buildJatunBannerDataURL() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 700;
+    canvas.height = 150;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 82px Arial, Helvetica, sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.fillText("JATUN", 36, canvas.height / 2 + 4);
+
+    const logoX = canvas.width - 95;
+    const logoY = canvas.height / 2;
+    let drewLogo = false;
+
+    const logoSrc = await _loadLogoRemitoOC();
+    if (logoSrc) {
+        const img = await _loadImg(logoSrc);
+        if (img) {
+            const size = 100;
+            const white = _whitenLogoCanvas(img, size);
+            // ¿quedó algo visible?
+            const check = white.getContext("2d").getImageData(0, 0, size, size).data;
+            let opaque = 0;
+            for (let i = 3; i < check.length; i += 4) if (check[i] > 40) opaque++;
+            if (opaque > 80) {
+                ctx.drawImage(white, logoX - size / 2, logoY - size / 2, size, size);
+                drewLogo = true;
+            }
+        }
+    }
+    if (!drewLogo) _drawDeltaLogo(ctx, logoX, logoY, 52);
+
+    return canvas.toDataURL("image/png");
+}
+
+/** Formato talles como el papel: "2 AL 5" / "38 AL 44" si hay secuencia. */
+function _formatTallesRemito(vars) {
+    const sorted = [...vars].sort((a, b) => {
+        const na = parseInt(String(a.talle).replace(/\D/g, ""), 10);
+        const nb = parseInt(String(b.talle).replace(/\D/g, ""), 10);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return String(a.talle).localeCompare(String(b.talle), "es");
+    });
+    const labels = sorted.map(x => String(x.talle || "").trim()).filter(Boolean);
+    if (!labels.length) return "";
+    if (labels.length === 1) return labels[0];
+
+    const nums = labels.map(t => parseInt(String(t).replace(/\D/g, ""), 10));
+    if (nums.every(n => !isNaN(n))) {
+        const uniq = [...new Set(nums)].sort((a, b) => a - b);
+        if (uniq.length >= 2) {
+            const diffs = uniq.slice(1).map((n, i) => n - uniq[i]);
+            const step = diffs[0];
+            if (step > 0 && diffs.every(d => d === step)) {
+                return `${uniq[0]} AL ${uniq[uniq.length - 1]}`;
+            }
+        }
+    }
+    return labels.join(" / ");
+}
+
+/** Q x talle: si todas iguales, un solo número (como el papel). */
+function _formatQxTalleRemito(vars) {
+    const sorted = [...vars].sort((a, b) => {
+        const na = parseInt(String(a.talle).replace(/\D/g, ""), 10);
+        const nb = parseInt(String(b.talle).replace(/\D/g, ""), 10);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return String(a.talle).localeCompare(String(b.talle), "es");
+    });
+    const qtys = sorted.map(x => Math.round(parseFloat(x.cantidad) || 0));
+    if (!qtys.length) return "";
+    const allSame = qtys.every(q => q === qtys[0]);
+    if (allSame) return String(qtys[0]);
+    return qtys.join("/");
+}
+
+/** Filas remito: 1 por producto+color (talles y qty agrupados). */
+function _buildRemitoCorteRows(nroOC) {
+    const rows = [];
+    let line = 1;
+    (State.items || []).forEach(it => {
+        const articulo = (it.productoNombre || `Producto ${it.idProducto}`).toUpperCase();
+        const byColor = new Map();
+        (it.variantes || []).forEach(v => {
+            const ct = _splitColorTalle(v);
+            const colorKey = (ct.color || "").trim().toUpperCase() || "";
+            if (!byColor.has(colorKey)) byColor.set(colorKey, []);
+            byColor.get(colorKey).push({ talle: (ct.talle || "").trim(), cantidad: parseFloat(v.cantidad) || 0 });
+        });
+        if (!byColor.size) {
+            rows.push({
+                cod: `${nroOC}-${line++}`,
+                articulo,
+                color: "",
+                talles: "",
+                qxTalle: "",
+                cant: parseFloat(it.cantidad) || 0
+            });
+            return;
+        }
+        byColor.forEach((vars, color) => {
+            const cant = vars.reduce((a, x) => a + x.cantidad, 0);
+            rows.push({
+                cod: `${nroOC}-${line++}`,
+                articulo,
+                color,
+                talles: _formatTallesRemito(vars),
+                qxTalle: _formatQxTalleRemito(vars),
+                cant
+            });
+        });
+    });
+    return rows;
+}
+
+function _pickEtapaRemito() {
+    const etapas = State.etapas || [];
+    if (!etapas.length) return null;
+    return etapas.find(e => e.idTaller) || etapas[0];
+}
+
+/** Modal para elegir FASSON si la OC no tiene etapa/taller. */
+function _elegirTallerRemitoUI() {
+    const talleres = State.talleres || [];
+    if (!talleres.length) return Promise.resolve(0);
+
+    return new Promise((resolve) => {
+        const id = "modalPickTallerRemito";
+        document.getElementById(id)?.remove();
+        const opts = talleres.map(t => `<option value="${t.Id}">${t.Nombre}</option>`).join("");
+        document.body.insertAdjacentHTML("beforeend", `
+<div class="modal fade" id="${id}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Fasson del remito</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2 text-muted">La orden no tiene etapa. Elegí el taller (Fasson) que va en el remito.</p>
+        <label class="form-label fw-bold">Fasson</label>
+        <select class="form-select" id="cmbPickTallerRemito">${opts}</select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnPickTallerOk">Usar en remito</button>
+      </div>
+    </div>
+  </div>
+</div>`);
+        const modalEl = document.getElementById(id);
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        let done = false;
+        const finish = (val) => {
+            if (done) return;
+            done = true;
+            try { modal.hide(); } catch { /* ignore */ }
+            setTimeout(() => modalEl.remove(), 300);
+            resolve(val);
+        };
+        document.getElementById("btnPickTallerOk").onclick = () => {
+            finish(parseInt(document.getElementById("cmbPickTallerRemito").value, 10) || 0);
+        };
+        modalEl.addEventListener("hidden.bs.modal", () => finish(0), { once: true });
+        modal.show();
+    });
+}
+
+async function _resolverDatosTallerRemito() {
+    if (!(State.talleres || []).length) {
+        try { await loadTalleres(); } catch { /* ignore */ }
+    }
+    const etapa = _pickEtapaRemito();
+    let idTaller = parseInt(etapa?.idTaller || 0, 10) || 0;
+    let fechaSalida = "";
+    if (etapa) {
+        fechaSalida = fView(etapa.fechaSalidaReal || etapa.fechaSalidaAprox || etapa.fechaEntrada) || "";
+    }
+    if (!idTaller) {
+        idTaller = await _elegirTallerRemitoUI();
+    }
+    const t = idTaller ? getTallerInfo(idTaller) : null;
+    return {
+        nombre: (t?.Nombre || etapa?.tallerNombre || "").trim(),
+        direccion: (t?.Direccion || "").trim(),
+        telefono: (t?.Telefono || "").trim(),
+        fechaSalida
+    };
+}
+
+function _drawLabelValue(doc, label, value, x, y, valueMaxW) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(label, x, y);
+    const labelW = doc.getTextWidth(label) + 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    const txt = (value || "").toUpperCase();
+    if (txt) {
+        const lines = doc.splitTextToSize(txt, valueMaxW || 220);
+        doc.text(lines[0], x + labelW, y);
+    }
+}
+
 async function exportarOCPdf() {
     if (!(State.items || []).length) return errorModal?.("Agregá al menos un producto para exportar.");
 
@@ -1102,117 +1431,213 @@ async function exportarOCPdf() {
         return errorModal?.("Falta jsPDF/autoTable.");
     }
 
-    // ✅ Elegir si incluir etapas
-    let incluirEtapas = true;
-    if (typeof confirmarModal === "function") {
-        incluirEtapas = await confirmarModal("¿Querés incluir las ETAPAS en el PDF?");
-    } else {
-        incluirEtapas = confirm("¿Querés incluir las ETAPAS en el PDF?");
-    }
-
     recomputeAll();
 
+    const tallerData = await _resolverDatosTallerRemito();
+    const nroOC = (State.idOC && State.idOC > 0) ? String(State.idOC) : "S/N";
+    const fasson = tallerData.nombre;
+    const direccion = tallerData.direccion;
+    const telefono = tallerData.telefono;
+    const fechaCorte = fView(document.getElementById("dtpFechaInicio")?.value) || "";
+    const fechaSalida = tallerData.fechaSalida || "";
+
     const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pad = 40;
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const pad = 26;
+    const ink = [0, 0, 0];
+    const contentW = pageW - pad * 2;
+    let y = 26;
 
-    // Header
+    // —— Cabecera: [JATUN+logo]  REMITO N°  FECHA DE CORTE ——
+    const banner = await _buildJatunBannerDataURL();
+    const brandW = 168, brandH = 38;
+    try { doc.addImage(banner, "PNG", pad, y, brandW, brandH, undefined, "NONE"); } catch { /* ignore */ }
+
+    // REMITO N° centrado entre brand y fecha
+    const boxW = 82, boxH = 32;
+    const boxX = pad + brandW + ((contentW - brandW - 130) / 2) - boxW / 2 + 8;
+    const boxY = y + 12;
+    doc.setTextColor(...ink);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("Orden de Corte", pad, 50);
-
     doc.setFontSize(11);
+    doc.text("REMITO N°", boxX + boxW / 2, y + 9, { align: "center" });
+    doc.setDrawColor(...ink);
+    doc.setLineWidth(1.5);
+    doc.rect(boxX, boxY, boxW, boxH);
+    doc.setFontSize(18);
+    doc.text(nroOC, boxX + boxW / 2, boxY + 22, { align: "center" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("FECHA DE CORTE", pageW - pad, y + 12, { align: "right" });
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(13);
+    doc.text(fechaCorte, pageW - pad, y + 30, { align: "right" });
 
-    // ✅ N° de OC (si no hay, mostrar “Sin número”)
-    const nroOC = (State.idOC && State.idOC > 0) ? String(State.idOC) : "Sin número (no registrada)";
-    doc.text(`N° OC: ${nroOC}`, pad, 68);
+    y += brandH + 8;
 
-    doc.text(`Fecha inicio: ${fView(document.getElementById("dtpFechaInicio").value)}`, pad, 84);
-    doc.text(`Estado: ${document.getElementById("cmbEstado").selectedOptions[0]?.text || "—"}`, pad, 100);
-    doc.text(`Responsable: ${document.getElementById("cmbPersonal").selectedOptions[0]?.text || "—"}`, pad, 116);
+    // Barra negra gruesa (como el papel)
+    doc.setFillColor(0, 0, 0);
+    doc.rect(pad, y, contentW, 6.5, "F");
+    y += 20;
 
-    doc.text(`A producir: ${_fmtNumber(State.aProducir)}`, pad, 134);
-    doc.text(`Producidas (corte): ${_fmtNumber(State.producidas)} — Δ Corte: ${_fmtNumber(State.difCorte)}`, pad, 150);
-    doc.text(`Final real (última etapa): ${_fmtNumber(State.finalReal)} — Δ Final: ${_fmtNumber(State.difFinal)}`, pad, 166);
-
-    // Productos
+    // FASSON: NOMBRE          FECHA DE SALIDA
+    // DIRECCION: ...          fecha
+    // TELEFONO: ...
+    const leftMax = contentW * 0.58;
+    _drawLabelValue(doc, "FASSON:", fasson, pad, y, leftMax - 70);
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("FECHA DE SALIDA", pageW - pad, y, { align: "right" });
+    y += 15;
+
+    _drawLabelValue(doc, "DIRECCION:", direccion || (fasson ? "#N/D" : ""), pad, y, leftMax - 80);
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(12);
-    doc.text("Productos", pad, 194);
+    doc.text(fechaSalida, pageW - pad, y, { align: "right" });
+    y += 14;
 
-    const bodyProd = (State.items || []).map(it => {
-        const vars = (it.variantes || []).map(v => `- ${v.nombre} × ${_fmtNumber(v.cantidad)}`).join("\n");
-        const prod = it.productoNombre || `Producto ${it.idProducto}`;
-        return [vars ? `${prod}\n${vars}` : prod, _fmtNumber(it.cantidad)];
-    });
-
-    doc.autoTable({
-        startY: 202,
-        head: [["Producto / Variantes", "Cantidad"]],
-        body: bodyProd,
-        margin: { left: pad, right: pad },
-        styles: { fontSize: 10, cellPadding: 6, overflow: "linebreak" },
-        headStyles: { fillColor: [28, 39, 54], textColor: [255, 255, 255] },
-        columnStyles: { 1: { halign: "right", cellWidth: 110 } }
-    });
-
-    let y = doc.lastAutoTable.finalY + 18;
-
-    // Insumos (siempre)
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("Insumos", pad, y);
+    if (telefono) {
+        _drawLabelValue(doc, "TELEFONO:", telefono, pad, y, leftMax - 80);
+        y += 13;
+    }
     y += 8;
 
-    const bodyIns = (State.insumos || []).map(i => [i.nombre, _fmtNumber(i.cantidad)]);
-    doc.autoTable({
-        startY: y,
-        head: [["Insumo", "Cantidad"]],
-        body: bodyIns,
-        margin: { left: pad, right: pad },
-        styles: { fontSize: 10, cellPadding: 6 },
-        headStyles: { fillColor: [46, 125, 50], textColor: [255, 255, 255] },
-        columnStyles: { 1: { halign: "right", cellWidth: 110 } }
-    });
-
-    y = doc.lastAutoTable.finalY + 18;
-
-    // ✅ Etapas (opcional)
-    if (incluirEtapas) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text("Etapas", pad, y);
-        y += 8;
-
-        const bodyEt = (State.etapas || []).map(e => {
-            const dias = (e.diasReales ?? null);
-            const salidaRealTxt = `${fView(e.fechaSalidaReal)}${dias == null ? "" : ` (${dias} días)`}`;
-            return [
-                e.tallerNombre || "—",
-                fView(e.fechaEntrada),
-                fView(e.fechaSalidaAprox),
-                salidaRealTxt,
-                _fmtNumber(e.aProducir),
-                _fmtNumber(e.producidas),
-                _fmtNumber(e.diferencias),
-                e.estadoNombre || "—",
-                e.nota || ""
-            ];
-        });
-
-        doc.autoTable({
-            startY: y,
-            head: [["Taller", "Entrada", "Salida aprox.", "Salida real", "A prod.", "Prod.", "Δ", "Estado", "Nota"]],
-            body: bodyEt,
-            margin: { left: pad, right: pad },
-            styles: { fontSize: 9, cellPadding: 5 },
-            headStyles: { fillColor: [255, 179, 0], textColor: [0, 0, 0] },
-            columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" } }
-        });
+    // —— Tabla ——
+    const remitoRows = _buildRemitoCorteRows(nroOC);
+    const totalPrendas = remitoRows.reduce((a, r) => a + (parseFloat(r.cant) || 0), 0);
+    const TOTAL_ROWS = 25;
+    const bodyProd = [];
+    for (let i = 0; i < TOTAL_ROWS; i++) {
+        const r = remitoRows[i];
+        const cod = `${nroOC}-${i + 1}`;
+        if (r) {
+            bodyProd.push([
+                cod,
+                r.articulo,
+                r.color,
+                r.talles,
+                r.qxTalle,
+                r.cant ? String(Math.round(r.cant)) : ""
+            ]);
+        } else {
+            bodyProd.push([cod, "", "", "", "", ""]);
+        }
     }
 
-    const fechaNombre = document.getElementById("dtpFechaInicio").value || moment().format("YYYY-MM-DD");
-    doc.save(`OrdenCorte_${nroOC}_${fechaNombre}.pdf`);
+    const colCod = 46, colColor = 86, colTalles = 62, colQx = 58, colCant = 38;
+    const colArt = contentW - colCod - colColor - colTalles - colQx - colCant;
+
+    doc.autoTable({
+        startY: y,
+        head: [["COD", "ARTICULO", "COLOR", "TALLES", "Q X TALLE", "CANT"]],
+        body: bodyProd,
+        margin: { left: pad, right: pad },
+        tableWidth: contentW,
+        styles: {
+            fontSize: 7.4,
+            cellPadding: { top: 2.1, bottom: 2.1, left: 2, right: 2 },
+            textColor: ink,
+            lineColor: ink,
+            lineWidth: 0.5,
+            overflow: "linebreak",
+            valign: "middle",
+            minCellHeight: 11
+        },
+        headStyles: {
+            fillColor: [0, 0, 0],
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+            halign: "center",
+            fontSize: 8,
+            cellPadding: 3.2
+        },
+        bodyStyles: { fillColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [255, 255, 255] },
+        columnStyles: {
+            0: { cellWidth: colCod, halign: "center", fontStyle: "bold" },
+            1: { cellWidth: colArt },
+            2: { cellWidth: colColor },
+            3: { cellWidth: colTalles, halign: "center" },
+            4: { cellWidth: colQx, halign: "center" },
+            5: { cellWidth: colCant, halign: "center", fontStyle: "bold" }
+        }
+    });
+
+    y = doc.lastAutoTable.finalY;
+
+    // TOTAL DE PRENDAS
+    doc.setDrawColor(...ink);
+    doc.setLineWidth(0.8);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(pad, y, contentW, 17, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("TOTAL DE PRENDAS", pad + 6, y + 12);
+    doc.text(String(Math.round(totalPrendas)), pageW - pad - 8, y + 12, { align: "right" });
+    y += 28;
+
+    // BOLSAS (izq) …………… FECHA DE ENTREGA (derecha, bien separadas)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setDrawColor(...ink);
+    doc.setLineWidth(0.8);
+    doc.text("BOLSAS:", pad, y);
+    doc.line(pad + 54, y + 1, pad + 150, y + 1);
+
+    const feX = pageW - pad - 175;
+    doc.text("FECHA DE ENTREGA:", feX, y);
+    doc.line(feX + doc.getTextWidth("FECHA DE ENTREGA:") + 6, y + 1, pageW - pad, y + 1);
+    y += 18;
+
+    // Insumos / avíos (solo si hay)
+    if ((State.insumos || []).length) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text("INSUMOS / AVIOS", pad, y);
+        y += 4;
+        doc.autoTable({
+            startY: y,
+            head: [["Insumo / Avio", "Cant."]],
+            body: (State.insumos || []).map(i => [i.nombre || "", String(Math.round(parseFloat(i.cantidad) || 0))]),
+            margin: { left: pad, right: pad },
+            styles: { fontSize: 7.5, cellPadding: 2.5, textColor: ink, lineColor: ink, lineWidth: 0.4 },
+            headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: "bold" },
+            columnStyles: { 1: { halign: "right", cellWidth: 50 } }
+        });
+        y = doc.lastAutoTable.finalY + 12;
+    } else {
+        y += 6;
+    }
+
+    if (y > pageH - 95) {
+        doc.addPage();
+        y = 40;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("OBSERVACIONES", pad, y);
+    y += 14;
+    doc.setDrawColor(...ink);
+    doc.setLineWidth(0.7);
+    for (let i = 0; i < 2; i++) {
+        doc.line(pad, y + i * 18, pageW - pad, y + i * 18);
+    }
+    y += 2 * 18 + 22;
+
+    // FIRMA (izq) + DUPLICADO (centro) — como el papel
+    doc.setLineWidth(0.9);
+    doc.line(pad, y, pad + 130, y);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("FIRMA", pad + 65, y + 13, { align: "center" });
+    doc.setFontSize(11);
+    doc.text("DUPLICADO", pageW / 2, y + 4, { align: "center" });
+
+    const fechaNombre = document.getElementById("dtpFechaInicio")?.value || moment().format("YYYY-MM-DD");
+    doc.save(`RemitoCorte_${nroOC}_${fechaNombre}.pdf`);
 }
 
 

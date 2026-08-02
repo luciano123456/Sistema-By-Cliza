@@ -22,6 +22,8 @@ const State = {
     productos: [],
     cuentas: [],
     clientes: [],
+    transportes: [],
+    remitoEmpresa: null,
     vendedores: [],
     listas: [],
     Sucursales: [],
@@ -30,7 +32,10 @@ const State = {
     editItemIndex: -1,
     editPagoIndex: -1,
     estado: "PENDIENTE",
-
+    tipoVenta: "Fisico",
+    cargandoVenta: false,
+    /** Datos de cliente/transporte cacheados al cargar venta (para remito). */
+    remitoCliente: null,
 };
 
 function ventaEsSoloLectura() {
@@ -285,7 +290,7 @@ function addComboSync(selector, stateKey, { extra = null } = {}) {
 function syncStateFromUI() {
     const dtp = document.getElementById("dtpFecha");
     if (dtp) { if (wasSubmitVenta) (dtp.value ? setValid(dtp) : setInvalid(dtp)); else clearValidation(dtp); }
-    [["#cmbCliente", "clienteId"], ["#cmbListaPrecio", "listaPrecioId"], ["#cmbSucursal", "sucursalId"], ["#cmbEstado", "estado"]].forEach(([sel, key]) => {
+    [["#cmbCliente", "clienteId"], ["#cmbListaPrecio", "listaPrecioId"], ["#cmbSucursal", "sucursalId"], ["#cmbEstado", "estado"], ["#cmbTipoVenta", "tipoVenta"]].forEach(([sel, key]) => {
         const el = document.querySelector(sel); if (!el) return;
         State[key] = el.value ? (isFinite(+el.value) ? +el.value : el.value) : 0;
         if (wasSubmitVenta) (State[key] ? setValid(el) : setInvalid(el)); else clearValidation(el);
@@ -297,7 +302,7 @@ function syncStateFromUI() {
 // Apaga TODA la validación visible (para la 1ra apertura o un reset manual)
 async function hideInitialRequiredHints(root = document) {
     wasSubmitVenta = false;
-    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado"].forEach(clearValidation);
+    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado", "#cmbTipoVenta"].forEach(clearValidation);
     root.querySelectorAll(".invalid-feedback").forEach(fb => fb.style.display = "none");
     document.getElementById("errorCamposVenta")?.classList.add("d-none");
     updateGates();
@@ -348,6 +353,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         removeEmptyOptionOnSelect("#cmbSucursal");
         initSelect2Base("#cmbEstado");
         removeEmptyOptionOnSelect("#cmbEstado");
+        initSelect2Base("#cmbTipoVenta");
+        removeEmptyOptionOnSelect("#cmbTipoVenta");
+        initSelect2Base("#cmbTransporte");
 
         bindPagoImporteVenta();
         bindVentasNuevoModifAtajosCatalogo();
@@ -365,18 +373,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // listeners de sincronización de combos
         addComboSync("#cmbCliente", "clienteId", {
-            extra: () => { if (State.pagos.length) { State.pagos = []; refrescarPagos(); } }
+            extra: () => {
+                if (State.pagos.length) { State.pagos = []; refrescarPagos(); }
+                aplicarTransporteDefaultCliente();
+            }
         });
         addComboSync("#cmbListaPrecio", "listaPrecioId", {
             extra: () => { if (State.items.length) { State.items = []; refrescarItems(); recalcularTotales(); } }
         });
         addComboSync("#cmbSucursal", "sucursalId");
         addComboSync("#cmbEstado", "estado");
+        addComboSync("#cmbTipoVenta", "tipoVenta");
+
+        $("#cmbTransporte").on("change select2:select select2:clear", actualizarLblDireccionTransporte);
 
         // Cargar datos de combos/maestros
         await Promise.all([
             cargarClientes(), cargarListasPrecios(), cargarEstadosVentaCombo(),
-            cargarProductos(), cargarCuentas(), cargarSucursalesUsuario()
+            cargarProductos(), cargarCuentas(), cargarSucursalesUsuario(),
+            cargarTransportes(), cargarRemitoEmpresa()
         ]);
 
 
@@ -404,6 +419,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 cmbEstado.value = "PENDIENTE";
                 if ($.fn.select2) $("#cmbEstado").val("PENDIENTE").trigger("change.select2");
             }
+            const cmbTipo = document.getElementById("cmbTipoVenta");
+            if (cmbTipo) {
+                cmbTipo.value = "Fisico";
+                State.tipoVenta = "Fisico";
+                if ($.fn.select2) $("#cmbTipoVenta").val("Fisico").trigger("change.select2");
+            }
 
 
             clearAllValidationVenta();
@@ -426,6 +447,61 @@ async function cargarClientes() {
     cmb.innerHTML = `<option value="">Seleccione</option>` + State.clientes.map(x => `<option value="${x.Id}">${x.Nombre || x.Denominacion || x.RazonSocial || ("Cliente " + x.Id)}</option>`).join("");
     if ($.fn.select2) $("#cmbCliente").trigger("change.select2");
     syncStateFromUI();
+}
+
+async function cargarTransportes() {
+    const r = await fetch("/Transportes/Lista", { headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json" } });
+    const d = r.ok ? await r.json() : [];
+    State.transportes = (d || []).filter(t => t.Activo !== false);
+    const cmb = document.getElementById("cmbTransporte"); if (!cmb) return;
+    cmb.innerHTML = `<option value="">Seleccione</option>` + State.transportes.map(x =>
+        `<option value="${x.Id}">${x.Nombre || ("Transporte " + x.Id)}</option>`
+    ).join("");
+    if ($.fn.select2) $("#cmbTransporte").trigger("change.select2");
+    actualizarLblDireccionTransporte();
+}
+
+async function cargarRemitoEmpresa() {
+    try {
+        const r = await fetch("/Ventas/RemitoEmpresa", { headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json" } });
+        State.remitoEmpresa = r.ok ? await r.json() : null;
+    } catch {
+        State.remitoEmpresa = null;
+    }
+}
+
+function actualizarLblDireccionTransporte() {
+    const cmb = document.getElementById("cmbTransporte");
+    const lbl = document.getElementById("lblDireccionTransporte");
+    if (!lbl) return;
+    const id = parseInt(cmb?.value || "0", 10) || 0;
+    const t = (State.transportes || []).find(x => Number(x.Id) === id);
+    const dir = (t?.Direccion || "").trim();
+    lbl.textContent = dir ? `Dirección de transporte: ${dir}` : (id ? "Sin dirección de transporte" : "");
+}
+
+function aplicarTransporteDefaultCliente() {
+    if (State.cargandoVenta) return;
+    const idCli = State.clienteId || parseInt(document.getElementById("cmbCliente")?.value || "0", 10) || 0;
+    const cli = (State.clientes || []).find(c => Number(c.Id) === idCli);
+    State.remitoCliente = cli || null;
+    const cmb = document.getElementById("cmbTransporte");
+    if (!cmb) return;
+    const idT = cli?.IdTransporte ? String(cli.IdTransporte) : "";
+    cmb.value = idT;
+    if ($.fn.select2) $("#cmbTransporte").val(idT).trigger("change.select2");
+    actualizarLblDireccionTransporte();
+}
+
+function sumarPrendasItems() {
+    return (State.items || []).reduce((a, it) => a + (parseFloat(it.cantidad) || 0), 0);
+}
+
+function syncCantidadPrendasDesdeItems() {
+    const el = document.getElementById("txtCantidadPrendas");
+    if (!el) return;
+    const sum = Math.round(sumarPrendasItems());
+    el.value = sum > 0 ? String(sum) : "";
 }
 
 async function cargarListasPrecios() {
@@ -601,6 +677,7 @@ async function cargarVentaExistente(id) {
     const r = await fetch(`/Ventas/EditarInfo?id=${id}`, { headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json" } });
     if (!r.ok) { errorModal?.("No se pudo cargar la venta."); return; }
     const v = await r.json();
+    State.cargandoVenta = true;
 
     // Cabecera
     const f = dateToInputValue(v.Fecha);
@@ -635,15 +712,44 @@ async function cargarVentaExistente(id) {
         State.estado = est;
     }
 
+    const tipoVenta = ((v.TipoVenta || v.tipoVenta || "Fisico") + "").trim() === "Online" ? "Online" : "Fisico";
+    State.tipoVenta = tipoVenta;
+    const cmbTipoVenta = document.getElementById("cmbTipoVenta");
+    if (cmbTipoVenta) {
+        cmbTipoVenta.value = tipoVenta;
+        if ($.fn.select2) $("#cmbTipoVenta").val(tipoVenta).trigger("change.select2");
+    }
 
     if ($.fn.select2) $("#cmbCliente, #cmbListaPrecio").trigger("change.select2");
 
     syncStateFromUI();
 
-
-
     document.getElementById("txtNota").value = v.NotaInterna || "";
     document.getElementById("txtNotaCliente").value = v.NotaCliente || "";
+
+    State.remitoCliente = {
+        Nombre: v.Cliente,
+        Cuit: v.ClienteCuit,
+        Domicilio: v.ClienteDomicilio,
+        Localidad: v.ClienteLocalidad,
+        CodigoPostal: v.ClienteCodigoPostal,
+        Telefono: v.ClienteTelefono,
+        Email: v.ClienteEmail,
+        CondicionIva: v.ClienteCondicionIva,
+        DireccionEntrega: v.ClienteDireccionEntrega,
+        Referencias: v.ClienteReferencias,
+        IdTransporte: v.IdTransporte
+    };
+
+    const cmbTransporte = document.getElementById("cmbTransporte");
+    if (cmbTransporte) {
+        const idT = v.IdTransporte ? String(v.IdTransporte) : "";
+        cmbTransporte.value = idT;
+        if ($.fn.select2) $("#cmbTransporte").val(idT).trigger("change.select2");
+        actualizarLblDireccionTransporte();
+    }
+    const txtBultos = document.getElementById("txtCantidadBultos");
+    if (txtBultos) txtBultos.value = v.CantidadBultos != null ? String(v.CantidadBultos) : "";
 
     // Items (+ variantes)
     State.items = (v.Productos || []).map(i => {
@@ -658,6 +764,7 @@ async function cargarVentaExistente(id) {
         };
     });
     refrescarItems();
+    syncCantidadPrendasDesdeItems();
 
     // Pagos
     State.pagos = (v.Pagos || []).map(p => ({ id: p.Id || 0, fecha: dateToInputValue(p.Fecha), idCuenta: p.IdCuenta, cuentaNombre: p.Cuenta || "", importe: parseFloat(p.Importe || 0), nota: p.NotaInterna || "" }));
@@ -665,6 +772,7 @@ async function cargarVentaExistente(id) {
 
     recalcularTotales();
     updateGates();
+    State.cargandoVenta = false;
 }
 
 // ---------------- DataTables: Items ----------------
@@ -1081,6 +1189,8 @@ function recalcularTotales() {
     if (elAb) elAb.textContent = `$ ${_fmtNumber(abonado)}`;
     if (elRs) { elRs.textContent = `$ ${_fmtNumber(restante)}`; elRs.classList.toggle("text-success", restante <= 0.000001); elRs.classList.toggle("text-warning", restante > 0.000001); }
 
+    syncCantidadPrendasDesdeItems();
+
     // AUTO estado SOLO para ventas nuevas (no en solo lectura)
     if (!State.idVenta && !ventaEsSoloLectura()) {
         const nuevoEstado = (restante <= 0.000001) ? "FINALIZADA" : "PENDIENTE";
@@ -1109,6 +1219,7 @@ function camposVentaValidos() {
     ok = (State.listaPrecioId ? setValid("#cmbListaPrecio") : setInvalid("#cmbListaPrecio")) && ok;
     ok = (State.sucursalId ? setValid("#cmbSucursal") : setInvalid("#cmbSucursal")) && ok;
     ok = (State.estado ? setValid("#cmbEstado") : setInvalid("#cmbEstado")) && ok;
+    ok = (State.tipoVenta ? setValid("#cmbTipoVenta") : setInvalid("#cmbTipoVenta")) && ok;
 
     return ok;
 }
@@ -1122,7 +1233,7 @@ function updateFormErrorBanner() {
 
 function clearAllValidationVenta() {
     wasSubmitVenta = false;
-    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado"].forEach(clearValidation);
+    ["#dtpFecha", "#cmbCliente", "#cmbListaPrecio", "#cmbSucursal", "#cmbEstado", "#cmbTipoVenta"].forEach(clearValidation);
     document.getElementById("errorCamposVenta")?.classList.add("d-none");
 }
 
@@ -1137,6 +1248,10 @@ window.guardarVenta = async function () {
     const fecha = document.getElementById("dtpFecha").value;
     const notaInterna = (document.getElementById("txtNota").value || "").trim();
     const notaCliente = (document.getElementById("txtNotaCliente").value || "").trim();
+    const idTransporte = parseInt(document.getElementById("cmbTransporte")?.value || "0", 10) || null;
+    const cantBultosRaw = document.getElementById("txtCantidadBultos")?.value;
+    const cantidadBultos = cantBultosRaw === "" || cantBultosRaw == null ? null : parseInt(cantBultosRaw, 10);
+    const cantidadPrendas = Math.round(sumarPrendasItems()) || null;
 
     const tot = calcularTotalesInterno();
     const payload = {
@@ -1145,6 +1260,10 @@ window.guardarVenta = async function () {
         Subtotal: tot.sub, Descuentos: tot.desc, TotalIva: tot.iva, ImporteTotal: tot.total,
         NotaInterna: notaInterna, NotaCliente: notaCliente,
         Estado: State.estado,
+        TipoVenta: State.tipoVenta || document.getElementById("cmbTipoVenta")?.value || "Fisico",
+        IdTransporte: idTransporte || null,
+        CantidadBultos: Number.isFinite(cantidadBultos) ? cantidadBultos : null,
+        CantidadPrendas: Number.isFinite(cantidadPrendas) ? cantidadPrendas : null,
         Productos: State.items.map(i => ({
             Id: i.id || 0, IdProducto: i.idProducto,
             PrecioUnitario: i.precioUnitario,
@@ -1163,15 +1282,30 @@ window.guardarVenta = async function () {
         Pagos: State.pagos.map(p => ({ Id: p.id || 0, Fecha: p.fecha, IdCuenta: p.idCuenta, Importe: p.importe, NotaInterna: p.nota }))
     };
 
-    const url = State.idVenta ? "/Ventas/Actualizar" : "/Ventas/Insertar";
-    const method = State.idVenta ? "PUT" : "POST";
+    const eraNuevo = !(State.idVenta > 0);
+    const url = eraNuevo ? "/Ventas/Insertar" : "/Ventas/Actualizar";
+    const method = eraNuevo ? "POST" : "PUT";
 
     try {
         isSaving = true;
         const res = await fetch(url, { method, headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json;charset=utf-8" }, body: JSON.stringify(payload) });
         if (!res.ok) throw new Error(res.statusText);
         const r = await res.json();
-        if ((r === true) || (r?.valor === true) || (r?.valor === "OK")) { exitoModal?.(State.idVenta ? "Venta actualizada" : "Venta registrada"); volverIndex(); }
+        if ((r === true) || (r?.valor === true) || (r?.valor === "OK")) {
+            const newId = parseInt(r?.id || State.idVenta || 0, 10) || 0;
+            if (newId > 0) State.idVenta = newId;
+            const accion = await despuesGuardarNuevoModif({
+                mensaje: eraNuevo ? "Venta registrada" : "Venta actualizada",
+                indexUrl: "/Ventas/Index",
+                editUrl: "/Ventas/NuevoModif",
+                id: State.idVenta,
+                eraNuevo
+            });
+            if (accion === "editar") {
+                const btnElim = document.getElementById("btnEliminarVenta");
+                if (btnElim && State.idVenta > 0) btnElim.classList.remove("d-none");
+            }
+        }
         else { errorModal?.("No se pudo guardar la venta."); }
     } catch (e) {
         console.error(e); errorModal?.("Error al guardar la venta.");
@@ -1198,6 +1332,7 @@ window.volverIndex = function () { window.location.href = "/Ventas/Index"; };
 // ================== Exportación PDF ==================
 function _textSel(id) { const el = document.getElementById(id); return el?.selectedOptions?.[0]?.text?.trim() || ""; }
 let __logoDataURL = null;
+let __logoRemitoDataURL = null;
 async function _loadLogoDataURL() {
     if (__logoDataURL) return __logoDataURL;
     const candidatas = ["/Imagenes/Logo.png", "/Imagenes/logo.png", "/Imagenes/Logo.jpg", "/Imagenes/logo.jpg", "/Imagenes/Logo.jpeg", "/Imagenes/logo.jpeg"];
@@ -1210,6 +1345,61 @@ async function _loadLogoDataURL() {
         } catch { }
     }
     return null;
+}
+
+/** Logo remito azul (sin "BY CLIZA"). Prioriza /Imagenes/LogoRemito.png */
+async function _loadLogoRemitoDataURL() {
+    if (__logoRemitoDataURL) return __logoRemitoDataURL;
+
+    try {
+        const r = await fetch("/Imagenes/LogoRemito.png?v=3", { cache: "no-cache" });
+        if (r.ok) {
+            const blob = await r.blob();
+            __logoRemitoDataURL = await new Promise(res => {
+                const fr = new FileReader();
+                fr.onload = () => res(fr.result);
+                fr.readAsDataURL(blob);
+            });
+            return __logoRemitoDataURL;
+        }
+    } catch { /* fallback */ }
+
+    // Fallback: Logo.png → recortar texto e pintar azul
+    const src = await _loadLogoDataURL();
+    if (!src) return null;
+    try {
+        const img = await new Promise((resolve, reject) => {
+            const i = new Image();
+            i.onload = () => resolve(i);
+            i.onerror = reject;
+            i.src = src;
+        });
+        const cropH = Math.floor(img.height * 0.58);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = cropH;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, img.width, cropH, 0, 0, img.width, cropH);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imageData.data;
+        // Azul oscuro remito #0A1F4A
+        const br = 10, bg = 31, bb = 74;
+        for (let p = 0; p < d.length; p += 4) {
+            const lum = (d[p] + d[p + 1] + d[p + 2]) / 3;
+            if (lum > 140) {
+                d[p] = br; d[p + 1] = bg; d[p + 2] = bb; d[p + 3] = 255;
+            } else {
+                d[p] = 255; d[p + 1] = 255; d[p + 2] = 255; d[p + 3] = 255;
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        __logoRemitoDataURL = canvas.toDataURL("image/png");
+        return __logoRemitoDataURL;
+    } catch {
+        return null;
+    }
 }
 function _calcTotales() {
     let sub = 0, desc = 0, iva = 0;
@@ -1323,6 +1513,270 @@ async function exportarVentaPdf() {
     const suc = (sucursalTexto || "Sucursal").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "_");
     const nombre = `Comprobante_Venta_${formatearFechaParaVista(fecha)}_${suc}.pdf`;
     doc.save(nombre);
+}
+
+async function exportarRemitoPdf() {
+    if (!Array.isArray(State.items) || State.items.length === 0) {
+        errorModal?.("Agregá al menos un producto para exportar el remito.");
+        return;
+    }
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+        errorModal?.("Falta jsPDF en la página.");
+        return;
+    }
+
+    if (!State.remitoEmpresa) await cargarRemitoEmpresa();
+    const emp = State.remitoEmpresa || {};
+    const idCli = State.clienteId || parseInt(document.getElementById("cmbCliente")?.value || "0", 10) || 0;
+    const cliLista = (State.clientes || []).find(c => Number(c.Id) === idCli) || {};
+    const cli = { ...(State.remitoCliente || {}), ...cliLista };
+    const idTrans = parseInt(document.getElementById("cmbTransporte")?.value || "0", 10) || 0;
+    const tr = (State.transportes || []).find(t => Number(t.Id) === idTrans) || {};
+    const transporteNombre = (tr.Nombre || "").trim() || "—";
+    const transporteDir = (tr.Direccion || "").trim();
+    const bultosRaw = document.getElementById("txtCantidadBultos")?.value;
+    const bultos = (bultosRaw === "" || bultosRaw == null) ? "—" : String(bultosRaw);
+    const prendasSum = Math.round(sumarPrendasItems());
+    const prendas = prendasSum > 0 ? String(prendasSum) : "—";
+    const tot = calcularTotalesInterno();
+    const valorDecl = `PS ${_fmtNumber(tot.total)}`;
+    const fecha = document.getElementById("dtpFecha")?.value || hoyISO();
+    const nro = State.idVenta ? `RT - ${State.idVenta}` : "RT - BORRADOR";
+    const pedidoNro = State.idVenta
+        ? `0091-NP-${String(State.idVenta).padStart(10, "0")}`
+        : "—";
+    const observaciones = (document.getElementById("txtNotaCliente")?.value || "").trim();
+    let vendedor = "—";
+    try {
+        const u = JSON.parse(localStorage.getItem("userSession") || "null");
+        if (u) vendedor = [u.Nombre, u.Apellido].filter(Boolean).join(" ") || u.Usuario || u.Nombre || "—";
+    } catch { /* noop */ }
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const mL = 36;
+    const mR = 36;
+    const contentW = W - mL - mR;
+    // Solo el logo es azul oscuro; el resto negro / gris como el remito original
+    const BLACK = [0, 0, 0];
+    const GRAY_BAR = [210, 210, 210];
+
+    const dash = (v) => {
+        const s = (v == null ? "" : String(v)).trim();
+        return s || "—";
+    };
+
+    // ========== HEADER ==========
+    // Ubicaciones del original:
+    // [LOGO]  ROPA DEPORTIVA... / JATUN S.R.L.     |  [R] REMITO FABRICA
+    // Boedoá / CP / CUIT / Tel... (debajo del logo) |  Fecha / Nº / Pedidos / Facturas
+    __logoRemitoDataURL = null;
+    const logo = await _loadLogoRemitoDataURL();
+    const logoSize = 48;
+    const logoX = mL;
+    const logoY = 26;
+    if (logo) {
+        try { doc.addImage(logo, "PNG", logoX, logoY, logoSize, logoSize); }
+        catch { try { doc.addImage(logo, "JPEG", logoX, logoY, logoSize, logoSize); } catch { /* noop */ } }
+    }
+
+    // Nombre al LADO del logo
+    const nameX = mL + logoSize + 10;
+    doc.setTextColor(...BLACK);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(emp.RazonSocial || "ROPA DEPORTIVA POR MAYOR Y MENOR", nameX, logoY + 16);
+    doc.setFontSize(9);
+    doc.text(emp.RazonSocialLinea2 || "JATUN S.R.L.", nameX, logoY + 28);
+
+    // Dirección y datos DEBAJO del logo (misma columna izquierda que el logo)
+    let yEmp = logoY + logoSize + 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    const empLines = [
+        emp.DomicilioLinea1 || null,
+        emp.DomicilioLinea2 || null,
+        emp.DomicilioLinea3 || null,
+        emp.Cuit ? `CUIT: ${emp.Cuit}` : null,
+        emp.CondicionIva || null,
+        emp.Telefonos ? `Tel.: ${emp.Telefonos}` : null,
+        emp.TelefonoLocal ? `Tel. local : ${emp.TelefonoLocal}` : null
+    ].filter(Boolean);
+    if (!emp.DomicilioLinea1 && emp.Domicilio) empLines.unshift(emp.Domicilio);
+    empLines.forEach(l => { doc.text(String(l), mL, yEmp); yEmp += 10; });
+
+    // Caja R + REMITO FABRICA (arriba a la derecha)
+    const rBox = 32;
+    const rX = W - mR - 175;
+    const rY = 26;
+    doc.setDrawColor(...BLACK);
+    doc.setLineWidth(1);
+    doc.rect(rX, rY, rBox, rBox);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(...BLACK);
+    doc.text("R", rX + rBox / 2, rY + 22, { align: "center" });
+
+    const metaX = rX + rBox + 10;
+    let yMeta = 36;
+    doc.setFontSize(12);
+    doc.text("REMITO FABRICA", metaX, yMeta);
+    yMeta += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Fecha: ${formatearFechaParaVista(fecha)}`, metaX, yMeta); yMeta += 12;
+    doc.text(`Nº Remito: ${nro}`, metaX, yMeta); yMeta += 12;
+    doc.text(`Pedidos: ${pedidoNro}`, metaX, yMeta); yMeta += 12;
+    doc.text("Facturas: 000000000000", metaX, yMeta);
+
+    let y = Math.max(yEmp, yMeta) + 8;
+    doc.setDrawColor(...BLACK);
+    doc.setLineWidth(1);
+    doc.line(mL, y, W - mR, y);
+    y += 8;
+
+    // ========== CAJA CLIENTE / VENDEDOR ==========
+    const boxTop = y;
+    const boxH = 175;
+    const midX = mL + contentW * 0.58;
+    const headerH = 15;
+    const rightRowH = (boxH - headerH) / 3;
+
+    doc.setDrawColor(...BLACK);
+    doc.setLineWidth(0.9);
+    doc.rect(mL, boxTop, contentW, boxH);
+    doc.line(midX, boxTop, midX, boxTop + boxH);
+
+    // Encabezados sin fondo gris
+    doc.line(mL, boxTop + headerH, midX, boxTop + headerH);
+    doc.line(midX, boxTop + headerH, W - mR, boxTop + headerH);
+    doc.line(midX, boxTop + headerH + rightRowH, W - mR, boxTop + headerH + rightRowH);
+    doc.line(midX, boxTop + headerH + rightRowH * 2, W - mR, boxTop + headerH + rightRowH * 2);
+    doc.line(midX, boxTop + headerH + rightRowH * 2 + headerH, W - mR, boxTop + headerH + rightRowH * 2 + headerH);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...BLACK);
+    doc.text("Datos de cliente", mL + 6, boxTop + 11);
+    doc.text("Datos del vendedor", midX + 6, boxTop + 11);
+
+    // Cliente
+    const leftPad = mL + 8;
+    let yL = boxTop + headerH + 13;
+    const labelW = 92;
+    const writeLeft = (label, value, opts = {}) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(...BLACK);
+        doc.text(label, leftPad, yL);
+        doc.setFont("helvetica", "normal");
+        const val = dash(value);
+        const maxW = midX - leftPad - labelW - 8;
+        const lines = doc.splitTextToSize(val, maxW);
+        if (opts.underline && lines.length && val !== "—") {
+            doc.text(lines[0], leftPad + labelW, yL);
+            const tw = doc.getTextWidth(lines[0]);
+            doc.setLineWidth(0.5);
+            doc.line(leftPad + labelW, yL + 1.5, leftPad + labelW + tw, yL + 1.5);
+            doc.setLineWidth(0.9);
+            yL += 12;
+            for (let i = 1; i < lines.length; i++) { doc.text(lines[i], leftPad + labelW, yL); yL += 11; }
+        } else {
+            doc.text(lines, leftPad + labelW, yL);
+            yL += Math.max(12, lines.length * 11);
+        }
+    };
+
+    const cp = dash(cli.CodigoPostal);
+    const loc = dash(cli.Localidad);
+    writeLeft("Señor(es):", cli.Nombre || _textSel("cmbCliente"));
+    writeLeft("CUIT:", cli.Cuit);
+    writeLeft("Domicilio:", cli.Domicilio);
+    writeLeft("CP:", `${cp}${loc !== "—" ? " - " + loc : ""}`.replace(/\s-\s$/, "") || "—");
+    if (cli.Localidad || cli.CodigoPostal) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(dash(cli.Provincia) !== "—" ? String(cli.Provincia).toUpperCase() : "BUENOS AIRES", leftPad + labelW, yL);
+        yL += 12;
+    }
+    writeLeft("Teléfono:", cli.Telefono);
+    writeLeft("IVA:", cli.CondicionIva);
+    writeLeft("Referencias:", cli.Referencias);
+    writeLeft("Correo electrónico:", cli.Email, { underline: true });
+
+    // Derecha
+    const rightPad = midX + 8;
+    const rightW = W - mR - midX - 14;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...BLACK);
+    doc.text(`Vendedor ${dash(vendedor)}`, rightPad, boxTop + headerH + 16);
+
+    // Celda media: nombre del transporte
+    const yT = boxTop + headerH + rightRowH + 14;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Transporte: ${dash(transporteNombre)}`, rightPad, yT);
+
+    // Celda inferior: Datos del transporte (no repetir "Datos del vendedor")
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("Datos del transporte", midX + 6, boxTop + headerH + rightRowH * 2 + 11);
+    doc.setFont("helvetica", "normal");
+    const dirLines = doc.splitTextToSize(
+        transporteDir ? `Dirección: ${transporteDir}` : "—",
+        rightW
+    );
+    doc.text(dirLines, rightPad, boxTop + headerH + rightRowH * 2 + headerH + 12);
+
+    y = boxTop + boxH + 16;
+
+    // ========== BULTOS / PRENDAS / VALOR ==========
+    const writeStar = (label, value) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...BLACK);
+        doc.text(`*  ${label}`, mL, y);
+        doc.text(String(value), mL + 150, y);
+        y += 14;
+    };
+    writeStar("Cantidad de bultos:", bultos);
+    writeStar("Cantidad de prendas:", prendas);
+    writeStar("Valor declarado:", valorDecl);
+    y += 4;
+
+    // Barra gris gruesa
+    doc.setFillColor(...GRAY_BAR);
+    doc.rect(mL, y, contentW, 8, "F");
+    y += 22;
+
+    // ========== OBSERVACIONES ==========
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...BLACK);
+    const obsLine = `Observaciones: ${transporteNombre !== "—" ? transporteNombre : "—"}`;
+    doc.text(obsLine, mL, y);
+    y += 13;
+    doc.setFont("helvetica", "normal");
+    if (observaciones) {
+        const rest = doc.splitTextToSize(observaciones, contentW);
+        doc.text(rest, mL, y);
+    }
+
+    // ========== FIRMAS ==========
+    const firmY = H - 68;
+    const firmW = 200;
+    doc.setDrawColor(...BLACK);
+    doc.setLineWidth(1);
+    doc.line(mL + 24, firmY, mL + 24 + firmW, firmY);
+    doc.line(W - mR - 24 - firmW, firmY, W - mR - 24, firmY);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("FIRMA", mL + 24 + firmW / 2, firmY + 14, { align: "center" });
+    doc.text("ACLARACIÓN", W - mR - 24 - firmW / 2, firmY + 14, { align: "center" });
+
+    doc.save(`Remito_Fabrica_${nro.replace(/\s+/g, "")}_${formatearFechaParaVista(fecha)}.pdf`);
 }
 
 

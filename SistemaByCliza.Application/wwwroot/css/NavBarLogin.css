@@ -626,4 +626,92 @@
     margin-top: 12px;
 }
 
+/* Contador de sesión (últimos 5 min) */
+.rp-session-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+}
+
+.rp-session-timer i {
+    opacity: 0.85;
+}
+
+.rp-session-timer-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+}
+
+.rp-session-timer strong,
+#sessionCountdownText {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+}
+
+.rp-session-timer.rp-session-warning {
+    border-color: rgba(251, 191, 36, 0.45);
+    background: rgba(251, 191, 36, 0.08);
+    color: #fde68a;
+}
+
+.rp-session-timer.rp-session-expired {
+    border-color: rgba(248, 113, 113, 0.45);
+    background: rgba(248, 113, 113, 0.1);
+    color: #fecaca;
+}
+
+@media (max-width: 768px) {
+    .rp-session-timer-label {
+        display: none;
+    }
+}
+
+.rp-session-renew-modal .rp-session-renew-countdown {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.08);
+}
+
+.rp-session-renew-countdown-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+#modalSessionPorExpirarCountdown {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: #fde68a;
+}
+
+#btnSessionRenovar .fa-refresh {
+    transition: transform 0.35s ease;
+}
+
+#btnSessionRenovar:not(:disabled):hover .fa-refresh {
+    transform: rotate(-180deg);
+}
+
+#btnSessionRenovar:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
 

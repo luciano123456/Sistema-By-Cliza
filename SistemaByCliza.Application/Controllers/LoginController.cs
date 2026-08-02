@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using SistemaByCliza.Application.Models.ViewModels;
 using SistemaByCliza.Application.Models;
+using SistemaByCliza.Application.Configuration;
 using SistemaByCliza.BLL.Service;
 using SistemaByCliza.Models;
 
@@ -19,16 +20,22 @@ namespace SistemaBronx.Application.Controllers
         private readonly ILoginService _loginService;
         private readonly IConfiguration _config;
         private readonly IUsuariosPermisosService _permisosService;
+        private readonly IUsuariosService _usuariosService;
+        private readonly SessionSettings _sessionSettings;
 
 
         public LoginController(
       ILoginService loginService,
       IConfiguration config,
-      IUsuariosPermisosService permisosService)
+      IUsuariosPermisosService permisosService,
+      IUsuariosService usuariosService,
+      SessionSettings sessionSettings)
         {
             _loginService = loginService;
             _config = config;
             _permisosService = permisosService;
+            _usuariosService = usuariosService;
+            _sessionSettings = sessionSettings;
         }
 
 
@@ -107,10 +114,14 @@ namespace SistemaBronx.Application.Controllers
                     })
                     .ToList();
 
+                var expiresAt = DateTime.UtcNow.Add(_sessionSettings.GetDuration());
+
                 return Ok(new
                 {
                     success = true,
                     token,
+                    expiresAt = expiresAt.ToString("o"),
+                    expiresAtUnixMs = new DateTimeOffset(expiresAt).ToUnixTimeMilliseconds(),
                     user = new
                     {
                         user.Id,
@@ -155,7 +166,7 @@ namespace SistemaBronx.Application.Controllers
                     _config["JwtSettings:Issuer"],
                     _config["JwtSettings:Audience"],
                     claims,
-                    expires: DateTime.UtcNow.AddHours(2),
+                    expires: DateTime.UtcNow.Add(_sessionSettings.GetDuration()),
                     signingCredentials: creds);
 
                 return new JwtSecurityTokenHandler().WriteToken(token);
@@ -163,6 +174,52 @@ namespace SistemaBronx.Application.Controllers
             catch (Exception ex)
             {
                 return null;
+            }
+        }
+
+        /// <summary>Extiende la sesión JWT del usuario autenticado (renovar sin volver a loguearse).</summary>
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> RenovarSesion()
+        {
+            try
+            {
+                var idClaim = User.FindFirst("Id")?.Value;
+                if (!int.TryParse(idClaim, out var userId))
+                {
+                    return Unauthorized(new { success = false, message = "Sesión no válida." });
+                }
+
+                var user = await _usuariosService.Obtener(userId);
+                if (user == null)
+                {
+                    return Unauthorized(new { success = false, message = "Usuario no encontrado." });
+                }
+
+                if (user.IdEstado == 2)
+                {
+                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado." });
+                }
+
+                var token = GenerarToken(user);
+                if (string.IsNullOrEmpty(token))
+                {
+                    return StatusCode(500, new { success = false, message = "No se pudo generar el token." });
+                }
+
+                var expiresAt = DateTime.UtcNow.Add(_sessionSettings.GetDuration());
+
+                return Ok(new
+                {
+                    success = true,
+                    token,
+                    expiresAt = expiresAt.ToString("o"),
+                    expiresAtUnixMs = new DateTimeOffset(expiresAt).ToUnixTimeMilliseconds()
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { success = false, message = "No se pudo renovar la sesión." });
             }
         }
 
@@ -185,4 +242,3 @@ namespace SistemaBronx.Application.Controllers
     }
 
 }
-

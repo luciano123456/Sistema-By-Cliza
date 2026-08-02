@@ -31,6 +31,12 @@ public partial class Cliente
 
     public int IdListaPrecio { get; set; }
 
+    public int? IdTransporte { get; set; }
+
+    public string? DireccionEntrega { get; set; }
+
+    public string? Referencias { get; set; }
+
     public int? IdUsuarioRegistra { get; set; }
 
     public DateTime? FechaRegistra { get; set; }
@@ -46,6 +52,8 @@ public partial class Cliente
     public virtual CondicionesIva? IdCondicionIvaNavigation { get; set; }
 
     public virtual ListasPrecio IdListaPrecioNavigation { get; set; } = null!;
+
+    public virtual Transporte? IdTransporteNavigation { get; set; }
 
     public virtual Provincia? IdProvinciaNavigation { get; set; }
 

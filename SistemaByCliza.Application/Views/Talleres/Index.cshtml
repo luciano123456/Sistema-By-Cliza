@@ -55,9 +55,12 @@
                         <table class="w-100 dt-dark display nowrap compact" id="grd_Talleres">
                             <thead>
                                 <tr>
-                                    <th></th>        <!-- Acciones -->
-                                    <th>Nombre</th>  <!-- 1 -->
-                                    <th>Dias Entrega</th>  <!-- 1 -->
+                                    <th></th>
+                                    <th class="text-center">Id</th>
+                                    <th>Nombre</th>
+                                    <th>Dirección</th>
+                                    <th>Teléfono</th>
+                                    <th>Dias Entrega</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -100,6 +103,16 @@
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
+                    <div class="col-12">
+                        <label for="txtDireccion" class="form-label">Dirección</label>
+                        <input type="text" class="form-control" id="txtDireccion" maxlength="250">
+                    </div>
+
+                    <div class="col-6">
+                        <label for="txtTelefono" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="txtTelefono" maxlength="50">
+                    </div>
+
                     <div id="errorCampos" class="alert alert-danger d-none col-12">
                         Debes completar los campos obligatorios.
                     </div>
@@ -139,5 +152,5 @@
     <script src="~/js/site.js"></script>
 
     <!-- Lógica Talleres -->
-    <script src="~/js/Talleres.js?v=1.4"></script>
+    <script src="~/js/Talleres.js?v=1.5"></script>
 }

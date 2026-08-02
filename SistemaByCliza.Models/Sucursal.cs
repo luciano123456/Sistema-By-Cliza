@@ -9,6 +9,9 @@ public partial class Sucursal
 
     public string Nombre { get; set; } = null!;
 
+    /// <summary>Canal de venta: TiendaFisica | Virtual</summary>
+    public string TipoCanal { get; set; } = "TiendaFisica";
+
     public virtual ICollection<Caja> Cajas { get; set; } = new List<Caja>();
 
     public virtual ICollection<ClientesCobro> ClientesCobros { get; set; } = new List<ClientesCobro>();

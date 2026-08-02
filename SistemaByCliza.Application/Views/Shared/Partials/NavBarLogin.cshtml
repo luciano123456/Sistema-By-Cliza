@@ -28,6 +28,13 @@
 
             <!-- USER -->
             <ul class="navbar-nav">
+                <li class="nav-item d-flex align-items-center me-2 d-none" id="sessionCountdownNav">
+                    <div class="rp-session-timer" id="sessionCountdown" title="Tiempo restante de sesion">
+                        <i class="fa fa-clock-o" aria-hidden="true"></i>
+                        <span class="rp-session-timer-label">Sesion</span>
+                        <strong id="sessionCountdownText">--:--:--</strong>
+                    </div>
+                </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" data-bs-toggle="dropdown">
                         <span id="userName">Usuario</span>
@@ -36,7 +43,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="#" onclick="abrirConfiguracionUser()">Configuración</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="/Login/Logout">Cerrar sesión</a></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="cerrarSesion(); return false;">Cerrar sesión</a></li>
                     </ul>
                 </li>
             </ul>
@@ -47,6 +54,6 @@
 
 <partial name="~/Views/Shared/Partials/ModalsConfiguracionSistema.cshtml" />
 
-<script src="~/js/Permisos.js?v=1.16"></script>
+<script src="~/js/Permisos.js?v=1.17"></script>
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-<script src="~/js/NavBarLogin.js?v=1.16" asp-append-version="true"></script>
+<script src="~/js/NavBarLogin.js?v=1.19" asp-append-version="true"></script>

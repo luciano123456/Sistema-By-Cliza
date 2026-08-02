@@ -5,10 +5,12 @@
 let gridTalleres;
 
 /* ---------- Filtros DataTable ---------- */
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' }, // Nombre
-    { index: 2, filterType: 'text' } // Dias Entrega
-];
+    { index: 2, filterType: 'text' }, // Dirección
+    { index: 3, filterType: 'text' }, // Teléfono
+    { index: 4, filterType: 'text' }  // Dias Entrega
+]);
 
 /* ========== Init ========== */
 $(document).ready(async () => {
@@ -42,6 +44,8 @@ async function guardarCambios() {
     const modelo = {
         Id: id !== "" ? parseInt(id) : 0,
         Nombre: $("#txtNombre").val().trim(),
+        Direccion: ($("#txtDireccion").val() || "").trim(),
+        Telefono: ($("#txtTelefono").val() || "").trim(),
         DiasEntrega: $("#txtDiasEntrega").val().trim()
     };
 
@@ -84,6 +88,8 @@ async function mostrarModal(modelo, opts = {}) {
     limpiarModal('#modalEdicion', '#errorCampos');
     $("#txtId").val(modelo.Id ?? 0);
     $("#txtNombre").val(modelo.Nombre ?? '');
+    $("#txtDireccion").val(modelo.Direccion ?? '');
+    $("#txtTelefono").val(modelo.Telefono ?? '');
     $("#txtDiasEntrega").val(modelo.DiasEntrega ?? '');
     if (readOnly) {
         $("#modalEdicionLabel").text("Ver Taller");
@@ -121,8 +127,9 @@ async function listaTalleres() {
     const data = Talleres.map(p => ({
         Id: p.Id,
         Nombre: p.Nombre,
+        Direccion: p.Direccion || "",
+        Telefono: p.Telefono || "",
         DiasEntrega: p.DiasEntrega
-
     }));
 
     await configurarDataTableTalleres(data);
@@ -238,8 +245,11 @@ async function configurarDataTableTalleres(data) {
                     orderable: false,
                     searchable: false,
                 },
-                { data: 'Nombre', title: 'Nombre' }, // 1
-                { data: 'DiasEntrega', title: 'Dias Entrega' }, // 1
+                colDataTableId(),
+                { data: 'Nombre', title: 'Nombre' },
+                { data: 'Direccion', title: 'Dirección' },
+                { data: 'Telefono', title: 'Teléfono' },
+                { data: 'DiasEntrega', title: 'Dias Entrega' },
             ],
             dom: 'Bfrtip',
             buttons: dataTableButtonsExportCondicional("Talleres", [
@@ -248,7 +258,7 @@ async function configurarDataTableTalleres(data) {
                     text: 'Exportar Excel',
                     filename: 'Talleres',
                     title: '',
-                    exportOptions: { columns: [1] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5] },
                     className: 'btn-exportar-excel',
                 },
                 {
@@ -256,14 +266,14 @@ async function configurarDataTableTalleres(data) {
                     text: 'Exportar PDF',
                     filename: 'Talleres',
                     title: '',
-                    exportOptions: { columns: [1] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5] },
                     className: 'btn-exportar-pdf',
                 },
                 {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [1] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5] },
                     className: 'btn-exportar-print'
                 },
             ]),

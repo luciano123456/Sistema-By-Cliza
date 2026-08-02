@@ -132,7 +132,8 @@ namespace SistemaByCliza.DAL.Repository
 
         public async Task<List<Venta>> Listar(DateTime? desde, DateTime? hasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto,
             int? restringirUsuarioRegistraId,
-            IReadOnlyList<int>? idsSucursalesPermitidas)
+            IReadOnlyList<int>? idsSucursalesPermitidas,
+            string? tipoVenta = null)
         {
             var q = _db.Ventas
                 .Include(v => v.IdClienteNavigation)
@@ -163,6 +164,15 @@ namespace SistemaByCliza.DAL.Repository
             if (idSucursal.HasValue && idSucursal > 0) q = q.Where(v => v.IdSucursal == idSucursal.Value);
 
             if (idVendedor.HasValue && idVendedor > 0) q = q.Where(v => v.IdUsuarioRegistra == idVendedor.Value);
+
+            if (!string.IsNullOrWhiteSpace(tipoVenta))
+            {
+                var tv = tipoVenta.Trim();
+                if (string.Equals(tv, "Online", StringComparison.OrdinalIgnoreCase))
+                    q = q.Where(v => v.TipoVenta == "Online");
+                else
+                    q = q.Where(v => v.TipoVenta == null || v.TipoVenta == "" || v.TipoVenta == "Fisico");
+            }
 
             if (!string.IsNullOrWhiteSpace(texto))
             {
@@ -209,6 +219,9 @@ namespace SistemaByCliza.DAL.Repository
         {
             return _db.Ventas
                 .Include(v => v.IdClienteNavigation)
+                    .ThenInclude(c => c.IdCondicionIvaNavigation)
+                .Include(v => v.IdClienteNavigation)
+                .Include(v => v.IdTransporteNavigation)
                 .Include(v => v.IdSucursalNavigation)
                 .Include(v => v.IdUsuarioRegistraNavigation)
                 .Include(v => v.VentasProductos).ThenInclude(p => p.VentasProductosVariantes)
@@ -306,6 +319,8 @@ namespace SistemaByCliza.DAL.Repository
             try
             {
                 // (1) Venta
+                if (string.IsNullOrWhiteSpace(venta.TipoVenta))
+                    venta.TipoVenta = "Fisico";
                 _db.Ventas.Add(venta);
                 await _db.SaveChangesAsync();
 
@@ -462,6 +477,10 @@ namespace SistemaByCliza.DAL.Repository
                 ent.NotaInterna = venta.NotaInterna;
                 ent.NotaCliente = venta.NotaCliente;
                 ent.Estado = venta.Estado;
+                ent.TipoVenta = string.IsNullOrWhiteSpace(venta.TipoVenta) ? "Fisico" : venta.TipoVenta;
+                ent.IdTransporte = venta.IdTransporte;
+                ent.CantidadBultos = venta.CantidadBultos;
+                ent.CantidadPrendas = venta.CantidadPrendas;
                 ent.IdUsuarioModifica = venta.IdUsuarioModifica;
                 ent.FechaModifica = venta.FechaModifica;
                 await _db.SaveChangesAsync();

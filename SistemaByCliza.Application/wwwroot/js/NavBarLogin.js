@@ -75,7 +75,8 @@ function buildMenuPorPermisos() {
         /** BD a veces guarda nombre con espacios: "Ordenes de Corte" → ordenesdecorte */
         ordenescorte: ["ordenesdecorte", "ordenesdecortes"],
         /** Maestro /Talleres: solo código canónico + singular. CC va por cuentascorrientestalleres / cctalleres (otra entrada del menú). */
-        talleres: ["taller"]
+        talleres: ["taller"],
+        analisisdatos: ["analisisdedatos"]
     };
 
     function clavesCompatibles(norm) {
@@ -349,7 +350,7 @@ function buildMenuPorPermisos() {
                 makeLinkItem("Insumos", "/Insumos", "VER", "Insumos"),
                 makeLinkItem("Clientes", "/Clientes", "VER", "Clientes"),
                 makeLinkItem("Proveedores", "/Proveedores", "VER", "Proveedores"),
-                
+                makeLinkItem("Transportes", "/Transportes", "VER", "Transportes"),
             ]
         },
 
@@ -427,13 +428,7 @@ function buildMenuPorPermisos() {
                     "ProductosCategoriasTalle", "OrdenesCorteEstados", "OrdenesCorteEtapasEstados"
                 ]),
                 makeLinkItem("Usuarios", "/Usuarios", "VER", "Usuarios"),
-                makeActionItem("Análisis de datos", () => {
-                    if (typeof window.advertenciaModal === "function") {
-                        advertenciaModal("Análisis de datos aún no disponible");
-                    } else if (typeof window.errorModal === "function") {
-                        errorModal("Análisis de datos aún no disponible");
-                    }
-                })
+                makeLinkItem("Análisis de datos", "/AnalisisDatos", "VER", ["AnalisisDatos", "Análisis de datos"])
             ]
         }
     ];
@@ -1249,3 +1244,21 @@ function buildMenuPorPermisos() {
 })(window, document, window.jQuery);
 
 
+
+function cerrarSesion() {
+    if (window.SessionManager?.beginVoluntaryLogout) {
+        window.SessionManager.beginVoluntaryLogout();
+    } else {
+        sessionStorage.removeItem('sesionExpirada');
+        sessionStorage.setItem('logoutVoluntario', '1');
+        localStorage.removeItem('JwtToken');
+        localStorage.removeItem('userSession');
+        localStorage.removeItem('sessionExpiresAt');
+        if (typeof window.syncTokenFromStorage === 'function') {
+            window.syncTokenFromStorage();
+        } else if (typeof window !== 'undefined') {
+            window.token = null;
+        }
+    }
+    window.location.href = '/Login/Logout';
+}

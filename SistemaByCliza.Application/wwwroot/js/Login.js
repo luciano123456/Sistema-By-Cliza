@@ -1,22 +1,18 @@
 $(document).ready(function () {
     const $btnIngresar = $("#btnIngresar");
-    const labelHtml = $btnIngresar.find(".btn-ingresar-label").length
-        ? $btnIngresar.html()
-        : '<span class="btn-ingresar-label">Ingresar</span>';
     let loginEnCurso = false;
+
+    if (window.SessionManager?.consumeExpiredMessageOnLogin?.()) {
+        $("#errorMessage").text("La sesion ha expirado. Inicia sesion nuevamente.");
+        $("#diverrorMessage").removeClass("d-none").show();
+    }
 
     function setLoginLoading(activo) {
         if (!$btnIngresar.length) return;
-        $btnIngresar.prop("disabled", activo);
-        $("#username, #password, #rememberMe").prop("disabled", activo);
-        if (activo) {
-            $btnIngresar.html(
-                '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>' +
-                '<span>Ingresando...</span>'
-            );
-        } else {
-            $btnIngresar.html(labelHtml);
-        }
+        $btnIngresar.toggleClass("is-loading", !!activo);
+        $btnIngresar.prop("disabled", !!activo);
+        $btnIngresar.attr("aria-busy", activo ? "true" : "false");
+        $("#username, #password, #rememberMe").prop("disabled", !!activo);
     }
 
     // Verificar si el usuario tiene credenciales guardadas
@@ -38,7 +34,7 @@ $(document).ready(function () {
     // Al enviar el formulario
     $("#loginForm").on("submit", function (event) {
         event.preventDefault(); // Evitar el envío tradicional del formulario
-        if (loginEnCurso) return;
+        if (loginEnCurso || $btnIngresar.prop("disabled")) return;
         loginEnCurso = true;
         setLoginLoading(true);
 
@@ -80,9 +76,9 @@ $(document).ready(function () {
                             ? "No se pudo iniciar sesión."
                             : "No se pudo iniciar sesión. Intentá de nuevo.");
                     $("#errorMessage").text(msg);
-                    $("#diverrorMessage").removeClass("d-none");
+                    $("#diverrorMessage").removeClass("d-none").show();
                     setTimeout(function () {
-                        $("#diverrorMessage").addClass("d-none");
+                        $("#diverrorMessage").addClass("d-none").hide();
                     }, 4000);
                     return null;
                 }
@@ -93,7 +89,6 @@ $(document).ready(function () {
                 if (!data) return;
 
                 if (data.success) {
-                    localStorage.setItem("JwtToken", data.token);
                     if (rememberMe) {
                         localStorage.setItem('username', username);
                         localStorage.setItem('password', password);
@@ -106,16 +101,28 @@ $(document).ready(function () {
                         $("#checkIcon").addClass("d-none");
                     }
 
-                    localStorage.setItem('userSession', JSON.stringify(data.user));
-                    window.location.href = 'Dashboard';
+                    const expiresMs = data.expiresAtUnixMs
+                        ?? (data.expiresAt ? Date.parse(data.expiresAt) : null)
+                        ?? (window.SessionManager?.decodeJwtExpMs?.(data.token) ?? null);
+
+                    if (window.SessionManager?.setSession) {
+                        window.SessionManager.setSession(data.token, data.user, expiresMs);
+                    } else {
+                        localStorage.setItem("JwtToken", data.token);
+                        localStorage.setItem('userSession', JSON.stringify(data.user));
+                        if (expiresMs) localStorage.setItem("sessionExpiresAt", String(expiresMs));
+                    }
+
+                    // Dejar el loading activo hasta navegar (ruta absoluta: no /Login/Dashboard)
+                    window.location.href = '/Dashboard';
                 } else {
                     loginEnCurso = false;
                     setLoginLoading(false);
                     $("#errorMessage").text(data.message || "No se pudo iniciar sesión.");
-                    $("#diverrorMessage").removeClass("d-none");
+                    $("#diverrorMessage").removeClass("d-none").show();
 
                     setTimeout(function () {
-                        $("#diverrorMessage").addClass("d-none");
+                        $("#diverrorMessage").addClass("d-none").hide();
                     }, 4000);
                 }
             })
@@ -124,7 +131,7 @@ $(document).ready(function () {
                 loginEnCurso = false;
                 setLoginLoading(false);
                 $("#errorMessage").text("No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo.");
-                $("#diverrorMessage").removeClass("d-none");
+                $("#diverrorMessage").removeClass("d-none").show();
             });
     });
 

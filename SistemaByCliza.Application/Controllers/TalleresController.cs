@@ -27,7 +27,14 @@ namespace SistemaByCliza.Application.Controllers
         {
             var Talleres = await _service.ObtenerTodos();
             var lista = Talleres
-                .Select(p => new VMTaller { Id = p.Id, Nombre = p.Nombre ?? string.Empty, DiasEntrega = p.DiasEntrega > 0 ? p.DiasEntrega : 0 })
+                .Select(p => new VMTaller
+                {
+                    Id = p.Id,
+                    Nombre = p.Nombre ?? string.Empty,
+                    Direccion = p.Direccion,
+                    Telefono = p.Telefono,
+                    DiasEntrega = p.DiasEntrega > 0 ? p.DiasEntrega : 0
+                })
                 .ToList();
 
             return Ok(lista);
@@ -40,6 +47,8 @@ namespace SistemaByCliza.Application.Controllers
             {
                 Id = model.Id,
                 Nombre = model.Nombre?.Trim() ?? string.Empty,
+                Direccion = model.Direccion?.Trim(),
+                Telefono = model.Telefono?.Trim(),
                 DiasEntrega = model.DiasEntrega
             };
 
@@ -54,6 +63,8 @@ namespace SistemaByCliza.Application.Controllers
             {
                 Id = model.Id,
                 Nombre = model.Nombre?.Trim() ?? string.Empty,
+                Direccion = model.Direccion?.Trim(),
+                Telefono = model.Telefono?.Trim(),
                 DiasEntrega = model.DiasEntrega
             };
 
@@ -74,7 +85,14 @@ namespace SistemaByCliza.Application.Controllers
             var p = await _service.Obtener(id);
             if (p == null) return StatusCode(StatusCodes.Status404NotFound);
 
-            var vm = new VMTaller { Id = p.Id, Nombre = p.Nombre ?? string.Empty, DiasEntrega = p.DiasEntrega };
+            var vm = new VMTaller
+            {
+                Id = p.Id,
+                Nombre = p.Nombre ?? string.Empty,
+                Direccion = p.Direccion,
+                Telefono = p.Telefono,
+                DiasEntrega = p.DiasEntrega
+            };
             return Ok(vm);
         }
 

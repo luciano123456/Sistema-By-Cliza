@@ -114,6 +114,15 @@
                                 </select>
                             </div>
 
+                            <div class="col-6 col-md-3">
+                                <label class="form-label">Tipo de venta</label>
+                                <select id="fltTipoVenta" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="Fisico">Físico</option>
+                                    <option value="Online">Online</option>
+                                </select>
+                            </div>
+
                             <div class="col-12 col-md-3">
                                 <label class="form-label">Buscar texto</label>
                                 <input type="text" id="fltTexto" class="form-control" placeholder="Cliente, notas...">
@@ -135,8 +144,10 @@
                             <thead>
                                 <tr>
                                     <th></th>
+                                <th>Id</th>
                                     <th>Fecha</th>
                                     <th>Sucursal</th>
+                                    <th>Tipo</th>
                                     <th>Cliente</th>
                                     <th>Subtotal</th>
                                     <th>Descuentos</th>

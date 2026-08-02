@@ -95,7 +95,9 @@ namespace SistemaByCliza.DAL.Repository
             {
                 IQueryable<Cliente> query = _dbcontext.Clientes
                     .Include(c => c.IdProvinciaNavigation)
-                    .Include(c => c.IdCondicionIvaNavigation);
+                    .Include(c => c.IdCondicionIvaNavigation)
+                    .Include(c => c.IdListaPrecioNavigation)
+                    .Include(c => c.IdTransporteNavigation);
 
                 return await Task.FromResult(query);
 

@@ -109,7 +109,7 @@ namespace SistemaByCliza.Application.Controllers
             var pagos = MapPagos(vm, compra, keepIds: false);
 
             var ok = await _srv.InsertarConDetallesYPagos(compra, items, pagos);
-            return Ok(new { valor = ok });
+            return Ok(new { valor = ok, id = ok ? compra.Id : 0 });
         }
 
         [HttpPut]

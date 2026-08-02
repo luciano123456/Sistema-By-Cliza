@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SistemaByCliza.Application.Configuration;
 using SistemaByCliza.Application.Extensions;
 using SistemaByCliza.Application.Models.ViewModels;
 using SistemaByCliza.BLL.Service;
@@ -18,12 +19,18 @@ namespace SistemaByCliza.Application.Controllers
         private readonly IVentasService _srv;
         private readonly IUsuariosService _usuariosService;
         private readonly ISucursalesService _sucursalesService;
+        private readonly RemitoEmpresaSettings _remitoEmpresa;
 
-        public VentasController(IVentasService srv, IUsuariosService usuariosService, ISucursalesService sucursalesService)
+        public VentasController(
+            IVentasService srv,
+            IUsuariosService usuariosService,
+            ISucursalesService sucursalesService,
+            RemitoEmpresaSettings remitoEmpresa)
         {
             _srv = srv;
             _usuariosService = usuariosService;
             _sucursalesService = sucursalesService;
+            _remitoEmpresa = remitoEmpresa;
         }
 
         private bool EsAdministradorTotal() => User.GetRolId() == RolAdministrador;
@@ -89,7 +96,7 @@ namespace SistemaByCliza.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lista(DateTime? fechaDesde, DateTime? fechaHasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto)
+        public async Task<IActionResult> Lista(DateTime? fechaDesde, DateTime? fechaHasta, int? idCliente, int? idVendedor, int? idSucursal, string? estado, string? texto, string? tipoVenta = null)
         {
             if (!EsAdministradorTotal() && User.GetUserId() is null)
                 return Forbid();
@@ -97,7 +104,7 @@ namespace SistemaByCliza.Application.Controllers
             var (restrUser, idsSuc) = await ResolverRestriccionesVentasAsync();
             var filtroVendedor = EsAdministradorTotal() ? idVendedor : null;
 
-            var data = await _srv.Listar(fechaDesde, fechaHasta, idCliente, filtroVendedor, idSucursal, estado, texto, restrUser, idsSuc);
+            var data = await _srv.Listar(fechaDesde, fechaHasta, idCliente, filtroVendedor, idSucursal, estado, texto, restrUser, idsSuc, tipoVenta);
             var vm = data.Select(v => new VMVenta
             {
                 Id = v.Id,
@@ -113,7 +120,9 @@ namespace SistemaByCliza.Application.Controllers
                 ImporteTotal = v.ImporteTotal,
                 Cliente = v.IdClienteNavigation?.Nombre ?? "",
                 Sucursal = v.IdSucursalNavigation?.Nombre ?? "",
-                Vendedor = NombreVendedorVenta(v)
+                Vendedor = NombreVendedorVenta(v),
+                TipoVenta = string.IsNullOrWhiteSpace(v.TipoVenta) ? "Fisico" : v.TipoVenta,
+                Estado = v.Estado
             }).ToList();
             return Ok(vm);
         }
@@ -162,6 +171,7 @@ namespace SistemaByCliza.Application.Controllers
             var items = await _srv.ObtenerItemsPorVenta(id);
             var pagos = await _srv.ObtenerPagosPorVenta(id);
 
+            var cli = v.IdClienteNavigation;
             var vm = new VMVenta
             {
                 Id = v.Id,
@@ -177,7 +187,22 @@ namespace SistemaByCliza.Application.Controllers
                 NotaInterna = v.NotaInterna,
                 NotaCliente = v.NotaCliente,
                 Estado = v.Estado,
-                Cliente = v.IdClienteNavigation?.Nombre ?? "",
+                TipoVenta = string.IsNullOrWhiteSpace(v.TipoVenta) ? "Fisico" : v.TipoVenta,
+                IdTransporte = v.IdTransporte,
+                CantidadBultos = v.CantidadBultos,
+                CantidadPrendas = v.CantidadPrendas,
+                TransporteNombre = v.IdTransporteNavigation?.Nombre,
+                TransporteDireccion = v.IdTransporteNavigation?.Direccion,
+                Cliente = cli?.Nombre ?? "",
+                ClienteCuit = cli?.Cuit,
+                ClienteDomicilio = cli?.Domicilio,
+                ClienteLocalidad = cli?.Localidad,
+                ClienteCodigoPostal = cli?.CodigoPostal,
+                ClienteTelefono = cli?.Telefono,
+                ClienteEmail = cli?.Email,
+                ClienteCondicionIva = cli?.IdCondicionIvaNavigation?.Nombre,
+                ClienteDireccionEntrega = cli?.DireccionEntrega,
+                ClienteReferencias = cli?.Referencias,
                 Sucursal = v.IdSucursalNavigation?.Nombre ?? "",
                 Vendedor = NombreVendedorVenta(v),
                 Productos = items.Select(i => new VMVentaProducto
@@ -219,6 +244,24 @@ namespace SistemaByCliza.Application.Controllers
             return Ok(vm);
         }
 
+        [HttpGet]
+        public IActionResult RemitoEmpresa()
+        {
+            return Ok(new
+            {
+                _remitoEmpresa.RazonSocial,
+                _remitoEmpresa.RazonSocialLinea2,
+                _remitoEmpresa.DomicilioLinea1,
+                _remitoEmpresa.DomicilioLinea2,
+                _remitoEmpresa.DomicilioLinea3,
+                _remitoEmpresa.Domicilio,
+                _remitoEmpresa.Cuit,
+                _remitoEmpresa.CondicionIva,
+                _remitoEmpresa.Telefonos,
+                _remitoEmpresa.TelefonoLocal
+            });
+        }
+
         // UPSERT
         [HttpPost]
         public async Task<IActionResult> Insertar([FromBody] VMVenta vm)
@@ -238,7 +281,7 @@ namespace SistemaByCliza.Application.Controllers
             var (items, variantes) = MapItems(vm);
             var pagos = MapPagos(vm, venta);
             var ok = await _srv.InsertarConDetallesYPagos(venta, items, variantes, pagos);
-            return Ok(new { valor = ok });
+            return Ok(new { valor = ok, id = ok ? venta.Id : 0 });
         }
 
         [HttpPut]
@@ -376,7 +419,18 @@ namespace SistemaByCliza.Application.Controllers
             NotaInterna = vm.NotaInterna,
             NotaCliente = vm.NotaCliente,
             Estado = vm.Estado,
+            TipoVenta = NormalizarTipoVenta(vm.TipoVenta),
+            IdTransporte = vm.IdTransporte,
+            CantidadBultos = vm.CantidadBultos,
+            CantidadPrendas = vm.CantidadPrendas,
         };
+
+        private static string NormalizarTipoVenta(string? tipo)
+        {
+            return string.Equals(tipo?.Trim(), "Online", StringComparison.OrdinalIgnoreCase)
+                ? "Online"
+                : "Fisico";
+        }
 
         private static (List<VentasProducto> items, List<VentasProductosVariante> vars) MapItems(VMVenta vm)
         {

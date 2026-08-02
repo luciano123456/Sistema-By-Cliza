@@ -1,14 +1,14 @@
 // ============================== Compras.js ==============================
 let gridCompras;
 
-const columnConfigCompras = [
+const columnConfigCompras = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },                                   // Fecha
     { index: 2, filterType: 'select', fetchDataFunc: listaProveedoresFilter }, // Proveedor
     { index: 3, filterType: 'text' },                                   // Subtotal
     { index: 4, filterType: 'text' },                                   // Descuentos
     { index: 5, filterType: 'text' },                                   // IVA
     { index: 6, filterType: 'text' },                                   // Total
-];
+]);
 
 $(document).ready(() => {
     Permisos.init();
@@ -95,6 +95,7 @@ async function configurarDataTableCompras(data) {
                         eliminar: "eliminarCompra"
                     }, "Compras")
                 },
+                colDataTableId(),
                 { data: "Fecha", title: "Fecha", render: f => formatearFechaParaVista(f) },
                 { data: "Proveedor", title: "Proveedor" },
                 { data: "Subtotal", title: "Subtotal", className: "text-end", render: n => formatNumber(n) },
@@ -104,11 +105,11 @@ async function configurarDataTableCompras(data) {
             ],
             dom: 'Bfrtip',
             buttons: dataTableButtonsExportCondicional("Compras", [
-                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Compras', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-excel' },
-                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Compras', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-pdf' },
-                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-print' },
+                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Compras', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] }, className: 'btn-exportar-excel' },
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Compras', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] }, className: 'btn-exportar-print' },
             ]),
-            order: [[1, "desc"], [0, "desc"]],
+            order: [[2, "desc"], [0, "desc"]],
             orderCellsTop: true,
             fixedHeader: true,
             initComplete: async function () {

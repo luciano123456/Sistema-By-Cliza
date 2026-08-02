@@ -1,7 +1,20 @@
 ﻿/* ============================== SITE.JS ============================== */
-const token = localStorage.getItem('JwtToken');
+function obtenerTokenJwt() {
+    return localStorage.getItem('JwtToken');
+}
+
+function syncTokenFromStorage() {
+    token = obtenerTokenJwt();
+    try {
+        window.token = token;
+    } catch (_) { /* no window (tests) */ }
+}
+
+var token = obtenerTokenJwt();
 try {
     window.token = token;
+    window.obtenerTokenJwt = obtenerTokenJwt;
+    window.syncTokenFromStorage = syncTokenFromStorage;
 } catch (_) { /* no window (tests) */ }
 
 async function MakeAjax(options) {
@@ -61,19 +74,374 @@ function aplicarZIndexModalFeedback(modalEl) {
     };
 }
 
-function mostrarModalConContador(modal, texto, tiempo) {
-    $(`#${modal}Text`).text(texto);
-    $(`#${modal}`).modal("show");
-    const el = document.getElementById(modal);
-    const limpiar = aplicarZIndexModalFeedback(el);
-    setTimeout(function () {
-        $(`#${modal}`).modal("hide");
-        limpiar();
-    }, tiempo);
+/* ============================== Toasts (reemplazo de exito/error/advertencia modal) ============================== */
+function __toastEnsureHost() {
+    let host = document.getElementById('appToastHost');
+    if (host) return host;
+    host = document.createElement('div');
+    host.id = 'appToastHost';
+    host.className = 'app-toast-host';
+    host.setAttribute('aria-live', 'polite');
+    host.setAttribute('aria-relevant', 'additions');
+    document.body.appendChild(host);
+    return host;
 }
-function exitoModal(texto) { mostrarModalConContador('exitoModal', texto, 1000); }
-function errorModal(texto) { mostrarModalConContador('ErrorModal', texto, 3000); }
-function advertenciaModal(texto) { mostrarModalConContador('AdvertenciaModal', texto, 3000); }
+
+/**
+ * Toast global (estilo Oro Ambiental).
+ * @param {string} mensaje
+ * @param {'success'|'error'|'warning'|'info'} [tipo='info']
+ * @param {number} [ms] duración; 0 = no auto-cierra
+ */
+function showToast(mensaje, tipo, ms) {
+    const type = (tipo || 'info').toLowerCase();
+    const map = {
+        success: { cls: 'app-toast--success', icon: 'fa-check-circle', title: 'Éxito' },
+        error: { cls: 'app-toast--error', icon: 'fa-exclamation-circle', title: 'Error' },
+        warning: { cls: 'app-toast--warning', icon: 'fa-exclamation-triangle', title: 'Advertencia' },
+        info: { cls: 'app-toast--info', icon: 'fa-info-circle', title: 'Info' }
+    };
+    const cfg = map[type] || map.info;
+    const duration = typeof ms === 'number'
+        ? ms
+        : (type === 'error' ? 4200 : type === 'warning' ? 3600 : 2800);
+
+    const host = __toastEnsureHost();
+    const el = document.createElement('div');
+    el.className = 'app-toast ' + cfg.cls;
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    el.innerHTML =
+        '<div class="app-toast__icon"><i class="fa ' + cfg.icon + '" aria-hidden="true"></i></div>' +
+        '<div class="app-toast__body">' +
+        '<div class="app-toast__title">' + cfg.title + '</div>' +
+        '<div class="app-toast__msg"></div>' +
+        '</div>' +
+        '<button type="button" class="app-toast__close" aria-label="Cerrar">&times;</button>' +
+        '<div class="app-toast__bar"></div>';
+
+    el.querySelector('.app-toast__msg').textContent = String(mensaje || '');
+    host.appendChild(el);
+
+    // animación entrada
+    requestAnimationFrame(() => el.classList.add('app-toast--in'));
+
+    let closed = false;
+    let timer = null;
+    const close = () => {
+        if (closed) return;
+        closed = true;
+        if (timer) clearTimeout(timer);
+        el.classList.remove('app-toast--in');
+        el.classList.add('app-toast--out');
+        setTimeout(() => el.remove(), 220);
+    };
+
+    el.querySelector('.app-toast__close').addEventListener('click', close);
+    el.addEventListener('click', function (e) {
+        if (e.target.closest('.app-toast__close')) return;
+        // click en el toast también cierra
+        close();
+    });
+
+    if (duration > 0) {
+        const bar = el.querySelector('.app-toast__bar');
+        if (bar) {
+            bar.style.setProperty('--toast-dur', duration + 'ms');
+            bar.classList.add('app-toast__bar--run');
+        }
+        timer = setTimeout(close, duration);
+    }
+
+    return { close };
+}
+
+function exitoModal(texto) { showToast(texto, 'success'); }
+function errorModal(texto) { showToast(texto, 'error'); }
+function advertenciaModal(texto) { showToast(texto, 'warning'); }
+
+/** @deprecated usar showToast; se mantiene por compatibilidad */
+function mostrarModalConContador(modal, texto, tiempo) {
+    if (modal === 'exitoModal') return showToast(texto, 'success', tiempo);
+    if (modal === 'ErrorModal') return showToast(texto, 'error', tiempo);
+    if (modal === 'AdvertenciaModal') return showToast(texto, 'warning', tiempo);
+    showToast(texto, 'info', tiempo);
+}
+
+try {
+    window.showToast = showToast;
+    window.exitoModal = exitoModal;
+    window.errorModal = errorModal;
+    window.advertenciaModal = advertenciaModal;
+} catch (_) { /* ignore */ }
+
+/**
+ * Tras guardar en pantallas NuevoModif.
+ * Pregunta si ir al listado o seguir editando.
+ * @param {string} mensajeExito
+ * @returns {Promise<'listado'|'editar'>}
+ */
+function preguntarDespuesGuardar(mensajeExito) {
+    return new Promise((resolve) => {
+        const modalEl = document.getElementById('modalDespuesGuardar');
+        const mensajeEl = document.getElementById('modalDespuesGuardarMensaje');
+        const btnListado = document.getElementById('btnDespuesGuardarListado');
+        const btnEditar = document.getElementById('btnDespuesGuardarEditar');
+
+        if (!modalEl || !btnListado || !btnEditar) {
+            // Fallback sin modal
+            const irListado = window.confirm((mensajeExito || 'Guardado correctamente.') + '\n\nAceptar = pantalla principal\nCancelar = seguir editando');
+            resolve(irListado ? 'listado' : 'editar');
+            return;
+        }
+
+        if (mensajeEl) mensajeEl.innerText = mensajeExito || 'Guardado correctamente.';
+
+        // Clonar para limpiar listeners previos
+        modalEl.replaceWith(modalEl.cloneNode(true));
+        const el = document.getElementById('modalDespuesGuardar');
+        const bListado = document.getElementById('btnDespuesGuardarListado');
+        const bEditar = document.getElementById('btnDespuesGuardarEditar');
+        const modal = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
+        let resuelto = false;
+        let limpiarZ = function noop() { };
+
+        const finish = (accion) => {
+            if (resuelto) return;
+            resuelto = true;
+            try { modal.hide(); } catch (_) { /* ignore */ }
+            resolve(accion);
+        };
+
+        bListado.onclick = () => finish('listado');
+        bEditar.onclick = () => finish('editar');
+        el.addEventListener('hidden.bs.modal', () => {
+            limpiarZ();
+            if (!resuelto) finish('editar');
+        }, { once: true });
+
+        modal.show();
+        if (typeof aplicarZIndexModalFeedback === 'function') {
+            limpiarZ = aplicarZIndexModalFeedback(el);
+        }
+    });
+}
+
+/**
+ * Flujo estándar post-guardado NuevoModif.
+ * @param {{ mensaje: string, indexUrl: string, editUrl: string, id?: number, eraNuevo?: boolean }} opts
+ * @returns {Promise<'listado'|'editar'>}
+ */
+async function despuesGuardarNuevoModif(opts) {
+    const mensaje = opts?.mensaje || 'Guardado correctamente.';
+    const indexUrl = opts?.indexUrl || '/';
+    const editUrl = opts?.editUrl || '';
+    const id = parseInt(opts?.id || 0, 10) || 0;
+    const eraNuevo = !!opts?.eraNuevo;
+
+    const accion = await preguntarDespuesGuardar(mensaje);
+    if (accion === 'listado') {
+        window.location.href = indexUrl;
+        return 'listado';
+    }
+    // Seguir editando: si era alta, abrir la ficha con el id nuevo
+    if (eraNuevo && id > 0 && editUrl) {
+        window.location.href = `${editUrl}?id=${id}`;
+    }
+    return 'editar';
+}
+
+try {
+    window.preguntarDespuesGuardar = preguntarDespuesGuardar;
+    window.despuesGuardarNuevoModif = despuesGuardarNuevoModif;
+} catch (_) { /* ignore */ }
+
+/* ============================== Busy buttons (anti doble-click) ============================== */
+const BUSY_BTN_SELECTOR = [
+    '#btnGuardar',
+    '#btnGuardarGlobal',
+    '#btnGuardarOC',
+    '#btnGuardarVenta',
+    '#btnGuardarCompra',
+    '#btnGuardarPermisos',
+    '#btnGuardarPago',
+    '#btnGuardarProducto',
+    '#btnGuardarInsumo',
+    '#btnGuardarEtapa',
+    '#btnGuardarItem',
+    '#btnEliminarOC',
+    '#btnEliminarVenta',
+    '#btnEliminarCompra',
+    '#btnEliminar',
+    '#btnPickTallerOk',
+    'button[data-busy-lock]',
+    '.btn[data-busy-lock]',
+    'a.btn[data-busy-lock]'
+].join(', ');
+
+const __busyState = {
+    lastBtn: null,
+    lastAt: 0,
+    pending: 0,
+    unlockTimer: null,
+    maxTimer: null,
+    patched: false
+};
+
+function __busyResolveEl(target) {
+    if (!target) return null;
+    if (typeof target === 'string') return document.querySelector(target);
+    if (target.jquery) return target[0] || null;
+    return target;
+}
+
+function setBotonBusy(target, activo, opts) {
+    const btn = __busyResolveEl(target);
+    if (!btn) return;
+    const on = !!activo;
+    const label = (opts && opts.label) || btn.getAttribute('data-busy-label') || 'Procesando...';
+
+    if (on) {
+        if (btn.dataset.busy === '1') return;
+        if (!btn.dataset.busyHtml) btn.dataset.busyHtml = btn.innerHTML;
+        delete btn.dataset.busyPending;
+        btn.dataset.busy = '1';
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.classList.add('is-busy');
+        if (!(opts && opts.keepLabel)) {
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> ' + label;
+        }
+    } else {
+        if (btn.dataset.busy !== '1' && !btn.dataset.busyPending) return;
+        const html = btn.dataset.busyHtml;
+        delete btn.dataset.busy;
+        delete btn.dataset.busyPending;
+        delete btn.dataset.busyHtml;
+        clearTimeout(btn.__busyPendingTimer);
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        btn.classList.remove('is-busy');
+        if (html != null) btn.innerHTML = html;
+    }
+}
+
+/**
+ * Ejecuta una acción async bloqueando el botón (spinner + disabled) hasta terminar.
+ * @param {HTMLElement|string} target
+ * @param {() => (any|Promise<any>)} accionAsync
+ * @param {{ label?: string, keepLabel?: boolean }} [opts]
+ */
+async function conBotonBusy(target, accionAsync, opts) {
+    const btn = __busyResolveEl(target);
+    if (btn && btn.dataset.busy === '1') return;
+    try {
+        if (btn) setBotonBusy(btn, true, opts);
+        return await Promise.resolve(typeof accionAsync === 'function' ? accionAsync() : accionAsync);
+    } finally {
+        if (btn) setBotonBusy(btn, false);
+    }
+}
+
+function __busyLockFromNetwork(btn) {
+    if (!btn || !document.contains(btn)) return;
+    setBotonBusy(btn, true, {
+        label: btn.getAttribute('data-busy-label') || 'Procesando...'
+    });
+    clearTimeout(__busyState.maxTimer);
+    __busyState.maxTimer = setTimeout(() => {
+        __busyUnlockTracked(btn);
+    }, 90000);
+}
+
+function __busyUnlockTracked(btn) {
+    clearTimeout(__busyState.unlockTimer);
+    clearTimeout(__busyState.maxTimer);
+    __busyState.pending = 0;
+    if (btn) setBotonBusy(btn, false);
+    if (__busyState.lastBtn === btn) {
+        __busyState.lastBtn = null;
+        __busyState.lastAt = 0;
+    }
+}
+
+function __busyOnRequestStart() {
+    const btn = __busyState.lastBtn;
+    if (!btn || !document.contains(btn)) return null;
+    // Solo si el click de acción sigue “en curso” (evita lockear por fetches de fondo)
+    if (btn.dataset.busy !== '1' && btn.dataset.busyPending !== '1') return null;
+    if (btn.dataset.busy !== '1') __busyLockFromNetwork(btn);
+    __busyState.pending++;
+    return btn;
+}
+
+function __busyOnRequestEnd(btn) {
+    if (!btn) return;
+    __busyState.pending = Math.max(0, __busyState.pending - 1);
+    if (__busyState.pending > 0) return;
+    clearTimeout(__busyState.unlockTimer);
+    // Pequeño debounce por si hay otro fetch en cadena
+    __busyState.unlockTimer = setTimeout(() => {
+        if (__busyState.pending <= 0) __busyUnlockTracked(btn);
+    }, 80);
+}
+
+function __initBusyButtonsGlobal() {
+    if (__busyState.patched) return;
+    __busyState.patched = true;
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest && e.target.closest(BUSY_BTN_SELECTOR);
+        if (!btn) return;
+
+        // Ya procesando o click reciente en curso: bloquear re-click
+        if (btn.dataset.busy === '1' || btn.dataset.busyPending === '1' || btn.classList.contains('is-busy')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+        }
+
+        btn.dataset.busyPending = '1';
+        __busyState.lastBtn = btn;
+        __busyState.lastAt = Date.now();
+
+        clearTimeout(btn.__busyPendingTimer);
+        btn.__busyPendingTimer = setTimeout(function () {
+            if (btn.dataset.busy !== '1') delete btn.dataset.busyPending;
+        }, 2500);
+    }, true);
+
+    // fetch
+    if (typeof window.fetch === 'function') {
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = function (...args) {
+            const btn = __busyOnRequestStart();
+            return nativeFetch(...args).finally(() => __busyOnRequestEnd(btn));
+        };
+    }
+
+    // jQuery ajax
+    if (window.jQuery) {
+        const jqStack = [];
+        window.jQuery(document).ajaxSend(function () {
+            jqStack.push(__busyOnRequestStart());
+        });
+        window.jQuery(document).ajaxComplete(function () {
+            __busyOnRequestEnd(jqStack.pop() || null);
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', __initBusyButtonsGlobal);
+} else {
+    __initBusyButtonsGlobal();
+}
+
+try {
+    window.setBotonBusy = setBotonBusy;
+    window.conBotonBusy = conBotonBusy;
+    window.__initBusyButtonsGlobal = __initBusyButtonsGlobal;
+} catch (_) { /* ignore */ }
 
 function confirmarModal(mensaje) {
     return new Promise((resolve) => {
@@ -1267,6 +1635,29 @@ function renderAccionesGrid(id, acciones, modulo) {
 }
 
 window.renderAccionesGrid = renderAccionesGrid;
+
+/** Columna Id visible (después de Acciones) para DataTables Index. */
+function colDataTableId(opts) {
+    const o = opts || {};
+    return {
+        data: o.data || "Id",
+        title: o.title || "Id",
+        width: o.width || "4%",
+        className: o.className || "text-center text-nowrap dt-col-id",
+        orderable: o.orderable !== false,
+        searchable: o.searchable !== false
+    };
+}
+window.colDataTableId = colDataTableId;
+
+/** Inserta filtro de Id en index 1 y desplaza el resto (+1). */
+function conFiltroIdDespuesAcciones(columnConfig) {
+    const base = Array.isArray(columnConfig) ? columnConfig : [];
+    return [{ index: 1, filterType: "text" }].concat(
+        base.map(c => Object.assign({}, c, { index: (c.index || 0) + 1 }))
+    );
+}
+window.conFiltroIdDespuesAcciones = conFiltroIdDespuesAcciones;
 
 document.addEventListener("DOMContentLoaded", function () {
     try {

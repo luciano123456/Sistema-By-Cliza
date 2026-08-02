@@ -22,12 +22,21 @@ function renderUser() {
 ========================= */
 
 function logout() {
-    localStorage.removeItem("userSession");
-    localStorage.removeItem("JwtToken");
-    // `token` en site.js es const global: no asignar `token = …`; solo limpiar memoria y window.
-    if (typeof window !== "undefined") window.token = null;
-
-    window.location.href = "/Login";
+    if (window.SessionManager?.beginVoluntaryLogout) {
+        window.SessionManager.beginVoluntaryLogout();
+    } else {
+        sessionStorage.removeItem("sesionExpirada");
+        sessionStorage.setItem("logoutVoluntario", "1");
+        localStorage.removeItem("userSession");
+        localStorage.removeItem("JwtToken");
+        localStorage.removeItem("sessionExpiresAt");
+        if (typeof window.syncTokenFromStorage === "function") {
+            window.syncTokenFromStorage();
+        } else if (typeof window !== "undefined") {
+            window.token = null;
+        }
+    }
+    window.location.href = "/Login/Logout";
 }
 
 /* =========================

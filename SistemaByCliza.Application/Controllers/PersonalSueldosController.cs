@@ -109,7 +109,7 @@ namespace SistemaByCliza.Application.Controllers
             try
             {
                 var ok = await _srv.InsertarConPagos(sueldo, pagos);
-                return Ok(new { valor = ok });
+                return Ok(new { valor = ok, id = ok ? sueldo.Id : 0 });
             }
             catch (Exception ex) { return BadRequest(ex.Message); }
         }

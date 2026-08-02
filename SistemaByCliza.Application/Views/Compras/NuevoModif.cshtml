@@ -101,7 +101,7 @@
                 </div>
 
                 <div class="d-grid mt-3">
-                    <button id="btnGuardarCompra" class="btn btn-primary btn-lg" type="button" onclick="guardarCompra()" title="Guardar compra">
+                    <button id="btnGuardarCompra" class="btn btn-primary btn-lg" type="button" data-busy-label="Guardando..." onclick="guardarCompra()" title="Guardar compra">
                         <i class="fa fa-check me-1"></i> Registrar
                     </button>
                     <button type="button" class="btn btn-outline-light mt-2" id="btnExportarCompraPdf" data-modulo="Compras" data-permiso="exportar">
@@ -290,5 +290,5 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/utils/moment.js"></script>
-    <script src="~/js/ComprasNuevoModif.js?v=1.7"></script>
+    <script src="~/js/ComprasNuevoModif.js?v=1.8"></script>
 }

@@ -30,6 +30,12 @@ namespace SistemaByCliza.Application.Models.ViewModels
 
         public int IdListaPrecio { get; set; }
 
+        public int? IdTransporte { get; set; }
+
+        public string? DireccionEntrega { get; set; }
+
+        public string? Referencias { get; set; }
+
         public virtual ICollection<ClientesCobro> ClientesCobros { get; set; } = new List<ClientesCobro>();
 
         public virtual ICollection<ClientesCuentaCorriente> ClientesCuentaCorrientes { get; set; } = new List<ClientesCuentaCorriente>();
@@ -46,5 +52,7 @@ namespace SistemaByCliza.Application.Models.ViewModels
         public string? CondicionIva { get; set; }
         public string? Provincia { get; set; }
         public string? ListaPrecio { get; set; }
+        public string? TransporteNombre { get; set; }
+        public string? TransporteDireccion { get; set; }
     }
 }

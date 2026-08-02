@@ -1,0 +1,297 @@
+@{
+    ViewData["Title"] = "Análisis de datos";
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="~/css/AnalisisDatos.css" asp-append-version="true" />
+}
+
+<div class="ax-page" id="analisisPage">
+    <!-- Toolbar -->
+    <div class="ax-toolbar">
+        <div class="ax-toolbar-left">
+            <div class="ax-title-block">
+                <i class="fa fa-line-chart"></i>
+                <div>
+                    <h1>Análisis de datos</h1>
+                    <span id="axPeriodoLabel">Período actual</span>
+                </div>
+            </div>
+        </div>
+        <div class="ax-toolbar-right">
+            <div class="ax-periodos" id="axPeriodos">
+                <button type="button" class="ax-chip" data-periodo="hoy">Hoy</button>
+                <button type="button" class="ax-chip" data-periodo="semana">Esta semana</button>
+                <button type="button" class="ax-chip" data-periodo="mes">Este mes</button>
+                <button type="button" class="ax-chip active" data-periodo="3m">Últimos 3 meses</button>
+                <button type="button" class="ax-chip" data-periodo="6m">Últimos 6 meses</button>
+                <button type="button" class="ax-chip" data-periodo="anio">Último año</button>
+                <button type="button" class="ax-chip" data-periodo="ytd">Este año</button>
+                <button type="button" class="ax-chip" data-periodo="custom">Personalizado</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="ax-filters">
+        <div class="ax-filter-dates d-none" id="axCustomDates">
+            <label>Desde</label>
+            <input type="date" id="fltDesde" />
+            <label>Hasta</label>
+            <input type="date" id="fltHasta" />
+        </div>
+        <select id="fltSucursal" class="ax-select">
+            <option value="">Todas las sucursales</option>
+        </select>
+        <select id="fltTipoVenta" class="ax-select" title="Tipo de venta cargado en cada venta">
+            <option value="">Todos los tipos</option>
+            <option value="Fisico">Físico</option>
+            <option value="Online">Online</option>
+        </select>
+        <select id="fltDiasSinMov" class="ax-select" title="Días sin movimiento">
+            <option value="30">Sin mov. 30 días</option>
+            <option value="60">Sin mov. 60 días</option>
+            <option value="90" selected>Sin mov. 90 días</option>
+            <option value="180">Sin mov. 180 días</option>
+        </select>
+        <button type="button" id="btnAplicar" class="ax-btn-primary">
+            <i class="fa fa-refresh"></i> Actualizar
+        </button>
+    </div>
+
+    <!-- KPI globales -->
+    <div class="ax-kpi-row kpi-solo-rol-finanzas">
+        <div class="ax-kpi">
+            <span class="ax-kpi-ico blue"><i class="fa fa-shopping-cart"></i></span>
+            <div>
+                <small>Ventas</small>
+                <strong id="kpiVentas">$0</strong>
+            </div>
+        </div>
+        <div class="ax-kpi">
+            <span class="ax-kpi-ico green"><i class="fa fa-balance-scale"></i></span>
+            <div>
+                <small>Resultado</small>
+                <strong id="kpiResultado">$0</strong>
+            </div>
+        </div>
+        <div class="ax-kpi">
+            <span class="ax-kpi-ico teal"><i class="fa fa-cubes"></i></span>
+            <div>
+                <small>Stock (venta)</small>
+                <strong id="kpiStock">$0</strong>
+            </div>
+        </div>
+        <div class="ax-kpi warn">
+            <span class="ax-kpi-ico amber"><i class="fa fa-pause-circle"></i></span>
+            <div>
+                <small>Stock parado</small>
+                <strong id="kpiParado">$0</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ax-tabs" id="analisisTabs">
+        <button type="button" class="ax-tab active" data-tab="tabVentas"><i class="fa fa-shopping-bag"></i> Ventas</button>
+        <button type="button" class="ax-tab" data-tab="tabInventario"><i class="fa fa-archive"></i> Inventario</button>
+        <button type="button" class="ax-tab" data-tab="tabFinanciero"><i class="fa fa-line-chart"></i> Financiero</button>
+        <button type="button" class="ax-tab" data-tab="tabGastos"><i class="fa fa-credit-card"></i> Gastos</button>
+        <button type="button" class="ax-tab" data-tab="tabProduccion"><i class="fa fa-industry"></i> Producción</button>
+    </div>
+
+    <div class="ax-panels">
+        <!-- VENTAS -->
+        <section class="ax-panel active" id="tabVentas">
+           
+            <div class="ax-grid">
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Prendas que más salen</h3><span class="ax-badge ok">Top</span></div>
+                    <div class="ax-rank" id="rankPrendasMas"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Prendas que menos salen</h3><span class="ax-badge warn">Bajo</span></div>
+                    <div class="ax-rank" id="rankPrendasMenos"></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Prendas más vs menos vendidas</h3></div>
+                    <div class="ax-chart"><canvas id="chartProductos"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Talles que más salen</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartTalles"></canvas></div>
+                    <div class="ax-rank ax-rank-sm" id="rankTallesMas"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Talles que menos salen</h3></div>
+                    <div class="ax-rank" id="rankTallesMenos"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Colores que más salen</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartColores"></canvas></div>
+                    <div class="ax-rank ax-rank-sm" id="rankColoresMas"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Colores que menos salen</h3></div>
+                    <div class="ax-rank" id="rankColoresMenos"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Ventas por tipo (Físico / Online)</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartCanal"></canvas></div>
+                    <div class="ax-rank ax-rank-sm" id="rankCanal"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Ventas por sucursal</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartSucursal"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Vendedores con más cierres</h3></div>
+                    <div class="ax-chart"><canvas id="chartVendedores"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Ranking de vendedores</h3><span class="ax-badge soft">Cierres</span></div>
+                    <div class="ax-rank" id="rankVendedores"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Presencia por provincia</h3></div>
+                    <div class="ax-rank" id="rankProvincias"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Provincias sin presencia</h3><span class="ax-badge warn">Expandir</span></div>
+                    <div class="ax-chips" id="chipsSinPresencia"></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Localidades con ventas</h3></div>
+                    <div class="ax-rank" id="rankLocalidades"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- INVENTARIO -->
+        <section class="ax-panel" id="tabInventario">
+            <div class="ax-kpi-row kpi-solo-rol-finanzas ax-kpi-row-sm ax-kpi-row-6">
+                <div class="ax-kpi"><small>Unidades stock</small><strong id="invUnidades">0</strong></div>
+                <div class="ax-kpi"><small>Inversión total</small><strong id="invInversion">$0</strong></div>
+                <div class="ax-kpi"><small>Valor venta total</small><strong id="invVenta">$0</strong></div>
+                <div class="ax-kpi"><small>Inversión presente</small><strong id="invInvPresente">$0</strong></div>
+                <div class="ax-kpi"><small>Venta presente</small><strong id="invVentaPresente">$0</strong></div>
+                <div class="ax-kpi warn"><small>Parado inv. / venta</small><strong id="invParado">$0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Movimiento del stock</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartInvClasif"></canvas></div>
+                    <div class="ax-legend" id="legendInvClasif"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Presente vs parado ($)</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartInvValor"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Más movimiento</h3><span class="ax-badge ok">Alto</span></div>
+                    <div class="ax-rank" id="rankStockAlto"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Poco movimiento</h3><span class="ax-badge soft">Bajo</span></div>
+                    <div class="ax-rank" id="rankStockPoco"></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Sin movimiento hace tiempo</h3><span class="ax-badge warn">Parado</span></div>
+                    <div class="ax-rank" id="rankStockParado"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FINANCIERO -->
+        <section class="ax-panel" id="tabFinanciero">
+            <div class="ax-kpi-row kpi-solo-rol-finanzas ax-kpi-row-sm">
+                <div class="ax-kpi"><small>Ventas</small><strong id="finVentas">$0</strong></div>
+                <div class="ax-kpi"><small>Gastos</small><strong id="finGastos">$0</strong></div>
+                <div class="ax-kpi"><small>Costo prod.</small><strong id="finCosto">$0</strong></div>
+                <div class="ax-kpi"><small>Resultado</small><strong id="finResultado">$0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Resultado mensual y punto de equilibrio</h3></div>
+                    <div class="ax-chart"><canvas id="chartEquilibrio"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Ganancia por prenda (gráfico)</h3></div>
+                    <div class="ax-chart"><canvas id="chartGananciaPrenda"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Cuánto se gana por prenda</h3></div>
+                    <div class="ax-rank" id="rankGananciaPrenda"></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Por mes: ¿llega al equilibrio y deja ganancia?</h3></div>
+                    <div class="ax-month-cards" id="cardsEquilibrio"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GASTOS -->
+        <section class="ax-panel" id="tabGastos">
+            <div class="ax-kpi-row ax-kpi-row-sm">
+                <div class="ax-kpi"><small>Total gastos</small><strong id="gastosTotal">$0</strong></div>
+                <div class="ax-kpi"><small>Cantidad</small><strong id="gastosCant">0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Por categoría</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartGastosCat"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Por sucursal</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartGastosSuc"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Ranking de categorías</h3></div>
+                    <div class="ax-rank" id="rankGastosCat"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PRODUCCIÓN -->
+        <section class="ax-panel" id="tabProduccion">
+            <div class="ax-kpi-row ax-kpi-row-sm">
+                <div class="ax-kpi"><small>Cant. a producir</small><strong id="prodAProducir">0</strong></div>
+                <div class="ax-kpi"><small>Cant. fabricada</small><strong id="prodProducidas">0</strong></div>
+                <div class="ax-kpi"><small>Final real</small><strong id="prodFinal">0</strong></div>
+                <div class="ax-kpi warn"><small>Pérdidas totales</small><strong id="prodPerdidas">0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Cantidad de fabricación vs pérdidas</h3></div>
+                    <div class="ax-chart"><canvas id="chartProdProducto"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Talleres con más productividad</h3></div>
+                    <div class="ax-chart"><canvas id="chartProdTaller"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Fabricación por producto</h3></div>
+                    <div class="ax-rank" id="rankProdProducto"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Pérdidas por producto</h3><span class="ax-badge warn">Pérdida</span></div>
+                    <div class="ax-rank" id="rankProdPerdidas"></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Ranking de productividad por taller</h3></div>
+                    <div class="ax-rank" id="rankProdTaller"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="~/js/site.js"></script>
+    <script src="~/js/AnalisisDatos.js" asp-append-version="true"></script>
+}
