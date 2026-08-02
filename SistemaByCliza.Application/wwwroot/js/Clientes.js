@@ -14,7 +14,7 @@ function clientesEventoConfiguracionEsAtajo(d) {
 }
 
 function destruirSelect2CombosCliente() {
-    ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia"].forEach((id) => {
+    ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia", "cmbTransporte"].forEach((id) => {
         const $s = $("#" + id);
         if ($s.length && $s.hasClass("select2-hidden-accessible")) {
             $s.select2("destroy");
@@ -26,7 +26,7 @@ function destruirSelect2CombosCliente() {
 function inicializarSelect2CombosClienteSiHaceFalta() {
     const $modal = $("#modalEdicion");
     if (!$modal.length || !(window.jQuery && $.fn.select2)) return;
-    ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia"].forEach((id) => {
+    ["cmbCondicionIva", "cmbListaPrecios", "cmbProvincia", "cmbTransporte"].forEach((id) => {
         const $s = $("#" + id);
         if (!$s.length || $s.hasClass("no-select2") || $s.is('[data-no-select2="1"]')) return;
         if ($s.hasClass("select2-hidden-accessible")) return;
@@ -152,14 +152,16 @@ async function refrescarCatalogosTrasConfiguracionCliente() {
     const vIva = $("#cmbCondicionIva").val();
     const vLp = $("#cmbListaPrecios").val();
     const vProv = $("#cmbProvincia").val();
+    const vTr = $("#cmbTransporte").val();
 
     destruirSelect2CombosCliente();
 
-    await Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()]);
+    await Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias(), listaTransportesCliente()]);
 
     if (vIva) $("#cmbCondicionIva").val(vIva);
     if (vLp) $("#cmbListaPrecios").val(vLp);
     if (vProv) $("#cmbProvincia").val(vProv);
+    if (vTr) $("#cmbTransporte").val(vTr);
 
     aplicarPendienteSeleccionCatalogoCliente(pend);
 
@@ -171,7 +173,7 @@ async function refrescarCatalogosTrasConfiguracionCliente() {
             inicializarSelect2CombosClienteSiHaceFalta();
         }
     }
-    ["#cmbCondicionIva", "#cmbListaPrecios", "#cmbProvincia"].forEach((sel) => {
+    ["#cmbCondicionIva", "#cmbListaPrecios", "#cmbProvincia", "#cmbTransporte"].forEach((sel) => {
         const $x = $(sel);
         if ($x.length && $x.hasClass("select2-hidden-accessible")) {
             $x.trigger("change");
@@ -282,7 +284,10 @@ const Modelo_base = {
     Localidad: "",
     Email: "",
     CodigoPostal: "",
-    IdListaPrecio: null
+    IdListaPrecio: null,
+    IdTransporte: null,
+    DireccionEntrega: "",
+    Referencias: ""
 };
 
 // --- Config de filtros por columna (thead) ---
@@ -344,7 +349,10 @@ function guardarCambios() {
         IdProvincia: $("#cmbProvincia").val(),
         Localidad: $("#txtLocalidad").val(),
         Email: $("#txtEmail").val(),
-        CodigoPostal: $("#txtCodigoPostal").val()
+        CodigoPostal: $("#txtCodigoPostal").val(),
+        IdTransporte: $("#cmbTransporte").val() ? parseInt($("#cmbTransporte").val(), 10) : null,
+        DireccionEntrega: $("#txtDireccionEntrega").val(),
+        Referencias: ($("#txtReferencias").val() || "").trim()
     };
 
     const url = idCliente === "" ? "/Clientes/Insertar" : "/Clientes/Actualizar";
@@ -375,7 +383,7 @@ function nuevoCliente() {
     limpiarEstilosValidacionCliente();
     destruirSelect2CombosCliente();
 
-    Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()]).then(() => {
+    Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias(), listaTransportesCliente()]).then(() => {
         $("#btnGuardar").removeClass("d-none").text("Registrar");
         $("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").prop("disabled", false);
         $("#btnPlusCondicionIva, #btnPlusListaPrecios, #btnPlusProvincia").prop("disabled", false);
@@ -392,7 +400,7 @@ async function mostrarModal(modelo, opts = {}) {
     limpiarEstilosValidacionCliente();
     destruirSelect2CombosCliente();
 
-    await Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias()]);
+    await Promise.all([listaCondicionesIva(), listaListaPrecios(), listaProvincias(), listaTransportesCliente()]);
 
     $("#txtId").val(modelo.Id ?? 0);
     $("#txtNombre").val(modelo.Nombre ?? "");
@@ -404,10 +412,13 @@ async function mostrarModal(modelo, opts = {}) {
     $("#txtLocalidad").val(modelo.Localidad ?? "");
     $("#txtEmail").val(modelo.Email ?? "");
     $("#txtCodigoPostal").val(modelo.CodigoPostal ?? "");
+    $("#txtDireccionEntrega").val(modelo.DireccionEntrega ?? "");
+    $("#txtReferencias").val(modelo.Referencias ?? "");
 
     $("#cmbCondicionIva").val(modelo.IdCondicionIva ?? "").trigger("change");
     $("#cmbListaPrecios").val(modelo.IdListaPrecio ?? "").trigger("change");
     $("#cmbProvincia").val(modelo.IdProvincia ?? "").trigger("change");
+    $("#cmbTransporte").val(modelo.IdTransporte ?? "").trigger("change");
 
     limpiarEstilosValidacionCliente();
 
@@ -703,6 +714,15 @@ async function listaListaPrecios() {
     });
     const data = await res.json();
     llenarSelect("cmbListaPrecios", data);
+}
+
+async function listaTransportesCliente() {
+    const res = await fetch("/Transportes/Lista", {
+        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }
+    });
+    const data = res.ok ? await res.json() : [];
+    const activos = (data || []).filter(t => t.Activo !== false);
+    llenarSelect("cmbTransporte", activos);
 }
 
 /* ======================= Datos para filtros (thead) ======================= */

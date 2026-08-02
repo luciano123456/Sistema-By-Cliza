@@ -26,7 +26,22 @@ namespace SistemaByCliza.Application.Models.ViewModels
         /// <summary>Fisico | Online</summary>
         public string TipoVenta { get; set; } = "Fisico";
 
+        public int? IdTransporte { get; set; }
+        public int? CantidadBultos { get; set; }
+        public int? CantidadPrendas { get; set; }
+        public string? TransporteNombre { get; set; }
+        public string? TransporteDireccion { get; set; }
+
         public string Cliente { get; set; } = "";
+        public string? ClienteCuit { get; set; }
+        public string? ClienteDomicilio { get; set; }
+        public string? ClienteLocalidad { get; set; }
+        public string? ClienteCodigoPostal { get; set; }
+        public string? ClienteTelefono { get; set; }
+        public string? ClienteEmail { get; set; }
+        public string? ClienteCondicionIva { get; set; }
+        public string? ClienteDireccionEntrega { get; set; }
+        public string? ClienteReferencias { get; set; }
         public string Vendedor { get; set; } = "";
         public string Sucursal { get; set; } = "";
 

@@ -113,6 +113,9 @@ builder.Services.AddScoped<IInsumosService, InsumosService>();
 builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
 builder.Services.AddScoped<IProveedoresRepository<Proveedor>, ProveedoresRepository>();
 
+builder.Services.AddScoped<ITransportesService, TransportesService>();
+builder.Services.AddScoped<ITransportesRepository<Transporte>, TransportesRepository>();
+
 builder.Services.AddScoped<IComprasRepository<Compra>, ComprasRepository>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 
@@ -155,6 +158,10 @@ builder.Services.AddControllersWithViews()
 
 var sessionSettings = new SessionSettings();
 builder.Configuration.GetSection("SessionSettings").Bind(sessionSettings);
+
+var remitoEmpresaSettings = new RemitoEmpresaSettings();
+builder.Configuration.GetSection(RemitoEmpresaSettings.SectionName).Bind(remitoEmpresaSettings);
+builder.Services.AddSingleton(remitoEmpresaSettings);
 if (sessionSettings.GetDuration() <= TimeSpan.Zero)
 {
     throw new InvalidOperationException(

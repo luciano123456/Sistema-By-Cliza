@@ -350,7 +350,7 @@ function buildMenuPorPermisos() {
                 makeLinkItem("Insumos", "/Insumos", "VER", "Insumos"),
                 makeLinkItem("Clientes", "/Clientes", "VER", "Clientes"),
                 makeLinkItem("Proveedores", "/Proveedores", "VER", "Proveedores"),
-                
+                makeLinkItem("Transportes", "/Transportes", "VER", "Transportes"),
             ]
         },
 

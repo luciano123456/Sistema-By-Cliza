@@ -35,6 +35,12 @@ public partial class Venta
 
     public string? NotaCliente { get; set; }
 
+    public int? IdTransporte { get; set; }
+
+    public int? CantidadBultos { get; set; }
+
+    public int? CantidadPrendas { get; set; }
+
     public int? IdUsuarioRegistra { get; set; }
 
     public DateTime? FechaRegistra { get; set; }
@@ -44,6 +50,8 @@ public partial class Venta
     public DateTime? FechaModifica { get; set; }
 
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
+
+    public virtual Transporte? IdTransporteNavigation { get; set; }
 
     public virtual ListasPrecio IdListaPrecioNavigation { get; set; } = null!;
 

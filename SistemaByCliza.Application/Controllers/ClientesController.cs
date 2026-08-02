@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SistemaByCliza.Application.Models.ViewModels;
 using SistemaByCliza.BLL.Service;
 using SistemaByCliza.Models;
@@ -28,7 +29,7 @@ namespace SistemaByCliza.Application.Controllers
         {
             var clientes = await _clientesService.ObtenerTodos();
 
-            var lista = clientes.Select(c => new VMCliente
+            var lista = (await clientes.ToListAsync()).Select(c => new VMCliente
             {
                 Id = c.Id,
                 Nombre = c.Nombre,
@@ -43,9 +44,14 @@ namespace SistemaByCliza.Application.Controllers
                 Email = c.Email,
                 CodigoPostal = c.CodigoPostal,
                 IdListaPrecio = c.IdListaPrecio,
-                CondicionIva = c.IdCondicionIvaNavigation.Nombre, 
-                Provincia = c.IdProvinciaNavigation.Nombre, 
-                ListaPrecio = c.IdListaPrecioNavigation.Nombre  
+                IdTransporte = c.IdTransporte,
+                DireccionEntrega = c.DireccionEntrega,
+                Referencias = c.Referencias,
+                CondicionIva = c.IdCondicionIvaNavigation != null ? c.IdCondicionIvaNavigation.Nombre : null,
+                Provincia = c.IdProvinciaNavigation != null ? c.IdProvinciaNavigation.Nombre : null,
+                ListaPrecio = c.IdListaPrecioNavigation != null ? c.IdListaPrecioNavigation.Nombre : null,
+                TransporteNombre = c.IdTransporteNavigation != null ? c.IdTransporteNavigation.Nombre : null,
+                TransporteDireccion = c.IdTransporteNavigation != null ? c.IdTransporteNavigation.Direccion : null
             }).ToList();
 
             return Ok(lista);
@@ -71,7 +77,10 @@ namespace SistemaByCliza.Application.Controllers
                     Localidad = model.Localidad,
                     Email = model.Email,
                     CodigoPostal = model.CodigoPostal,
-                    IdListaPrecio = model.IdListaPrecio
+                    IdListaPrecio = model.IdListaPrecio,
+                    IdTransporte = model.IdTransporte,
+                    DireccionEntrega = model.DireccionEntrega,
+                    Referencias = model.Referencias
                 };
 
                 var ok = await _clientesService.Insertar(entidad);
@@ -101,6 +110,9 @@ namespace SistemaByCliza.Application.Controllers
             clienteDb.Email = model.Email;
             clienteDb.CodigoPostal = model.CodigoPostal;
             clienteDb.IdListaPrecio = model.IdListaPrecio;
+            clienteDb.IdTransporte = model.IdTransporte;
+            clienteDb.DireccionEntrega = model.DireccionEntrega;
+            clienteDb.Referencias = model.Referencias;
 
             var ok = await _clientesService.Actualizar(clienteDb);
             return Ok(new { valor = ok ? "OK" : "Error" });
@@ -138,9 +150,14 @@ namespace SistemaByCliza.Application.Controllers
                 Email = c.Email,
                 CodigoPostal = c.CodigoPostal,
                 IdListaPrecio = c.IdListaPrecio,
-                CondicionIva = c.IdCondicionIvaNavigation?.Nombre, // ajustar
-                Provincia = c.IdProvinciaNavigation?.Nombre,            // ajustar
-                ListaPrecio = c.IdListaPrecioNavigation?.Nombre         // ajustar
+                IdTransporte = c.IdTransporte,
+                DireccionEntrega = c.DireccionEntrega,
+                Referencias = c.Referencias,
+                CondicionIva = c.IdCondicionIvaNavigation?.Nombre,
+                Provincia = c.IdProvinciaNavigation?.Nombre,
+                ListaPrecio = c.IdListaPrecioNavigation?.Nombre,
+                TransporteNombre = c.IdTransporteNavigation?.Nombre,
+                TransporteDireccion = c.IdTransporteNavigation?.Direccion
             };
 
             return Ok(vm);

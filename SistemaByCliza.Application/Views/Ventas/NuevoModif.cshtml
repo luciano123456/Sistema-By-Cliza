@@ -100,6 +100,25 @@
                         <label class="form-label">Nota cliente</label>
                         <textarea id="txtNotaCliente" class="form-control" rows="2"></textarea>
                     </div>
+
+                    <div class="col-12"><hr class="my-1" /><h6 class="fw-bold mb-0"><i class="fa fa-truck me-1"></i> Envío / Remito</h6></div>
+                    <div class="col-md-12">
+                        <label class="form-label">Transporte</label>
+                        <select id="cmbTransporte" class="form-select">
+                            <option value="">Seleccione</option>
+                        </select>
+                        <small id="lblDireccionTransporte" class="text-muted d-block mt-1"></small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cantidad de bultos</label>
+                        <input type="number" min="0" step="1" id="txtCantidadBultos" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cantidad de prendas</label>
+                        <input type="number" min="0" step="1" id="txtCantidadPrendas" class="form-control" readonly title="Se calcula con la suma de cantidades de los productos" />
+                        <small class="text-muted">Automático según productos</small>
+                    </div>
+
                     <div id="errorCamposVenta" class="alert alert-danger d-none">Completá los campos obligatorios.</div>
                 </form>
 
@@ -150,6 +169,9 @@
                     </button>
                     <button type="button" class="btn btn-outline-light mt-2" data-modulo="Ventas" data-permiso="exportar" onclick="exportarVentaPdf()">
                         <i class="fa fa-file-pdf-o me-1"></i> Exportar PDF
+                    </button>
+                    <button type="button" class="btn btn-outline-info mt-2" data-modulo="Ventas" data-permiso="exportar" onclick="exportarRemitoPdf()">
+                        <i class="fa fa-truck me-1"></i> Remito para transporte
                     </button>
 
                     <button type="button" id="btnEliminarVenta" class="btn btn-danger mt-2 d-none" onclick="eliminarVenta()">
@@ -433,5 +455,5 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/utils/moment.js"></script>
     <script src="~/js/Entities/M_Producto.js?v=1.2"></script>
-    <script src="~/js/VentasNuevoModif.js?v=1.10"></script>
+    <script src="~/js/VentasNuevoModif.js?v=1.18"></script>
 }

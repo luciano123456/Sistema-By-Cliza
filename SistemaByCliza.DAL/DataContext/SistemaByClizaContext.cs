@@ -136,6 +136,8 @@ public partial class SistemaByClizaContext : DbContext
 
     public virtual DbSet<TalleresPago> TalleresPagos { get; set; }
 
+    public virtual DbSet<Transporte> Transportes { get; set; }
+
     public virtual DbSet<User> Usuarios { get; set; }
 
     public virtual DbSet<UsuariosModulo> UsuariosModulos { get; set; }
@@ -263,6 +265,12 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.TelefonoAlternativo)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.DireccionEntrega)
+                .HasMaxLength(250)
+                .IsUnicode(false);
+            entity.Property(e => e.Referencias)
+                .HasMaxLength(250)
+                .IsUnicode(false);
 
             entity.HasOne(d => d.IdCondicionIvaNavigation).WithMany(p => p.Clientes)
                 .HasForeignKey(d => d.IdCondicionIva)
@@ -272,6 +280,10 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdListaPrecio)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Clientes_Listas_Precios");
+
+            entity.HasOne(d => d.IdTransporteNavigation).WithMany(p => p.Clientes)
+                .HasForeignKey(d => d.IdTransporte)
+                .HasConstraintName("FK_Clientes_Transportes");
 
             entity.HasOne(d => d.IdProvinciaNavigation).WithMany(p => p.Clientes)
                 .HasForeignKey(d => d.IdProvincia)
@@ -1345,6 +1357,26 @@ public partial class SistemaByClizaContext : DbContext
                 .HasConstraintName("FK_Talleres_Pagos_Usuarios_Registra");
         });
 
+        modelBuilder.Entity<Transporte>(entity =>
+        {
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.Direccion)
+                .HasMaxLength(250)
+                .IsUnicode(false);
+            entity.Property(e => e.Telefono)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Email)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.Notas)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.Activo).HasDefaultValue(true);
+        });
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(e => e.Apellido)
@@ -1571,6 +1603,10 @@ public partial class SistemaByClizaContext : DbContext
                 .HasForeignKey(d => d.IdSucursal)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ventas_Sucursales");
+
+            entity.HasOne(d => d.IdTransporteNavigation).WithMany(p => p.Ventas)
+                .HasForeignKey(d => d.IdTransporte)
+                .HasConstraintName("FK_Ventas_Transportes");
 
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.VentaIdUsuarioModificaNavigations)
                 .HasForeignKey(d => d.IdUsuarioModifica)

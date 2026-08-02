@@ -219,6 +219,9 @@ namespace SistemaByCliza.DAL.Repository
         {
             return _db.Ventas
                 .Include(v => v.IdClienteNavigation)
+                    .ThenInclude(c => c.IdCondicionIvaNavigation)
+                .Include(v => v.IdClienteNavigation)
+                .Include(v => v.IdTransporteNavigation)
                 .Include(v => v.IdSucursalNavigation)
                 .Include(v => v.IdUsuarioRegistraNavigation)
                 .Include(v => v.VentasProductos).ThenInclude(p => p.VentasProductosVariantes)
@@ -475,6 +478,9 @@ namespace SistemaByCliza.DAL.Repository
                 ent.NotaCliente = venta.NotaCliente;
                 ent.Estado = venta.Estado;
                 ent.TipoVenta = string.IsNullOrWhiteSpace(venta.TipoVenta) ? "Fisico" : venta.TipoVenta;
+                ent.IdTransporte = venta.IdTransporte;
+                ent.CantidadBultos = venta.CantidadBultos;
+                ent.CantidadPrendas = venta.CantidadPrendas;
                 ent.IdUsuarioModifica = venta.IdUsuarioModifica;
                 ent.FechaModifica = venta.FechaModifica;
                 await _db.SaveChangesAsync();

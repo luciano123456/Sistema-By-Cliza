@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SistemaByCliza.Application.Configuration;
 using SistemaByCliza.Application.Extensions;
 using SistemaByCliza.Application.Models.ViewModels;
 using SistemaByCliza.BLL.Service;
@@ -18,12 +19,18 @@ namespace SistemaByCliza.Application.Controllers
         private readonly IVentasService _srv;
         private readonly IUsuariosService _usuariosService;
         private readonly ISucursalesService _sucursalesService;
+        private readonly RemitoEmpresaSettings _remitoEmpresa;
 
-        public VentasController(IVentasService srv, IUsuariosService usuariosService, ISucursalesService sucursalesService)
+        public VentasController(
+            IVentasService srv,
+            IUsuariosService usuariosService,
+            ISucursalesService sucursalesService,
+            RemitoEmpresaSettings remitoEmpresa)
         {
             _srv = srv;
             _usuariosService = usuariosService;
             _sucursalesService = sucursalesService;
+            _remitoEmpresa = remitoEmpresa;
         }
 
         private bool EsAdministradorTotal() => User.GetRolId() == RolAdministrador;
@@ -164,6 +171,7 @@ namespace SistemaByCliza.Application.Controllers
             var items = await _srv.ObtenerItemsPorVenta(id);
             var pagos = await _srv.ObtenerPagosPorVenta(id);
 
+            var cli = v.IdClienteNavigation;
             var vm = new VMVenta
             {
                 Id = v.Id,
@@ -180,7 +188,21 @@ namespace SistemaByCliza.Application.Controllers
                 NotaCliente = v.NotaCliente,
                 Estado = v.Estado,
                 TipoVenta = string.IsNullOrWhiteSpace(v.TipoVenta) ? "Fisico" : v.TipoVenta,
-                Cliente = v.IdClienteNavigation?.Nombre ?? "",
+                IdTransporte = v.IdTransporte,
+                CantidadBultos = v.CantidadBultos,
+                CantidadPrendas = v.CantidadPrendas,
+                TransporteNombre = v.IdTransporteNavigation?.Nombre,
+                TransporteDireccion = v.IdTransporteNavigation?.Direccion,
+                Cliente = cli?.Nombre ?? "",
+                ClienteCuit = cli?.Cuit,
+                ClienteDomicilio = cli?.Domicilio,
+                ClienteLocalidad = cli?.Localidad,
+                ClienteCodigoPostal = cli?.CodigoPostal,
+                ClienteTelefono = cli?.Telefono,
+                ClienteEmail = cli?.Email,
+                ClienteCondicionIva = cli?.IdCondicionIvaNavigation?.Nombre,
+                ClienteDireccionEntrega = cli?.DireccionEntrega,
+                ClienteReferencias = cli?.Referencias,
                 Sucursal = v.IdSucursalNavigation?.Nombre ?? "",
                 Vendedor = NombreVendedorVenta(v),
                 Productos = items.Select(i => new VMVentaProducto
@@ -220,6 +242,24 @@ namespace SistemaByCliza.Application.Controllers
             };
 
             return Ok(vm);
+        }
+
+        [HttpGet]
+        public IActionResult RemitoEmpresa()
+        {
+            return Ok(new
+            {
+                _remitoEmpresa.RazonSocial,
+                _remitoEmpresa.RazonSocialLinea2,
+                _remitoEmpresa.DomicilioLinea1,
+                _remitoEmpresa.DomicilioLinea2,
+                _remitoEmpresa.DomicilioLinea3,
+                _remitoEmpresa.Domicilio,
+                _remitoEmpresa.Cuit,
+                _remitoEmpresa.CondicionIva,
+                _remitoEmpresa.Telefonos,
+                _remitoEmpresa.TelefonoLocal
+            });
         }
 
         // UPSERT
@@ -380,6 +420,9 @@ namespace SistemaByCliza.Application.Controllers
             NotaCliente = vm.NotaCliente,
             Estado = vm.Estado,
             TipoVenta = NormalizarTipoVenta(vm.TipoVenta),
+            IdTransporte = vm.IdTransporte,
+            CantidadBultos = vm.CantidadBultos,
+            CantidadPrendas = vm.CantidadPrendas,
         };
 
         private static string NormalizarTipoVenta(string? tipo)
