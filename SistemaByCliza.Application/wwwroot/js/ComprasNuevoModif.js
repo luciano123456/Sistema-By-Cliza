@@ -744,8 +744,9 @@ window.guardarCompra = async function () {
         }))
     };
 
-    const url = State.idCompra ? "/Compras/Actualizar" : "/Compras/Insertar";
-    const method = State.idCompra ? "PUT" : "POST";
+    const eraNuevo = !(State.idCompra > 0);
+    const url = eraNuevo ? "/Compras/Insertar" : "/Compras/Actualizar";
+    const method = eraNuevo ? "POST" : "PUT";
 
     try {
         isSaving = true;
@@ -755,7 +756,21 @@ window.guardarCompra = async function () {
         });
         if (!res.ok) throw new Error(res.statusText);
         const r = await res.json();
-        if ((r === true) || (r?.valor === true) || (r?.valor === "OK")) { exitoModal?.(State.idCompra ? "Compra actualizada" : "Compra registrada"); volverIndex(); }
+        if ((r === true) || (r?.valor === true) || (r?.valor === "OK")) {
+            const newId = parseInt(r?.id || State.idCompra || 0, 10) || 0;
+            if (newId > 0) State.idCompra = newId;
+            const accion = await despuesGuardarNuevoModif({
+                mensaje: eraNuevo ? "Compra registrada" : "Compra actualizada",
+                indexUrl: "/Compras/Index",
+                editUrl: "/Compras/NuevoModif",
+                id: State.idCompra,
+                eraNuevo
+            });
+            if (accion === "editar") {
+                const btnElim = document.getElementById("btnEliminarCompra");
+                if (btnElim && State.idCompra > 0) btnElim.classList.remove("d-none");
+            }
+        }
         else { errorModal?.("No se pudo guardar la compra."); }
     } catch (e) {
         console.error(e); errorModal?.("Error al guardar la compra.");

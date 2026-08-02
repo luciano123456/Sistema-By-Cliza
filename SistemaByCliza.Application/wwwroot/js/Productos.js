@@ -16,11 +16,11 @@ const Catalogos = {
 };
 
 /* ---------- Configuración de filtros para DataTable ---------- */
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },                                  // Descripción
     { index: 2, filterType: 'select', fetchDataFunc: listaCategoriasFilter }, // Categoría (nombre)
     { index: 3, filterType: 'text' }                                   // Precio
-];
+]);
 
 /* ---------- Estado selección para checklists ---------- */
 const MultiState = {
@@ -558,6 +558,7 @@ async function configurarDataTableProductos(data) {
                     orderable: false,
                     searchable: false,
                 },
+                colDataTableId(),
                 { data: 'Descripcion', title: 'Descripción' },                 // 1
                 { data: 'CategoriaNombre', title: 'Categoría' },               // 2
                 {
@@ -572,7 +573,7 @@ async function configurarDataTableProductos(data) {
                     text: 'Exportar Excel',
                     filename: 'Productos',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3] },
+                    exportOptions: { columns: [1, 2, 3, 4] },
                     className: 'btn-exportar-excel',
                 },
                 {
@@ -580,14 +581,14 @@ async function configurarDataTableProductos(data) {
                     text: 'Exportar PDF',
                     filename: 'Productos',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3] },
+                    exportOptions: { columns: [1, 2, 3, 4] },
                     className: 'btn-exportar-pdf',
                 },
                 {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3] },
+                    exportOptions: { columns: [1, 2, 3, 4] },
                     className: 'btn-exportar-print'
                 },
             ]),

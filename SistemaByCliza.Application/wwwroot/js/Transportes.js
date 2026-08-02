@@ -4,12 +4,12 @@
 
 let gridTransportes;
 
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
     { index: 4, filterType: 'text' }
-];
+]);
 
 $(document).ready(async () => {
     Permisos.init();
@@ -234,6 +234,7 @@ async function configurarDataTableTransportes(data) {
                     orderable: false,
                     searchable: false,
                 },
+                colDataTableId(),
                 { data: 'Nombre', title: 'Nombre' },
                 { data: 'Direccion', title: 'Dirección' },
                 { data: 'Telefono', title: 'Teléfono' },
@@ -246,7 +247,7 @@ async function configurarDataTableTransportes(data) {
                     text: 'Exportar Excel',
                     filename: 'Transportes',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5] },
                     className: 'btn-exportar-excel',
                 },
                 {
@@ -254,14 +255,14 @@ async function configurarDataTableTransportes(data) {
                     text: 'Exportar PDF',
                     filename: 'Transportes',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5] },
                     className: 'btn-exportar-pdf',
                 },
                 {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5] },
                     className: 'btn-exportar-print'
                 },
             ]),

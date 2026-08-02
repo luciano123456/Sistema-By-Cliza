@@ -52,13 +52,13 @@ function inicializarSelect2CombosInsumoSiHaceFalta() {
 }
 
 /* ---------- Filtros DataTable ---------- */
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },                                   // Código
     { index: 2, filterType: 'text' },                                   // Descripción
     { index: 3, filterType: 'select', fetchDataFunc: listaCategoriasFilter }, // Categoría (nombre)
     { index: 4, filterType: 'select', fetchDataFunc: listaProveedoresFilter }, // Proveedor (nombre)
     { index: 5, filterType: 'text' }                                    // Costo
-];
+]);
 
 /* ========== Init ========== */
 $(document).ready(async () => {
@@ -472,6 +472,7 @@ async function configurarDataTableInsumos(data) {
                     orderable: false,
                     searchable: false,
                 },
+                colDataTableId(),
                 { data: 'Codigo', title: 'Código' },                     // 1
                 { data: 'Descripcion', title: 'Descripción' },           // 2
                 { data: 'CategoriaNombre', title: 'Categoría' },         // 3
@@ -488,7 +489,7 @@ async function configurarDataTableInsumos(data) {
                     text: 'Exportar Excel',
                     filename: 'Insumos',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4, 5] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5, 6] },
                     className: 'btn-exportar-excel',
                 },
                 {
@@ -496,14 +497,14 @@ async function configurarDataTableInsumos(data) {
                     text: 'Exportar PDF',
                     filename: 'Insumos',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4, 5] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5, 6] },
                     className: 'btn-exportar-pdf',
                 },
                 {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [1, 2, 3, 4, 5] },
+                    exportOptions: { columns: [1, 2, 3, 4, 5, 6] },
                     className: 'btn-exportar-print'
                 },
             ]),

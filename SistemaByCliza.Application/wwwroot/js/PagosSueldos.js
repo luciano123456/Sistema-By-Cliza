@@ -1,13 +1,13 @@
 let gridSueldos;
 
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },                 // Fecha
     { index: 2, filterType: 'select', fetchDataFunc: listaPersonalFilter }, // Personal
     { index: 3, filterType: 'text' },                 // Concepto
     { index: 4, filterType: 'text' },                 // Importe
     { index: 5, filterType: 'text' },                 // Abonado
     { index: 6, filterType: 'text' },                 // Saldo
-];
+]);
 
 $(document).ready(() => {
     Permisos.init();
@@ -126,6 +126,7 @@ async function configurarDataTableSueldos(data) {
                     orderable: false,
                     searchable: false,
                 },
+                colDataTableId(),
                 { data: "Fecha", render: f => formatearFechaParaVista(f) },
                 { data: "Personal" },
                 { data: "Concepto" },
@@ -135,9 +136,9 @@ async function configurarDataTableSueldos(data) {
             ],
             dom: 'Bfrtip',
             buttons: dataTableButtonsExportCondicional("PersonalSueldos", [
-                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Sueldos', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-excel' },
-                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Sueldos', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-pdf' },
-                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6] }, className: 'btn-exportar-print' },
+                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Sueldos', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] }, className: 'btn-exportar-excel' },
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Sueldos', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] }, className: 'btn-exportar-print' },
             ]),
             orderCellsTop: true,
             fixedHeader: true,

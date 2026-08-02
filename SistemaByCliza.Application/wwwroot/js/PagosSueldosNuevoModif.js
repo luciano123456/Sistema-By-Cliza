@@ -833,8 +833,9 @@ async function guardarTodo() {
         }))
     };
 
-    const url = id ? "/PersonalSueldos/Actualizar" : "/PersonalSueldos/Insertar";
-    const method = id ? "PUT" : "POST";
+    const eraNuevo = !(id > 0);
+    const url = eraNuevo ? "/PersonalSueldos/Insertar" : "/PersonalSueldos/Actualizar";
+    const method = eraNuevo ? "POST" : "PUT";
 
     try {
         const res = await fetch(url, {
@@ -848,8 +849,22 @@ async function guardarTodo() {
         if (!res.ok) throw new Error(res.statusText);
         const r = await res.json();
         if ((typeof r.valor === "boolean" && r.valor) || r.valor === "OK" || r === true) {
-            exitoModal(id ? "Pago de sueldo actualizado" : "Pago de sueldo registrado");
-            volverIndex();
+            const newId = parseInt(r?.id || id || 0, 10) || 0;
+            if (newId > 0) {
+                const txtId = document.getElementById("txtId");
+                if (txtId) txtId.value = String(newId);
+            }
+            const accion = await despuesGuardarNuevoModif({
+                mensaje: eraNuevo ? "Pago de sueldo registrado" : "Pago de sueldo actualizado",
+                indexUrl: "/PersonalSueldos/Index",
+                editUrl: "/PersonalSueldos/NuevoModif",
+                id: newId,
+                eraNuevo
+            });
+            if (accion === "editar") {
+                const btnElim = document.getElementById("btnEliminar");
+                if (btnElim && newId > 0) btnElim.classList.remove("d-none");
+            }
         } else {
             errorModal("No se pudo guardar el pago");
         }

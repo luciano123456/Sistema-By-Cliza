@@ -9,6 +9,10 @@ public partial class Taller
 
     public string Nombre { get; set; } = null!;
 
+    public string? Direccion { get; set; }
+
+    public string? Telefono { get; set; }
+
     public int DiasEntrega { get; set; }
 
     public int? IdUsuarioRegistra { get; set; }

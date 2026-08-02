@@ -1,7 +1,7 @@
 // ============================== Ventas.js ==============================
 let gridVentas;
 
-const columnConfigVentas = [
+const columnConfigVentas = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },
     { index: 2, filterType: 'select', fetchDataFunc: listaSucursalesVentasFilter },
     { index: 3, filterType: 'select', fetchDataFunc: async () => [{ Id: "Fisico", Nombre: "Físico" }, { Id: "Online", Nombre: "Online" }] },
@@ -10,7 +10,7 @@ const columnConfigVentas = [
     { index: 6, filterType: 'text' },
     { index: 7, filterType: 'text' },
     { index: 8, filterType: 'text' },
-];
+]);
 
 $(document).ready(() => {
     Permisos.init();
@@ -109,6 +109,7 @@ async function configurarDataTableVentas(data) {
                         eliminar: "eliminarVenta"
                     }, "Ventas")
                 },
+                colDataTableId(),
                 { data: "Fecha", title: "Fecha", render: f => formatearFechaParaVista(f) },
                 { data: "Sucursal", title: "Sucursal" },
                 {
@@ -129,11 +130,11 @@ async function configurarDataTableVentas(data) {
             ],
             dom: 'Bfrtip',
             buttons: dataTableButtonsExportCondicional("Ventas", [
-                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, className: 'btn-exportar-excel' },
-                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, className: 'btn-exportar-pdf' },
-                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, className: 'btn-exportar-print' },
+                { extend: 'excelHtml5', text: 'Exportar Excel', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-excel' },
+                { extend: 'pdfHtml5', text: 'Exportar PDF', filename: 'Reporte Ventas', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-pdf' },
+                { extend: 'print', text: 'Imprimir', title: '', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, className: 'btn-exportar-print' },
             ]),
-            order: [[1, "desc"], [0, "desc"]],
+            order: [[2, "desc"], [0, "desc"]],
             orderCellsTop: true,
             fixedHeader: true,
             initComplete: async function () {

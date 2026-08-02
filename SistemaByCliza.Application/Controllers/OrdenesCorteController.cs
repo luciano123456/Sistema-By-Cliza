@@ -159,7 +159,7 @@ namespace SistemaByCliza.Application.Controllers
             var etapas = MapEtapas(vm);
 
             var ok = await _srv.InsertarConDetalles(orden, productos, insumos, etapas);
-            return Ok(new { valor = ok });
+            return Ok(new { valor = ok, id = ok ? orden.Id : 0 });
         }
 
         // --------- Actualizar ----------

@@ -2,7 +2,7 @@
 let gridPersonal;
 
 // Índices de columnas (coinciden con el thead)
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
@@ -25,7 +25,7 @@ const columnConfig = [
     { index: 20, filterType: 'text' },
     { index: 21, filterType: 'text' },
     { index: 22, filterType: 'select', fetchDataFunc: listaSucursalesFilter }
-];
+]);
 
 $(document).ready(() => {
     Permisos.init();
@@ -134,6 +134,7 @@ async function configurarDataTablePersonal(data) {
                     },
                     orderable: false, searchable: false
                 },
+                colDataTableId(),
                 { data: 'Nombre' },
                 { data: 'Telefono' },
                 { data: 'TelefonoAlternativo' },
@@ -164,7 +165,7 @@ async function configurarDataTablePersonal(data) {
                     text: 'Exportar Excel',
                     filename: 'Reporte_Personal',
                     title: '',
-                    exportOptions: { columns: [...Array(22).keys()].map(i => i + 1) },
+                    exportOptions: { columns: [...Array(23).keys()].map(i => i + 1) },
                     className: 'btn-exportar-excel'
                 },
                 {
@@ -174,7 +175,7 @@ async function configurarDataTablePersonal(data) {
                     title: null,
                     orientation: 'landscape',
                     pageSize: 'A4',
-                    exportOptions: { columns: [...Array(22).keys()].map(i => i + 1) },
+                    exportOptions: { columns: [...Array(23).keys()].map(i => i + 1) },
                     className: 'buttons-pdf btn-exportar-pdf',
                     customize: function (doc) {
                         const now = moment().format('DD/MM/YYYY HH:mm');
@@ -223,7 +224,7 @@ async function configurarDataTablePersonal(data) {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [...Array(22).keys()].map(i => i + 1) },
+                    exportOptions: { columns: [...Array(23).keys()].map(i => i + 1) },
                     className: 'btn-exportar-print'
                 },
             ]),

@@ -1,62 +1,5 @@
-<!-- Modal Error -->
-<div class="modal fade w-100" id="ErrorModal" tabindex="-1" aria-labelledby="ErrorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content text-white app-modal-dark">
-            <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
-                <i class="fa fa-exclamation-circle text-danger fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold" id="ErrorModalLabel">Error</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p id="ErrorModalText" class="text-danger fs-4 fw-semibold m-0 text-white text-wrap"></p>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">Aceptar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Advertencia -->
-<div class="modal fade w-100" id="AdvertenciaModal" tabindex="-1" aria-labelledby="AdvertenciaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content text-white app-modal-dark">
-            <div class="modal-header border-0 bg-warning bg-opacity-10 colorEncabezado">
-                <i class="fa fa-exclamation-triangle text-warning fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold" id="AdvertenciaModalLabel">Advertencia</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p id="AdvertenciaModalText" class="text-warning fs-4 fw-semibold m-0 text-white text-wrap"></p>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-warning px-4" data-bs-dismiss="modal">Aceptar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-<!-- Modal Éxito -->
-<div class="modal fade w-100" id="exitoModal" tabindex="-1" aria-labelledby="exitoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content text-white app-modal-dark">
-            <div class="modal-header border-0 bg-success bg-opacity-10 colorEncabezado">
-                <i class="fa fa-check-circle text-success fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold">Éxito</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p id="exitoModalText" class="text-success fs-4 fw-semibold m-0 text-white text-wrap"></p>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Aceptar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+<!-- Host de toasts (se completa desde site.js; se deja por si hace falta anclar) -->
+<div id="appToastHost" class="app-toast-host" aria-live="polite" aria-relevant="additions"></div>
 
 <!-- Modal Confirmar -->
 <div class="modal fade w-100" id="modalConfirmar" tabindex="-1" aria-labelledby="modalConfirmarLabel" aria-hidden="true">
@@ -75,6 +18,30 @@
             <div class="modal-footer border-0 justify-content-center">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary px-4" id="btnModalConfirmarAceptar">Sí, continuar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal post-guardado NuevoModif: listado vs seguir editando -->
+<div class="modal fade w-100" id="modalDespuesGuardar" tabindex="-1" aria-labelledby="modalDespuesGuardarLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content text-white app-modal-dark">
+            <div class="modal-header border-0 bg-success bg-opacity-10 colorEncabezado">
+                <i class="fa fa-check-circle text-success fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold" id="modalDespuesGuardarLabel">Guardado</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p id="modalDespuesGuardarMensaje" class="text-success fs-4 fw-semibold m-0 text-white text-wrap"></p>
+                <p class="text-white-50 mt-3 mb-0">¿Qué deseás hacer ahora?</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-light px-4" id="btnDespuesGuardarListado">
+                    <i class="fa fa-list me-1"></i> Ir a la pantalla principal
+                </button>
+                <button type="button" class="btn btn-success px-4" id="btnDespuesGuardarEditar">
+                    <i class="fa fa-pencil me-1"></i> Seguir editando
+                </button>
             </div>
         </div>
     </div>

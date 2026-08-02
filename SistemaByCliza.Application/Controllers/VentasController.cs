@@ -281,7 +281,7 @@ namespace SistemaByCliza.Application.Controllers
             var (items, variantes) = MapItems(vm);
             var pagos = MapPagos(vm, venta);
             var ok = await _srv.InsertarConDetallesYPagos(venta, items, variantes, pagos);
-            return Ok(new { valor = ok });
+            return Ok(new { valor = ok, id = ok ? venta.Id : 0 });
         }
 
         [HttpPut]

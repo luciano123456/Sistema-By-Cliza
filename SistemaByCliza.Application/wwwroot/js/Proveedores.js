@@ -5,9 +5,9 @@
 let gridProveedores;
 
 /* ---------- Filtros DataTable ---------- */
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' } // Nombre
-];
+]);
 
 /* ========== Init ========== */
 $(document).ready(async () => {
@@ -231,6 +231,7 @@ async function configurarDataTableProveedores(data) {
                     orderable: false,
                     searchable: false,
                 },
+                colDataTableId(),
                 { data: 'Nombre', title: 'Nombre' } // 1
             ],
             dom: 'Bfrtip',
@@ -240,7 +241,7 @@ async function configurarDataTableProveedores(data) {
                     text: 'Exportar Excel',
                     filename: 'Proveedores',
                     title: '',
-                    exportOptions: { columns: [1] },
+                    exportOptions: { columns: [1, 2] },
                     className: 'btn-exportar-excel',
                 },
                 {
@@ -248,14 +249,14 @@ async function configurarDataTableProveedores(data) {
                     text: 'Exportar PDF',
                     filename: 'Proveedores',
                     title: '',
-                    exportOptions: { columns: [1] },
+                    exportOptions: { columns: [1, 2] },
                     className: 'btn-exportar-pdf',
                 },
                 {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [1] },
+                    exportOptions: { columns: [1, 2] },
                     className: 'btn-exportar-print'
                 },
             ]),

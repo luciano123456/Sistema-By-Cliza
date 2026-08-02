@@ -291,7 +291,7 @@ const Modelo_base = {
 };
 
 // --- Config de filtros por columna (thead) ---
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },                         // Nombre
     { index: 2, filterType: 'text' },                         // Teléfono
     { index: 3, filterType: 'text' },                         // Teléfono Alternativo
@@ -303,7 +303,7 @@ const columnConfig = [
     { index: 9, filterType: 'text' },                         // Localidad
     { index: 10, filterType: 'text' },                        // Email
     { index: 11, filterType: 'text' }                         // Código Postal
-];
+]);
 
 $(document).ready(() => {
     Permisos.init();
@@ -538,6 +538,7 @@ async function configurarDataTableClientes(data) {
                     orderable: false,
                     searchable: false,
                 },
+                colDataTableId(),
                 { data: 'Nombre', title: 'Nombre' },
                 { data: 'Telefono', title: 'Teléfono' },
                 { data: 'TelefonoAlternativo', title: 'Teléfono Alternativo' },
@@ -557,7 +558,7 @@ async function configurarDataTableClientes(data) {
                     text: 'Exportar Excel',
                     filename: 'Clientes',
                     title: '',
-                    exportOptions: { columns: Array.from({ length: 11 }, (_, i) => i + 1) },
+                    exportOptions: { columns: Array.from({ length: 12 }, (_, i) => i + 1) },
                     className: 'btn-exportar-excel',
                 },
                 {
@@ -569,7 +570,7 @@ async function configurarDataTableClientes(data) {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: Array.from({ length: 11 }, (_, i) => i + 1) },
+                    exportOptions: { columns: Array.from({ length: 12 }, (_, i) => i + 1) },
                     className: 'btn-exportar-print'
                 },
             ]),

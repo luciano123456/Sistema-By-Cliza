@@ -1,13 +1,13 @@
 let gridGastos;
 
-const columnConfig = [
+const columnConfig = conFiltroIdDespuesAcciones([
     { index: 1, filterType: 'text' },                          // Fecha (texto o yyyy-mm-dd)
     { index: 2, filterType: 'text' },                          // Concepto
     { index: 3, filterType: 'text' },                          // Importe
     { index: 4, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
     { index: 5, filterType: 'select', fetchDataFunc: listaGastosCategoriasFilter },
     { index: 6, filterType: 'select', fetchDataFunc: listaCuentasFilter },
-];
+]);
 
 const Modelo_base = {
     Id: 0,
@@ -253,6 +253,7 @@ async function configurarDataTableGastos(data) {
                     orderable: false,
                     searchable: false,
                 },
+                colDataTableId(),
                 { data: "Fecha", render: (f) => formatearFechaParaVista(f) },
                 { data: 'Concepto' },     // 2
                 { data: "Importe", render: (f) => formatNumber(f) },
@@ -267,7 +268,7 @@ async function configurarDataTableGastos(data) {
                     text: 'Exportar Excel',
                     filename: 'Reporte Gastos',
                     title: '',
-                    exportOptions: { columns: [...Array(7).keys()].map(i => i + 1) },
+                    exportOptions: { columns: [...Array(8).keys()].map(i => i + 1) },
                     className: 'btn-exportar-excel',
                 },
                 {
@@ -275,14 +276,14 @@ async function configurarDataTableGastos(data) {
                     text: 'Exportar PDF',
                     filename: 'Reporte Gastos',
                     title: '',
-                    exportOptions: { columns: [...Array(7).keys()].map(i => i + 1) },
+                    exportOptions: { columns: [...Array(8).keys()].map(i => i + 1) },
                     className: 'btn-exportar-pdf',
                 },
                 {
                     extend: 'print',
                     text: 'Imprimir',
                     title: '',
-                    exportOptions: { columns: [...Array(7).keys()].map(i => i + 1) },
+                    exportOptions: { columns: [...Array(8).keys()].map(i => i + 1) },
                     className: 'btn-exportar-print'
                 },
             ]),

@@ -1283,6 +1283,12 @@ public partial class SistemaByClizaContext : DbContext
             entity.Property(e => e.Nombre)
                 .HasMaxLength(200)
                 .IsUnicode(false);
+            entity.Property(e => e.Direccion)
+                .HasMaxLength(250)
+                .IsUnicode(false);
+            entity.Property(e => e.Telefono)
+                .HasMaxLength(50)
+                .IsUnicode(false);
 
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.TallereIdUsuarioModificaNavigations)
                 .HasForeignKey(d => d.IdUsuarioModifica)

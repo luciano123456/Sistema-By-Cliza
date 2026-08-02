@@ -1282,15 +1282,30 @@ window.guardarVenta = async function () {
         Pagos: State.pagos.map(p => ({ Id: p.id || 0, Fecha: p.fecha, IdCuenta: p.idCuenta, Importe: p.importe, NotaInterna: p.nota }))
     };
 
-    const url = State.idVenta ? "/Ventas/Actualizar" : "/Ventas/Insertar";
-    const method = State.idVenta ? "PUT" : "POST";
+    const eraNuevo = !(State.idVenta > 0);
+    const url = eraNuevo ? "/Ventas/Insertar" : "/Ventas/Actualizar";
+    const method = eraNuevo ? "POST" : "PUT";
 
     try {
         isSaving = true;
         const res = await fetch(url, { method, headers: { Authorization: "Bearer " + (token || ""), "Content-Type": "application/json;charset=utf-8" }, body: JSON.stringify(payload) });
         if (!res.ok) throw new Error(res.statusText);
         const r = await res.json();
-        if ((r === true) || (r?.valor === true) || (r?.valor === "OK")) { exitoModal?.(State.idVenta ? "Venta actualizada" : "Venta registrada"); volverIndex(); }
+        if ((r === true) || (r?.valor === true) || (r?.valor === "OK")) {
+            const newId = parseInt(r?.id || State.idVenta || 0, 10) || 0;
+            if (newId > 0) State.idVenta = newId;
+            const accion = await despuesGuardarNuevoModif({
+                mensaje: eraNuevo ? "Venta registrada" : "Venta actualizada",
+                indexUrl: "/Ventas/Index",
+                editUrl: "/Ventas/NuevoModif",
+                id: State.idVenta,
+                eraNuevo
+            });
+            if (accion === "editar") {
+                const btnElim = document.getElementById("btnEliminarVenta");
+                if (btnElim && State.idVenta > 0) btnElim.classList.remove("d-none");
+            }
+        }
         else { errorModal?.("No se pudo guardar la venta."); }
     } catch (e) {
         console.error(e); errorModal?.("Error al guardar la venta.");
